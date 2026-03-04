@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}{{ product.name }} - EcomFans{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    <div class="dashboard-header">
+        <a href="{{ url_for('trends.feed') }}" class="back-link">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="15 18 9 12 15 6"/>
+            </svg>
+            Back to Trends
+        </a>
+        <h1>{{ product.name }}</h1>
+        <div class="product-header-meta">
+            {% if product.brand %}
+            <span class="category-badge">{{ product.brand }}</span>
+            {% endif %}
+            {% if product.category %}
+            <span class="category-badge">{{ product.category }}</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="product-stats-grid">
+        <div class="stat-card">
+            <span class="stat-value">{{ product.unique_creators }}</span>
+            <span class="stat-label">Unique Creators</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-value">{{ product.total_mentions }}</span>
+            <span class="stat-label">Total Mentions</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-value sentiment-positive">{{ sentiments.positive }}</span>
+            <span class="stat-label">Positive</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-value sentiment-negative">{{ sentiments.negative }}</span>
+            <span class="stat-label">Negative</span>
+        </div>
+    </div>
+
+    <h2 class="section-title">Source Videos</h2>
+
+    {% if mentions %}
+    <div class="source-videos-list">
+        {% for mention in mentions %}
+        <div class="source-video-card">
+            <a href="{{ url_for('videos.detail', video_id=mention.video.id) }}" class="source-video-link">
+                <div class="source-video-thumb">
+                    <img src="{{ mention.video.thumbnail_url }}" alt="" loading="lazy">
+                </div>
+                <div class="source-video-info">
+                    <span class="source-video-title">{{ mention.video.title or mention.video.youtube_id }}</span>
+                    <span class="source-video-channel">{{ mention.video.channel_name or 'Unknown channel' }}</span>
+                </div>
+            </a>
+            <div class="source-video-mention">
+                {% if mention.sentiment %}
+                <span class="sentiment-badge sentiment-{{ mention.sentiment }}">{{ mention.sentiment }}</span>
+                {% endif %}
+                {% if mention.mention_type %}
+                <span class="category-badge">{{ mention.mention_type }}</span>
+                {% endif %}
+                {% if mention.is_sponsored %}
+                <span class="category-badge badge-sponsored">Sponsored</span>
+                {% endif %}
+            </div>
+            {% if mention.context_quote %}
+            <p class="context-quote">"{{ mention.context_quote }}"</p>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <p>No source videos found for this product.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -7,6 +7,8 @@ from flask import Blueprint, Flask, redirect, render_template, session, url_for
 from auth import auth_bp, login_required
 from db import db, migrate
 from scraper import scraper_bp
+from videos import videos_bp
+from trends import trends_bp
 
 load_dotenv()
 
@@ -35,6 +37,8 @@ migrate.init_app(app, db)
 # Register blueprints
 app.register_blueprint(auth_bp)
 app.register_blueprint(scraper_bp)
+app.register_blueprint(videos_bp)
+app.register_blueprint(trends_bp)
 
 
 @app.route("/")

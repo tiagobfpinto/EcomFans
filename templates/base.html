@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Image Scraper - Extract and download images from any website">
-    <title>{% block title %}Image Scraper{% endblock %}</title>
+    <meta name="description" content="EcomFans - YouTube Trend Detection for E-commerce">
+    <title>{% block title %}EcomFans{% endblock %}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -20,18 +20,31 @@
                     <circle cx="8.5" cy="8.5" r="1.5"/>
                     <polyline points="21 15 16 10 5 21"/>
                 </svg>
-                <span>ImageScraper</span>
+                <span>EcomFans</span>
             </div>
         </div>
 
         <nav class="sidebar-nav">
-            <a href="{{ url_for('main.dashboard') }}" class="nav-item active">
+            <a href="{{ url_for('main.dashboard') }}" class="nav-item {{ 'active' if request.endpoint == 'main.dashboard' else '' }}">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
                 </svg>
                 <span>Image Scraper</span>
             </a>
-            <!-- Future nav items go here -->
+            <a href="{{ url_for('videos.input_page') }}" class="nav-item {{ 'active' if request.endpoint and request.endpoint.startswith('videos.') else '' }}">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="23 7 16 12 23 17 23 7"/>
+                    <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+                </svg>
+                <span>Video Analysis</span>
+            </a>
+            <a href="{{ url_for('trends.feed') }}" class="nav-item {{ 'active' if request.endpoint and request.endpoint.startswith('trends.') else '' }}">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
+                    <polyline points="17 6 23 6 23 12"/>
+                </svg>
+                <span>Trends</span>
+            </a>
         </nav>
 
         <div class="sidebar-footer">
@@ -69,5 +82,6 @@
     </main>
 
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    {% block scripts %}{% endblock %}
 </body>
 </html>

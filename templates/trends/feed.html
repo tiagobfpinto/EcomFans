@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Trends - EcomFans{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    <div class="dashboard-header">
+        <h1>Trending Products</h1>
+        <p>Products ranked by number of unique creators mentioning them</p>
+    </div>
+
+    <div class="filter-bar">
+        <form method="GET" action="{{ url_for('trends.feed') }}" class="filter-form">
+            <select name="category" class="filter-select" onchange="this.form.submit()">
+                <option value="">All Categories</option>
+                {% for cat in categories %}
+                <option value="{{ cat }}" {% if cat == selected_category %}selected{% endif %}>{{ cat }}</option>
+                {% endfor %}
+            </select>
+        </form>
+        <span class="results-info">{{ pagination.total }} product{{ 's' if pagination.total != 1 else '' }} found</span>
+    </div>
+
+    {% if products %}
+    <div class="trend-list">
+        {% for product in products %}
+        <a href="{{ url_for('trends.product_detail', product_id=product.id) }}" class="trend-card">
+            <div class="trend-rank">#{{ (pagination.page - 1) * pagination.per_page + loop.index }}</div>
+            <div class="trend-info">
+                <div class="trend-name">{{ product.name }}</div>
+                <div class="trend-meta">
+                    {% if product.brand %}
+                    <span class="category-badge">{{ product.brand }}</span>
+                    {% endif %}
+                    {% if product.category %}
+                    <span class="category-badge">{{ product.category }}</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="trend-stats">
+                <div class="trend-stat">
+                    <span class="trend-stat-value">{{ product.unique_creators }}</span>
+                    <span class="trend-stat-label">Creator{{ 's' if product.unique_creators != 1 else '' }}</span>
+                </div>
+                <div class="trend-stat">
+                    <span class="trend-stat-value">{{ product.total_mentions }}</span>
+                    <span class="trend-stat-label">Mention{{ 's' if product.total_mentions != 1 else '' }}</span>
+                </div>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+
+    {% if pagination.pages > 1 %}
+    <div class="pagination">
+        {% if pagination.has_prev %}
+        <a href="{{ url_for('trends.feed', page=pagination.prev_num, category=selected_category) }}" class="btn btn-ghost">Previous</a>
+        {% endif %}
+        <span class="page-info">Page {{ pagination.page }} of {{ pagination.pages }}</span>
+        {% if pagination.has_next %}
+        <a href="{{ url_for('trends.feed', page=pagination.next_num, category=selected_category) }}" class="btn btn-ghost">Next</a>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="empty-state">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
+            <polyline points="17 6 23 6 23 12"/>
+        </svg>
+        <p>No trending products yet. Analyze some YouTube videos to discover product trends!</p>
+        <a href="{{ url_for('videos.input_page') }}" class="btn btn-primary">Analyze Videos</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/trends.js') }}"></script>
+{% endblock %}

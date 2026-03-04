@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Processing - EcomFans{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    <div class="dashboard-header">
+        <h1>Processing Videos</h1>
+        <p>Extracting transcripts and analyzing product mentions...</p>
+    </div>
+
+    <div class="progress-section">
+        <div class="progress-header">
+            <span id="progress-text">0 / {{ job.total_urls }} videos processed</span>
+            <span id="progress-percent">0%</span>
+        </div>
+        <div class="progress-bar">
+            <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
+        </div>
+    </div>
+
+    <div class="video-status-list" id="video-list">
+        {% for video in videos %}
+        <div class="video-status-item" id="video-{{ video.id }}">
+            <div class="video-status-thumb">
+                <img src="{{ video.thumbnail_url }}" alt="" loading="lazy">
+            </div>
+            <div class="video-status-info">
+                <span class="video-status-title">{{ video.title or video.url }}</span>
+                <span class="video-status-id">{{ video.youtube_id }}</span>
+            </div>
+            <div class="video-status-badge status-pending">
+                <span class="status-icon">&#9679;</span>
+                <span class="status-label">Pending</span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div id="completion-actions" class="completion-actions" style="display: none;">
+        <a href="{{ url_for('trends.feed') }}" class="btn btn-primary">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
+                <polyline points="17 6 23 6 23 12"/>
+            </svg>
+            View Trends
+        </a>
+        <a href="{{ url_for('videos.input_page') }}" class="btn btn-ghost">Analyze More Videos</a>
+    </div>
+</div>
+
+<script>
+    const JOB_ID = {{ job.id }};
+</script>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/videos.js') }}"></script>
+{% endblock %}

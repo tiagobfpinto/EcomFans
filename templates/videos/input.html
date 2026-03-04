@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Video Analysis - EcomFans{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    <div class="dashboard-header">
+        <h1>Video Analysis</h1>
+        <p>Paste YouTube URLs to extract product mentions from video transcripts</p>
+    </div>
+
+    <form action="{{ url_for('videos.submit') }}" method="POST" class="url-form">
+        <div class="form-group">
+            <label for="urls">YouTube URLs (one per line)</label>
+            <textarea id="urls" name="urls" class="url-textarea" rows="8"
+                placeholder="https://www.youtube.com/watch?v=...&#10;https://youtu.be/...&#10;https://www.youtube.com/watch?v=..."></textarea>
+        </div>
+        <div class="url-form-footer">
+            <span class="helper-text">Paste up to 20 YouTube video URLs. Videos with English captions work best.</span>
+            <button type="submit" class="btn btn-primary">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="5 3 19 12 5 21 5 3"/>
+                </svg>
+                Analyze Videos
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

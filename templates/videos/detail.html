@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}{{ video.title or 'Video Detail' }} - EcomFans{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    <div class="dashboard-header">
+        <a href="{{ url_for('videos.job_page', job_id=video.job_id) }}" class="back-link">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="15 18 9 12 15 6"/>
+            </svg>
+            Back to Job
+        </a>
+        <h1>{{ video.title or 'Video ' + video.youtube_id }}</h1>
+        <p>{{ video.channel_name or 'Unknown channel' }}</p>
+    </div>
+
+    <div class="video-detail-header">
+        <div class="video-thumb-large">
+            <img src="{{ video.thumbnail_url }}" alt="{{ video.title }}">
+        </div>
+        <div class="video-meta">
+            <div class="meta-item">
+                <span class="meta-label">YouTube ID</span>
+                <span class="meta-value">{{ video.youtube_id }}</span>
+            </div>
+            <div class="meta-item">
+                <span class="meta-label">Status</span>
+                <span class="meta-value">{{ video.processing_status }}</span>
+            </div>
+            {% if video.analyzed_at %}
+            <div class="meta-item">
+                <span class="meta-label">Analyzed</span>
+                <span class="meta-value">{{ video.analyzed_at.strftime('%Y-%m-%d %H:%M') }}</span>
+            </div>
+            {% endif %}
+            <div class="meta-item">
+                <span class="meta-label">Products Found</span>
+                <span class="meta-value">{{ mentions|length }}</span>
+            </div>
+        </div>
+    </div>
+
+    {% if mentions %}
+    <h2 class="section-title">Extracted Products</h2>
+    <div class="product-mentions-list">
+        {% for mention in mentions %}
+        <div class="mention-card">
+            <div class="mention-header">
+                <a href="{{ url_for('trends.product_detail', product_id=mention.product.id) }}" class="mention-product-name">
+                    {{ mention.product.name }}
+                </a>
+                {% if mention.product.brand %}
+                <span class="category-badge">{{ mention.product.brand }}</span>
+                {% endif %}
+                {% if mention.product.category %}
+                <span class="category-badge">{{ mention.product.category }}</span>
+                {% endif %}
+            </div>
+            <div class="mention-details">
+                {% if mention.sentiment %}
+                <span class="sentiment-badge sentiment-{{ mention.sentiment }}">{{ mention.sentiment }}</span>
+                {% endif %}
+                {% if mention.mention_type %}
+                <span class="category-badge">{{ mention.mention_type }}</span>
+                {% endif %}
+                {% if mention.is_sponsored %}
+                <span class="category-badge badge-sponsored">Sponsored</span>
+                {% endif %}
+            </div>
+            {% if mention.context_quote %}
+            <p class="context-quote">"{{ mention.context_quote }}"</p>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <p>No products were extracted from this video.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
