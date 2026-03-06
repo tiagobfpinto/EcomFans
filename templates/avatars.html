@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+{% block title %}Avatars – Before & After - EcomFans{% endblock %}
+{% block content %}
+<div class="ai-image-page avatars-page">
+    <div class="dashboard-header">
+        <h1>Avatars – Before & After</h1>
+        <p>Generate realistic before/after transformation images linked to your products</p>
+    </div>
+
+    <!-- Credit badge -->
+    <div class="ai-credits-bar">
+        <div class="credits-badge">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <path d="M12 6v6l4 2" />
+            </svg>
+            <span><strong id="avatar-credits-count">{{ credits }}</strong> credits remaining</span>
+        </div>
+    </div>
+
+    {% if not has_api_key %}
+    <div class="api-key-banner">
+        <div class="api-key-banner-content">
+            <div class="api-key-icon">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path
+                        d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4" />
+                </svg>
+            </div>
+            <div class="api-key-text">
+                <h3>Gemini API Key Required</h3>
+                <p>Configure your Gemini API key on the <a href="{{ url_for('ai_image.ai_image_page') }}">AI Image</a>
+                    page first.</p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Avatar Generator -->
+    <div class="prompt-section">
+        <h2>Generate Avatars</h2>
+        <div class="prompt-card avatar-generator-card">
+
+            <!-- Product Selector -->
+            <div class="avatar-field">
+                <label for="avatar-product">Product</label>
+                <select id="avatar-product" class="avatar-select">
+                    <option value="">Select a product...</option>
+                    {% for product in products %}
+                    <option value="{{ product.id }}">{{ product.name }}</option>
+                    {% endfor %}
+                </select>
+                {% if not products %}
+                <p class="field-hint">No products yet. <a href="{{ url_for('products.products_page') }}">Create one
+                        first</a>.</p>
+                {% endif %}
+            </div>
+
+            <!-- Physical Characteristic -->
+            <div class="avatar-field">
+                <label for="avatar-characteristic">Physical Characteristic (Before)</label>
+                <input type="text" id="avatar-characteristic"
+                    placeholder="e.g. overweight, aging skin, acne, hair loss..." class="avatar-text-input">
+                <p class="field-hint">What should the "before" avatar look like?</p>
+            </div>
+
+            <!-- Persona Selection -->
+            <div class="avatar-field">
+                <label>Select Personas</label>
+                <div id="persona-chips" class="persona-chips">
+                    {% for persona in preset_personas %}
+                    <button type="button" class="persona-chip" data-persona="{{ persona }}"
+                        onclick="togglePersonaChip(this)">{{ persona }}</button>
+                    {% endfor %}
+                </div>
+                <div class="custom-persona-row">
+                    <input type="text" id="custom-persona-input" placeholder="Add custom persona..."
+                        class="avatar-text-input custom-persona-input">
+                    <button type="button" class="btn btn-ghost btn-sm" onclick="addCustomPersona()">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="12" y1="5" x2="12" y2="19" />
+                            <line x1="5" y1="12" x2="19" y2="12" />
+                        </svg>
+                        Add
+                    </button>
+                </div>
+            </div>
+
+            <!-- Count per persona -->
+            <div class="avatar-field">
+                <label>Avatars per Persona</label>
+                <div class="prompt-controls">
+                    <div class="variations-selector">
+                        <div class="variation-btns">
+                            <button class="var-btn active" data-count="1" onclick="setAvatarCount(1)">1</button>
+                            <button class="var-btn" data-count="2" onclick="setAvatarCount(2)">2</button>
+                            <button class="var-btn" data-count="3" onclick="setAvatarCount(3)">3</button>
+                        </div>
+                    </div>
+                    <span class="cost-label" id="avatar-cost-label">Cost: 0 credits</span>
+                </div>
+            </div>
+
+            <!-- Generate -->
+            <button id="avatar-generate-btn" class="btn btn-accent btn-full" onclick="generateAvatars()">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+                </svg>
+                <span>Generate Before & After</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Loading state -->
+    <div id="avatar-loading" class="loading-state" style="display: none;">
+        <div class="spinner"></div>
+        <p>Generating avatars... This may take a while for multiple personas.</p>
+    </div>
+
+    <!-- Results -->
+    <div id="avatar-results" class="gen-results" style="display:none;">
+        <h3>Generated Avatars</h3>
+        <div id="avatar-results-grid" class="avatar-results-grid"></div>
+    </div>
+
+    <!-- History -->
+    <div class="prompt-history">
+        <h2>Batch History</h2>
+        {% if batches %}
+        <div id="batches-list" class="prompts-list">
+            {% for batch in batches %}
+            <div class="prompt-history-card" data-batch-id="{{ batch.id }}">
+                <div class="prompt-header-row">
+                    <div>
+                        <p class="prompt-text-content">
+                            <strong>{{ batch.product.name }}</strong> · {{ batch.characteristic }}
+                        </p>
+                        <span class="prompt-date">
+                            {{ batch.created_at.strftime('%b %d, %Y at %H:%M') }}
+                            · {{ batch.results | length }} avatar{{ 's' if batch.results | length != 1 else '' }}
+                        </span>
+                    </div>
+                    <div class="prompt-actions">
+                        <button class="btn btn-ghost btn-sm btn-danger-hover"
+                            onclick="deleteAvatarBatch({{ batch.id }})">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="3 6 5 6 21 6" />
+                                <path
+                                    d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                {% if batch.results %}
+                <div class="avatar-history-previews">
+                    {% for res in batch.results %}
+                    {% if res.status == 'completed' %}
+                    <div class="avatar-pair-mini">
+                        <div class="avatar-mini-img" onclick="showFullImage(this)">
+                            <img src="data:image/png;base64,{{ res.before_image }}" alt="Before">
+                            <span class="ba-label ba-before">B</span>
+                        </div>
+                        <div class="avatar-mini-img" onclick="showFullImage(this)">
+                            <img src="data:image/png;base64,{{ res.after_image }}" alt="After">
+                            <span class="ba-label ba-after">A</span>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+            </svg>
+            <p>No avatar batches yet. Generate your first above!</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Full-size image modal (reuses existing) -->
+<div id="image-modal" class="image-modal" onclick="closeModal(event)">
+    <div class="modal-content">
+        <button class="modal-close"
+            onclick="document.getElementById('image-modal').style.display='none'">&times;</button>
+        <img id="modal-image" src="" alt="Full size image">
+    </div>
+</div>
+{% endblock %}

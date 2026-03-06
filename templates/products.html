@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% block title %}Products - EcomFans{% endblock %}
+{% block content %}
+<div class="products-page">
+    <div class="dashboard-header">
+        <h1>Products</h1>
+        <p>Create products, save product context, and keep up to 4 reference images in your workspace.</p>
+    </div>
+
+    <div class="products-layout">
+        <section class="product-form-card">
+            <div class="section-heading">
+                <h2>New product</h2>
+                <p>Add the product details you want available later for creatives and prompts.</p>
+            </div>
+
+            <form method="POST" enctype="multipart/form-data" class="product-form">
+                <div class="form-group">
+                    <label for="product-name">Product name</label>
+                    <input id="product-name" type="text" name="name" maxlength="160" required
+                        placeholder="Summer Linen Shirt">
+                </div>
+
+                <div class="form-group">
+                    <label for="product-context">Product context</label>
+                    <textarea id="product-context" name="context" rows="6" required
+                        placeholder="Describe the product, audience, features, tone, brand style, and anything the AI should know."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="product-price">Price</label>
+                    <input id="product-price" type="text" name="price" maxlength="200"
+                        placeholder="$49.90 or 3x of $16.63">
+                </div>
+
+                <div class="form-group">
+                    <label for="product-offer">Offer</label>
+                    <textarea id="product-offer" name="offer" rows="3"
+                        placeholder="What is the current offer, bundle, discount, or CTA?"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="product-benefits">Benefits</label>
+                    <textarea id="product-benefits" name="benefits" rows="4"
+                        placeholder="List the core benefits and outcomes this product delivers."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="product-images">Context images</label>
+                    <input id="product-images" type="file" name="images" accept="image/*" multiple>
+                    <span class="field-hint">Optional. Upload up to 4 images.</span>
+                </div>
+
+                <button type="submit" class="btn btn-primary">Save product</button>
+            </form>
+        </section>
+
+        <section class="products-list-section">
+            <div class="section-heading">
+                <h2>Your products</h2>
+                <p>{{ products|length }} saved product{% if products|length != 1 %}s{% endif %}</p>
+            </div>
+
+            {% if products %}
+            <div class="products-grid">
+                {% for product in products %}
+                <article class="product-card">
+                    <div class="product-card-header">
+                        <div>
+                            <h3>{{ product.name }}</h3>
+                            <span class="product-date">
+                                {% if product.created_at %}
+                                {{ product.created_at.strftime('%Y-%m-%d %H:%M') }}
+                                {% endif %}
+                            </span>
+                        </div>
+                        <span class="product-image-count">{{ product.images|length }}/4 images</span>
+                    </div>
+
+                    <p class="product-context">{{ product.context }}</p>
+
+                    {% if product.price or product.offer or product.benefits %}
+                    <div class="product-info-block">
+                        {% if product.price %}
+                        <p><strong>Price:</strong> {{ product.price }}</p>
+                        {% endif %}
+                        {% if product.offer %}
+                        <p><strong>Offer:</strong> {{ product.offer }}</p>
+                        {% endif %}
+                        {% if product.benefits %}
+                        <p><strong>Benefits:</strong> {{ product.benefits }}</p>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    {% if product.images %}
+                    <div class="product-images-grid">
+                        {% for image in product.images %}
+                        <div class="product-image-thumb">
+                            <img src="data:{{ image.mime_type }};base64,{{ image.image_data }}"
+                                alt="{{ product.name }} context image {{ loop.index }}">
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="product-empty-images">No context images uploaded.</div>
+                    {% endif %}
+                </article>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state product-empty-state">
+                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="4" width="18" height="16" rx="2" />
+                    <path d="M8 2v4" />
+                    <path d="M16 2v4" />
+                    <path d="M3 10h18" />
+                </svg>
+                <p>No products yet. Create your first one to start building reusable context.</p>
+            </div>
+            {% endif %}
+        </section>
+    </div>
+</div>
+{% endblock %}

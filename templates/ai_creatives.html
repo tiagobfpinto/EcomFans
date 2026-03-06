@@ -1,0 +1,1240 @@
+{% extends "base.html" %}
+{% block title %}AI Creatives - EcomFans{% endblock %}
+{% block content %}
+<div class="ai-image-page avatars-page">
+    <div class="dashboard-header">
+        <h1>AI Creatives</h1>
+        <p>Turn inspiration ads into creatives for your own product, automatically.</p>
+    </div>
+
+    <!-- Credit badge -->
+    <div class="ai-credits-bar">
+        <div class="credits-badge">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <path d="M12 6v6l4 2" />
+            </svg>
+            <span><strong id="creatives-credits-count">{{ credits }}</strong> credits remaining</span>
+        </div>
+    </div>
+
+    <div id="api-key-banner" class="api-key-banner" {% if has_gemini_key and has_openai_key %}style="display:none" {%
+        endif %}>
+        <div class="api-key-banner-content">
+            <div class="api-key-icon">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path
+                        d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4" />
+                </svg>
+            </div>
+            <div class="api-key-text">
+                <h3>API Keys Required</h3>
+                <p>
+                    {% if not has_gemini_key %}Gemini key{% endif %}
+                    {% if not has_gemini_key and not has_openai_key %} and {% endif %}
+                    {% if not has_openai_key %}OpenAI key{% endif %}
+                    missing. Configure them on the <a href="{{ url_for('ai_image.ai_image_page') }}">AI Image</a> page.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ─── Two-column layout ─────────────────────────────────────── -->
+    <div class="creatives-layout">
+
+        <!-- LEFT: Inspiration library -->
+        <div class="creatives-panel creatives-library-panel">
+            <h2>Inspiration Library</h2>
+            <p class="field-hint">Upload competitor or reference ads. Select them to use as inspiration for generation.
+            </p>
+
+            <!-- Upload zone -->
+            <div class="inspiration-upload-zone" id="inspiration-drop-zone"
+                onclick="document.getElementById('inspiration-file-input').click()"
+                ondragover="event.preventDefault(); this.classList.add('drag-over')"
+                ondragleave="this.classList.remove('drag-over')" ondrop="handleInspirationDrop(event)">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="17 8 12 3 7 8" />
+                    <line x1="12" y1="3" x2="12" y2="15" />
+                </svg>
+                <p>Click or drag images to upload</p>
+                <span class="field-hint">PNG, JPG, WEBP accepted</span>
+                <input type="file" id="inspiration-file-input" accept="image/*" multiple style="display:none"
+                    onchange="handleInspirationFileSelect(event)">
+            </div>
+
+            <!-- Library grid -->
+            <div id="inspirations-grid" class="inspirations-grid">
+                {% for insp in inspirations %}
+                <div class="inspiration-card selectable" data-id="{{ insp.id }}"
+                    onclick="toggleInspirationSelect(this)">
+                    <img src="data:{{ insp.mime_type }};base64,{{ insp.image_data }}"
+                        alt="{{ insp.name or 'Inspiration' }}" loading="lazy">
+                    <div class="inspiration-overlay">
+                        <svg class="check-icon" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                    </div>
+                    <button class="inspiration-delete-btn" onclick="deleteInspiration(event, {{ insp.id }})">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="18" y1="6" x2="6" y2="18" />
+                            <line x1="6" y1="6" x2="18" y2="18" />
+                        </svg>
+                    </button>
+                </div>
+                {% endfor %}
+            </div>
+
+            {% if not inspirations %}
+            <div id="inspirations-empty" class="empty-state">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2" />
+                    <circle cx="8.5" cy="8.5" r="1.5" />
+                    <polyline points="21 15 16 10 5 21" />
+                </svg>
+                <p>No inspirations yet. Upload some ads above.</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- RIGHT: Generate + history -->
+        <div class="creatives-panel creatives-generate-panel">
+            <!-- Generate card -->
+            <div class="prompt-section">
+                <h2>Generate Creatives</h2>
+                <div class="prompt-card avatar-generator-card">
+
+                    <!-- Product selector -->
+                    <div class="avatar-field">
+                        <label for="creatives-product">Product</label>
+                        <select id="creatives-product" class="avatar-select">
+                            <option value="">Select a product...</option>
+                            {% for product in products %}
+                            <option value="{{ product.id }}">{{ product.name }}</option>
+                            {% endfor %}
+                        </select>
+                        {% if not products %}
+                        <p class="field-hint">No products yet. <a href="{{ url_for('products.products_page') }}">Create
+                                one first</a>.</p>
+                        {% endif %}
+                    </div>
+
+                    <!-- AI Provider selector -->
+                    <div class="avatar-field">
+                        <label>Image AI Provider</label>
+                        <div class="provider-selector">
+                            <label
+                                class="provider-option {% if not has_gemini_key %}provider-option-disabled{% endif %}">
+                                <input type="radio" name="ai-provider" value="gemini" {% if has_gemini_key %}checked{%
+                                    else %}disabled{% endif %} onchange="onProviderChange()">
+                                <span class="provider-icon">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <circle cx="12" cy="12" r="10" />
+                                        <path d="M12 8v4l3 3" />
+                                    </svg>
+                                </span>
+                                <span>Gemini</span>
+                            </label>
+                            <label
+                                class="provider-option {% if not has_openai_key %}provider-option-disabled{% endif %}">
+                                <input type="radio" name="ai-provider" value="openai" {% if has_openai_key and not
+                                    has_gemini_key %}checked{% endif %} {% if not has_openai_key %}disabled{% endif %}
+                                    onchange="onProviderChange()">
+                                <span class="provider-icon">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+                                    </svg>
+                                </span>
+                                <span>OpenAI</span>
+                            </label>
+                            <label
+                                class="provider-option {% if not has_gemini_key or not has_openai_key %}provider-option-disabled{% endif %}">
+                                <input type="radio" name="ai-provider" value="both" {% if not has_gemini_key or not
+                                    has_openai_key %}disabled{% endif %} onchange="onProviderChange()">
+                                <span class="provider-icon">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <line x1="8" y1="6" x2="21" y2="6" />
+                                        <line x1="8" y1="12" x2="21" y2="12" />
+                                        <line x1="8" y1="18" x2="21" y2="18" />
+                                        <line x1="3" y1="6" x2="3.01" y2="6" />
+                                        <line x1="3" y1="12" x2="3.01" y2="12" />
+                                        <line x1="3" y1="18" x2="3.01" y2="18" />
+                                    </svg>
+                                </span>
+                                <span>Both</span>
+                            </label>
+                        </div>
+                        <p class="field-hint" id="provider-hint">Gemini: inspiration image + all product images sent as
+                            visual context to the generation model.</p>
+                    </div>
+
+                    <!-- ── Prompt configuration ── -->
+                    <div class="prompts-divider">
+                        <span>Prompt Configuration</span>
+                    </div>
+
+                    <!-- Base Prompt -->
+                    <div class="avatar-field">
+                        <label for="base-prompt">
+                            Base Prompt
+                            <button type="button" class="btn-reset-prompt" onclick="resetPrompt('base')"
+                                title="Reset to default">↺ reset</button>
+                            <button type="button" id="btn-save-base" class="btn-save-default"
+                                onclick="saveDefault('base_prompt', 'base-prompt')" style="display:none"
+                                title="Save current base prompt as default">save as default</button>
+                        </label>
+                        <textarea id="base-prompt" class="avatar-textarea prompt-textarea" rows="3"
+                            oninput="checkDefault('base_prompt', this.value.trim())"
+                            placeholder="What you want to create...">{{ default_base_prompt }}</textarea>
+                        <p class="field-hint">The foundation of every generation. The regen prompt (from analysis) is
+                            appended to this.</p>
+                    </div>
+
+                    <!-- Analysis Prompt -->
+                    <div class="avatar-field">
+                        <label for="analysis-prompt">
+                            Analysis Prompt
+                            <button type="button" class="btn-reset-prompt" onclick="resetPrompt('analysis')"
+                                title="Reset to default">↺ reset</button>
+                            <button type="button" id="btn-save-analysis" class="btn-save-default"
+                                onclick="saveDefault('analysis_prompt', 'analysis-prompt')" style="display:none"
+                                title="Save current analysis prompt as default">save as default</button>
+                        </label>
+                        <textarea id="analysis-prompt" class="avatar-textarea prompt-textarea" rows="4"
+                            oninput="checkDefault('analysis_prompt', this.value.trim())"
+                            placeholder="Instructions for analyzing each inspiration image...">{{ default_analysis_prompt }}</textarea>
+                        <p class="field-hint">Sent to the AI with each inspiration image. The response (regen prompt) is
+                            concatenated after the base prompt.</p>
+                    </div>
+
+                    <!-- Product Info -->
+                    <div class="avatar-field">
+                        <label for="product-info-source">Product Info Source</label>
+                        <select id="product-info-source" class="avatar-select">
+                            <option value="product_page">Get product info from product page</option>
+                        </select>
+                        <p class="field-hint">Uses the selected product's saved Price, Offer, and Benefits fields from
+                            the Products page.</p>
+                    </div>
+
+                    <div class="avatar-field">
+                        <label for="product-info-preview">Product Info Preview</label>
+                        <textarea id="product-info-preview" class="avatar-textarea prompt-textarea" rows="5" readonly
+                            placeholder="Select a product to preview the product info that will be pulled from the product page."></textarea>
+                        <p class="field-hint">This is assembled automatically from the selected product.</p>
+                    </div>
+
+                    <!-- Prompt flow diagram -->
+                    <div class="prompt-flow-diagram" style="flex-direction: column; align-items: flex-start; gap: 8px;">
+                        <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+                            <span class="pf-step">Product Page Info</span>
+                            <span class="pf-plus">+</span>
+                            <span class="pf-step">Analysis Prompt</span>
+                            <span class="pf-arrow">→</span>
+                            <span class="pf-step pf-derived">Regen Prompt</span>
+                        </div>
+                        <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+                            <span class="pf-step">Base Prompt</span>
+                            <span class="pf-plus">+</span>
+                            <span class="pf-step pf-derived">Regen Prompt</span>
+                            <span class="pf-arrow">→</span>
+                            <span class="pf-step pf-final">Final Prompt</span>
+                        </div>
+                    </div>
+
+                    <!-- Selection summary -->
+                    <div class="prompts-divider">
+                        <span>Selection</span>
+                    </div>
+
+                    <div class="avatar-field">
+                        <label>Selected Inspirations</label>
+                        <div id="creatives-selection-summary" class="selection-summary">
+                            <span id="creatives-selected-count">0 selected</span>
+                            <button type="button" class="btn btn-ghost btn-sm" onclick="clearInspirationSelection()"
+                                id="creatives-clear-btn" style="display:none">Clear</button>
+                        </div>
+                        <p class="field-hint">Click inspirations on the left. Each selected image is analyzed separately
+                            → one image generated per inspiration.</p>
+                    </div>
+
+                    <!-- Generate Prompt Only Toggle -->
+                    <div class="avatar-field" style="margin-bottom: 8px;">
+                        <label
+                            style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 500; font-size: 0.875rem;">
+                            <input type="checkbox" id="prompt-only-toggle" onchange="updateSelectionSummary()">
+                            Generate Prompt Only (Do not generate image)
+                        </label>
+                        <p class="field-hint" style="margin-top: 4px;">Saves API credits by only performing the vision
+                            analysis step.</p>
+                    </div>
+
+                    <!-- Cost + generate -->
+                    <div class="avatar-field">
+                        <div class="prompt-controls">
+                            <span class="cost-label" id="creatives-cost-label">Cost: 0 credits</span>
+                        </div>
+                    </div>
+
+                    <button id="creatives-generate-btn" class="btn btn-accent btn-full" onclick="generateCreatives()">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+                        </svg>
+                        <span>Generate Creatives</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Loading state -->
+            <div id="creatives-loading" class="loading-state" style="display: none;">
+                <div class="spinner"></div>
+                <p id="creatives-loading-text">Analyzing inspirations and generating creatives… This may take a while.
+                </p>
+            </div>
+
+            <!-- Live results -->
+            <div id="creatives-results" style="display:none;">
+                <h3>Just Generated</h3>
+                <div id="creatives-results-grid" class="creatives-results-grid"></div>
+            </div>
+
+            <!-- Batch history -->
+            <div class="prompt-history">
+                <h2>Batch History</h2>
+                {% if batches %}
+                <div id="creatives-batches-list" class="prompts-list">
+                    {% for batch in batches %}
+                    <div class="prompt-history-card" data-batch-id="{{ batch.id }}">
+                        <div class="prompt-header-row">
+                            <div>
+                                <p class="prompt-text-content">
+                                    <strong>{{ batch.product.name }}</strong>
+                                </p>
+                                <span class="prompt-date">
+                                    {{ batch.created_at.strftime('%b %d, %Y at %H:%M') }}
+                                    · {{ batch.results | length }} creative{{ 's' if batch.results | length != 1 else ''
+                                    }}
+                                </span>
+                            </div>
+                            <div class="prompt-actions">
+                                <button class="btn btn-ghost btn-sm btn-danger-hover"
+                                    onclick="deleteCreativeBatch({{ batch.id }})">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <polyline points="3 6 5 6 21 6" />
+                                        <path
+                                            d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        {% if batch.results %}
+                        <div class="creatives-history-grid">
+                            {% for res in batch.results %}
+                            {% if res.status == 'completed' %}
+                            <div class="creative-history-item">
+                                <div class="creative-pair">
+                                    {% if res.inspiration %}
+                                    <div class="creative-mini-img creative-inspiration-thumb"
+                                        onclick="showFullImage(this)" title="Inspiration">
+                                        <img src="data:{{ res.inspiration.mime_type }};base64,{{ res.inspiration.image_data }}"
+                                            alt="Inspiration">
+                                        <span class="ba-label ba-before">IN</span>
+                                    </div>
+                                    {% endif %}
+                                    {% if res.generated_image %}
+                                    <div class="creative-mini-img" onclick="showFullImage(this)" title="Generated">
+                                        <img src="data:image/png;base64,{{ res.generated_image }}" alt="Generated">
+                                        <span class="ba-label ba-after">OUT</span>
+                                    </div>
+                                    {% else %}
+                                    <div class="creative-mini-img"
+                                        style="display: flex; align-items: center; justify-content: center; background: var(--surface-2); text-align: center; font-size: 0.75rem; color: var(--text-muted); padding: 8px;">
+                                        Prompt Only
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                {% if res.generated_prompt %}
+                                <div class="creative-prompt-box collapsed" onclick="togglePrompt(this)">
+                                    <div class="creative-prompt-header">
+                                        <span class="creative-prompt-label">Final Prompt</span>
+                                        {% if not res.generated_image %}
+                                        <button type="button" class="btn btn-ghost btn-sm"
+                                            onclick="copyPromptText(this); event.stopPropagation();"
+                                            style="margin-left:auto; margin-right:8px;">Copy</button>
+                                        {% endif %}
+                                        <svg class="prompt-chevron" width="12" height="12" viewBox="0 0 24 24"
+                                            fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                                            stroke-linejoin="round">
+                                            <polyline points="6 9 12 15 18 9" />
+                                        </svg>
+                                    </div>
+                                    <p class="creative-prompt-text">{{ res.generated_prompt }}</p>
+                                </div>
+                                {% endif %}
+                            </div>
+                            {% elif res.status == 'failed' %}
+                            <div class="creative-history-item creative-failed">
+                                <p class="field-hint">Failed: {{ res.error_message[:60] if res.error_message else
+                                    'Unknown error' }}</p>
+                            </div>
+                            {% endif %}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div id="creatives-history-empty" class="empty-state">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="3" width="18" height="18" rx="2" />
+                        <circle cx="8.5" cy="8.5" r="1.5" />
+                        <polyline points="21 15 16 10 5 21" />
+                    </svg>
+                    <p>No creatives generated yet.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Full-size image modal -->
+<div id="image-modal" class="image-modal" onclick="closeModal(event)">
+    <div class="modal-content">
+        <button class="modal-close"
+            onclick="document.getElementById('image-modal').style.display='none'">&times;</button>
+        <img id="modal-image" src="" alt="Full size image">
+    </div>
+</div>
+
+<style>
+    /* ── Provider selector ─────────────────────────────────────────────── */
+    .provider-selector {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .provider-option {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 14px;
+        border: 1.5px solid var(--border);
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 0.875rem;
+        font-weight: 500;
+        transition: border-color 0.15s, background 0.15s;
+        background: var(--surface);
+        user-select: none;
+    }
+
+    .provider-option:has(input:checked) {
+        border-color: var(--accent);
+        background: color-mix(in srgb, var(--accent) 10%, transparent);
+        color: var(--accent);
+    }
+
+    .provider-option-disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+    }
+
+    .provider-option input[type="radio"] {
+        display: none;
+    }
+
+    .provider-icon {
+        display: flex;
+        align-items: center;
+    }
+
+    /* ── Prompt config section ─────────────────────────────────────────── */
+    .prompts-divider {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: 6px 0 2px;
+        color: var(--text-muted, #888);
+        font-size: 0.72rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+    }
+
+    .prompts-divider::before,
+    .prompts-divider::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        background: var(--border);
+    }
+
+    .prompt-textarea {
+        font-family: inherit;
+        font-size: 0.875rem;
+        line-height: 1.5;
+        resize: vertical;
+        min-height: 60px;
+    }
+
+    .btn-reset-prompt {
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 0.72rem;
+        color: var(--text-muted, #888);
+        padding: 0 4px;
+        margin-left: 6px;
+        vertical-align: middle;
+        opacity: 0.7;
+        transition: opacity 0.15s;
+    }
+
+    .btn-reset-prompt:hover {
+        opacity: 1;
+    }
+
+    /* ── Prompt flow diagram ───────────────────────────────────────────── */
+    .prompt-flow-diagram {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 6px;
+        padding: 10px 12px;
+        background: var(--surface-2, var(--surface));
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        font-size: 0.75rem;
+        margin-bottom: 4px;
+    }
+
+    .pf-step {
+        padding: 3px 8px;
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        background: var(--surface);
+        font-weight: 500;
+        white-space: nowrap;
+    }
+
+    .pf-derived {
+        border-style: dashed;
+        opacity: 0.8;
+    }
+
+    .pf-final {
+        border-color: var(--accent);
+        color: var(--accent);
+        font-weight: 700;
+    }
+
+    .pf-plus,
+    .pf-arrow {
+        color: var(--text-muted, #888);
+        font-weight: 600;
+    }
+
+    .pf-derived em {
+        font-style: italic;
+        font-weight: 400;
+        opacity: 0.7;
+    }
+
+    /* ── Prompt breakdown in results ───────────────────────────────────── */
+    .prompt-breakdown {
+        margin-top: 8px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        overflow: hidden;
+    }
+
+    .prompt-breakdown-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 7px 10px;
+        background: var(--surface-2, var(--surface));
+        cursor: pointer;
+        font-size: 0.75rem;
+        user-select: none;
+    }
+
+    .prompt-breakdown-title {
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--text-muted, #888);
+    }
+
+    .prompt-breakdown-body {
+        padding: 0;
+    }
+
+    .prompt-breakdown.collapsed .prompt-breakdown-body {
+        display: none;
+    }
+
+    .prompt-breakdown.collapsed .prompt-chevron {
+        transform: rotate(0deg);
+        transition: transform 0.2s;
+    }
+
+    .prompt-breakdown:not(.collapsed) .prompt-chevron {
+        transform: rotate(180deg);
+        transition: transform 0.2s;
+    }
+
+    .prompt-step {
+        padding: 8px 10px;
+        border-top: 1px solid var(--border);
+        font-size: 0.8rem;
+    }
+
+    .prompt-step:first-child {
+        border-top: none;
+    }
+
+    .prompt-step-label {
+        font-size: 0.68rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--text-muted, #888);
+        margin-bottom: 4px;
+    }
+
+    .prompt-step-text {
+        white-space: pre-wrap;
+        word-break: break-word;
+        line-height: 1.5;
+        color: var(--text);
+        margin: 0;
+    }
+
+    .prompt-step.step-final .prompt-step-label {
+        color: var(--accent);
+    }
+
+    /* ── Dual image result layout ──────────────────────────────────────── */
+    .creative-result-images {
+        display: flex;
+        gap: 8px;
+    }
+
+    .creative-result-image-wrap {
+        flex: 1;
+        position: relative;
+    }
+
+    .creative-result-provider-label {
+        position: absolute;
+        top: 6px;
+        left: 6px;
+        background: rgba(0, 0, 0, 0.65);
+        color: #fff;
+        font-size: 0.65rem;
+        font-weight: 700;
+        padding: 2px 6px;
+        border-radius: 4px;
+        letter-spacing: 0.05em;
+        z-index: 2;
+        pointer-events: none;
+    }
+
+    .creative-result-meta {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        margin: 6px 0 4px;
+        font-size: 0.72rem;
+        color: var(--text-muted, #888);
+    }
+
+    .creative-result-meta .meta-badge {
+        background: var(--surface-2, var(--surface));
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        padding: 2px 6px;
+        font-weight: 600;
+    }
+
+    /* ── History prompt box ────────────────────────────────────────────── */
+    .creative-prompt-box {
+        margin-top: 8px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        overflow: hidden;
+        cursor: pointer;
+    }
+
+    .creative-prompt-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 6px 10px;
+        background: var(--surface-2, var(--surface));
+        font-size: 0.75rem;
+    }
+
+    .creative-prompt-label {
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--text-muted, #888);
+    }
+
+    .creative-prompt-text {
+        padding: 8px 10px;
+        margin: 0;
+        font-size: 0.8rem;
+        line-height: 1.5;
+        white-space: pre-wrap;
+        word-break: break-word;
+        color: var(--text);
+    }
+
+    .creative-prompt-box.collapsed .creative-prompt-text {
+        display: none;
+    }
+
+    .creative-prompt-box.collapsed .prompt-chevron {
+        transform: rotate(0deg);
+        transition: transform 0.2s;
+    }
+
+    .creative-prompt-box:not(.collapsed) .prompt-chevron {
+        transform: rotate(180deg);
+        transition: transform 0.2s;
+    }
+
+    .btn-save-default {
+        background: none;
+        border: none;
+        color: var(--primary);
+        font-size: 0.75rem;
+        cursor: pointer;
+        padding: 0;
+        text-decoration: underline;
+        margin-left: auto;
+    }
+
+    .btn-save-default:hover {
+        opacity: 0.8;
+    }
+</style>
+
+<script>
+    // ── Default prompts (mirrors Python defaults) ─────────────────────────
+    let DEFAULT_BASE_PROMPT = {{ default_base_prompt | tojson }};
+    let DEFAULT_ANALYSIS_PROMPT = {{ default_analysis_prompt | tojson }};
+    const PRODUCT_INFO_BY_ID = {
+        {% for product in products %}
+        {{ product.id }}: {{ product.build_product_info() | tojson }}{% if not loop.last %},{% endif %}
+        {% endfor %}
+    };
+
+    function checkDefault(field, value) {
+        let isDifferent = false;
+        let btnId = '';
+        if (field === 'base_prompt') {
+            isDifferent = value !== DEFAULT_BASE_PROMPT;
+            btnId = 'btn-save-base';
+        } else if (field === 'analysis_prompt') {
+            isDifferent = value !== DEFAULT_ANALYSIS_PROMPT;
+            btnId = 'btn-save-analysis';
+        }
+
+        const btn = document.getElementById(btnId);
+        if (btn) {
+            btn.style.display = isDifferent ? 'inline-block' : 'none';
+        }
+    }
+
+    async function saveDefault(field, inputId) {
+        const input = document.getElementById(inputId);
+        const value = input.value.trim();
+
+        try {
+            const resp = await fetch('/ai-creatives/save-default', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ field, value })
+            });
+            const data = await resp.json();
+
+            if (!resp.ok) {
+                showFlash(data.error || 'Failed to save defaults.', 'error');
+                return;
+            }
+
+            if (field === 'base_prompt') {
+                DEFAULT_BASE_PROMPT = value;
+                document.getElementById('btn-save-base').style.display = 'none';
+            } else if (field === 'analysis_prompt') {
+                DEFAULT_ANALYSIS_PROMPT = value;
+                document.getElementById('btn-save-analysis').style.display = 'none';
+            }
+
+            showFlash('Saved as default.', 'success');
+        } catch (err) {
+            showFlash('Network error.', 'error');
+        }
+    }
+
+    // ── State ─────────────────────────────────────────────────────────────
+    const selectedInspirationIds = new Set();
+
+    // ── Reset prompts ─────────────────────────────────────────────────────
+    function resetPrompt(which) {
+        if (which === 'base') {
+            const el = document.getElementById('base-prompt');
+            el.value = DEFAULT_BASE_PROMPT;
+            checkDefault('base_prompt', el.value);
+        } else if (which === 'analysis') {
+            const el = document.getElementById('analysis-prompt');
+            el.value = DEFAULT_ANALYSIS_PROMPT;
+            checkDefault('analysis_prompt', el.value);
+        }
+    }
+
+    // ── Provider change ───────────────────────────────────────────────────
+    function getSelectedProvider() {
+        const radio = document.querySelector('input[name="ai-provider"]:checked');
+        return radio ? radio.value : 'gemini';
+    }
+
+    function onProviderChange() {
+        updateSelectionSummary();
+        const provider = getSelectedProvider();
+        const hints = {
+            gemini: 'Gemini: inspiration image + all product images sent as visual context to generation.',
+            openai: 'OpenAI (gpt-image-1): visual context from analysis step is embedded in the regen prompt.',
+            both: 'Both: generates one image per provider. Costs 2 credits per inspiration.',
+        };
+        document.getElementById('provider-hint').textContent = hints[provider] || '';
+    }
+
+    function updateProductInfoPreview() {
+        const productId = document.getElementById('creatives-product').value;
+        document.getElementById('product-info-preview').value = PRODUCT_INFO_BY_ID[productId] || '';
+    }
+
+    // ── Inspiration upload ────────────────────────────────────────────────
+    function handleInspirationDrop(event) {
+        event.preventDefault();
+        document.getElementById('inspiration-drop-zone').classList.remove('drag-over');
+        const files = Array.from(event.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+        if (files.length) uploadInspirationFiles(files);
+    }
+
+    function handleInspirationFileSelect(event) {
+        const files = Array.from(event.target.files);
+        if (files.length) uploadInspirationFiles(files);
+        event.target.value = '';
+    }
+
+    async function uploadInspirationFiles(files) {
+        const images = [];
+        for (const file of files) {
+            const b64 = await fileToBase64(file);
+            images.push({ name: file.name, mime_type: file.type || 'image/jpeg', data: b64 });
+        }
+        const resp = await fetch('/ai-creatives/inspirations', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ images }),
+        });
+        const data = await resp.json();
+        if (!resp.ok) { showFlash(data.error || 'Upload failed', 'error'); return; }
+        location.reload();
+    }
+
+    function fileToBase64(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result.split(',')[1]);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+        });
+    }
+
+    // ── Inspiration selection ─────────────────────────────────────────────
+    function toggleInspirationSelect(card) {
+        const id = parseInt(card.dataset.id);
+        if (selectedInspirationIds.has(id)) {
+            selectedInspirationIds.delete(id);
+            card.classList.remove('selected');
+        } else {
+            selectedInspirationIds.add(id);
+            card.classList.add('selected');
+        }
+        updateSelectionSummary();
+    }
+
+    function clearInspirationSelection() {
+        selectedInspirationIds.clear();
+        document.querySelectorAll('.inspiration-card.selected').forEach(c => c.classList.remove('selected'));
+        updateSelectionSummary();
+    }
+
+    function updateSelectionSummary() {
+        const count = selectedInspirationIds.size;
+        const provider = getSelectedProvider();
+        const isPromptOnly = document.getElementById('prompt-only-toggle').checked;
+        const imagesPerInsp = provider === 'both' ? 2 : 1;
+        const totalCredits = isPromptOnly ? 0 : (count * imagesPerInsp);
+
+        document.getElementById('creatives-selected-count').textContent =
+            count === 0 ? '0 selected' : `${count} inspiration${count !== 1 ? 's' : ''} selected`;
+
+        let costText = `Cost: ${totalCredits} credit${totalCredits !== 1 ? 's' : ''}`;
+        if (isPromptOnly) {
+            costText += ' (Prompt only)';
+        } else if (provider === 'both') {
+            costText += ' (2 per inspiration)';
+        }
+        document.getElementById('creatives-cost-label').textContent = costText;
+        document.getElementById('creatives-clear-btn').style.display = count > 0 ? 'inline-flex' : 'none';
+    }
+
+    // ── Delete inspiration ────────────────────────────────────────────────
+    async function deleteInspiration(event, id) {
+        event.stopPropagation();
+        const resp = await fetch(`/ai-creatives/inspirations/${id}`, { method: 'DELETE' });
+        const data = await resp.json();
+        if (!resp.ok) { showFlash(data.error || 'Delete failed', 'error'); return; }
+        const card = document.querySelector(`.inspiration-card[data-id="${id}"]`);
+        if (card) card.remove();
+        selectedInspirationIds.delete(id);
+        updateSelectionSummary();
+        checkInspirationEmpty();
+    }
+
+    function checkInspirationEmpty() {
+        const grid = document.getElementById('inspirations-grid');
+        let empty = document.getElementById('inspirations-empty');
+        if (grid && grid.querySelectorAll('.inspiration-card').length === 0) {
+            if (!empty) {
+                empty = document.createElement('div');
+                empty.id = 'inspirations-empty';
+                empty.className = 'empty-state';
+                empty.innerHTML = '<p>No inspirations yet. Upload some ads above.</p>';
+                grid.parentNode.insertBefore(empty, grid.nextSibling);
+            }
+            empty.style.display = '';
+        }
+    }
+
+    // ── Generate ──────────────────────────────────────────────────────────
+    async function generateCreatives() {
+        const productId = document.getElementById('creatives-product').value;
+        if (!productId) { showFlash('Please select a product.', 'error'); return; }
+        if (selectedInspirationIds.size === 0) { showFlash('Select at least one inspiration image.', 'error'); return; }
+
+        const basePrompt = document.getElementById('base-prompt').value.trim();
+        const analysisPrompt = document.getElementById('analysis-prompt').value.trim();
+        const productInfoSource = document.getElementById('product-info-source').value;
+        const isPromptOnly = document.getElementById('prompt-only-toggle').checked;
+
+        if (!basePrompt) { showFlash('Base prompt is required.', 'error'); return; }
+        if (!analysisPrompt) { showFlash('Analysis prompt is required.', 'error'); return; }
+
+        const provider = getSelectedProvider();
+        const imagesPerInsp = provider === 'both' ? 2 : 1;
+        const cost = isPromptOnly ? 0 : (selectedInspirationIds.size * imagesPerInsp);
+        const credits = parseInt(document.getElementById('creatives-credits-count').textContent);
+        if (cost > credits) {
+            showFlash(`Not enough credits. Need ${cost}, have ${credits}.`, 'error');
+            return;
+        }
+
+        const btn = document.getElementById('creatives-generate-btn');
+        const loadingEl = document.getElementById('creatives-loading');
+        const loadingText = document.getElementById('creatives-loading-text');
+        btn.disabled = true;
+        loadingEl.style.display = 'flex';
+
+        if (isPromptOnly) {
+            loadingText.textContent = `Analyzing ${selectedInspirationIds.size} inspiration(s) to generate prompts only… This may take a while.`;
+        } else {
+            loadingText.textContent = `Analyzing ${selectedInspirationIds.size} inspiration(s) and generating with ${provider === 'both' ? 'Gemini + OpenAI' : provider}… This may take a while.`;
+        }
+
+        document.getElementById('creatives-results').style.display = 'none';
+
+        try {
+            const resp = await fetch('/ai-creatives/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    product_id: parseInt(productId),
+                    inspiration_ids: Array.from(selectedInspirationIds),
+                    provider,
+                    base_prompt: basePrompt,
+                    analysis_prompt: analysisPrompt,
+                    product_info_source: productInfoSource,
+                    prompt_only: isPromptOnly,
+                }),
+
+            });
+            const data = await resp.json();
+
+            if (!resp.ok) {
+                const msgs = {
+                    no_gemini_key: 'Gemini API key missing. Add it on the AI Image page.',
+                    no_openai_key: 'OpenAI API key missing. Add it on the AI Image page.',
+                };
+                showFlash(msgs[data.error] || data.error || 'Generation failed.', 'error');
+                return;
+            }
+
+            document.getElementById('creatives-credits-count').textContent = data.credits_remaining;
+            renderNewResults(data.results, data.provider);
+            clearInspirationSelection();
+        } catch (err) {
+            showFlash('Network error. Please try again.', 'error');
+        } finally {
+            btn.disabled = false;
+            loadingEl.style.display = 'none';
+        }
+    }
+
+    // ── Render results ────────────────────────────────────────────────────
+    function renderNewResults(results, provider) {
+        const grid = document.getElementById('creatives-results-grid');
+        grid.innerHTML = '';
+
+        results.forEach(r => {
+            const item = document.createElement('div');
+            item.className = 'creative-result-item';
+
+            if (r.status === 'completed') {
+                // Images section
+                let imagesHtml = '';
+                const isPromptOnly = !(r.openai_image || r.gemini_image);
+                if (!isPromptOnly) {
+                    if (provider === 'both') {
+                        imagesHtml = `<div class="creative-result-images">`;
+                        if (r.openai_image) {
+                            imagesHtml += imageWrapHtml(r.openai_image, 'OpenAI', `creative_openai_${r.id}.png`);
+                        }
+                        if (r.gemini_image) {
+                            imagesHtml += imageWrapHtml(r.gemini_image, 'Gemini', `creative_gemini_${r.id}.png`);
+                        }
+                        imagesHtml += `</div>`;
+                    } else {
+                        const img = r.gemini_image || r.openai_image;
+                        const label = r.gemini_image ? 'Gemini' : 'OpenAI';
+                        imagesHtml = `<div class="creative-result-images">` +
+                            imageWrapHtml(img, label, `creative_${r.id}.png`) + `</div>`;
+                    }
+                }
+
+                // Meta badge
+                const metaHtml = `
+                <div class="creative-result-meta">
+                    <span class="meta-badge">${r.product_image_count} product img${r.product_image_count !== 1 ? 's' : ''} used</span>
+                    <span class="meta-badge">+ inspiration image sent to generation</span>
+                </div>`;
+
+                // Full prompt breakdown
+                let breakdownHtml = '';
+                if (isPromptOnly) {
+                    breakdownHtml = buildPromptOnlyBreakdown(r);
+                } else {
+                    breakdownHtml = buildPromptBreakdown(r);
+                }
+
+                item.innerHTML = imagesHtml + metaHtml + breakdownHtml;
+            } else {
+                item.innerHTML = `<p class="field-hint" style="color:var(--error)">Failed: ${escapeHtml(r.error || 'Unknown error')}</p>`;
+            }
+            grid.appendChild(item);
+        });
+
+        document.getElementById('creatives-results').style.display = 'block';
+    }
+
+    function imageWrapHtml(b64, label, filename) {
+        return `
+        <div class="creative-result-image-wrap">
+            <span class="creative-result-provider-label">${label}</span>
+            <div class="creative-result-image" onclick="showFullImageData('data:image/png;base64,${b64}')">
+                <img src="data:image/png;base64,${b64}" alt="${label} creative">
+                <a class="creative-download-btn" href="data:image/png;base64,${b64}"
+                   download="${filename}" onclick="event.stopPropagation()">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="7 10 12 15 17 10"/>
+                        <line x1="12" y1="15" x2="12" y2="3"/>
+                    </svg>
+                </a>
+            </div>
+        </div>`;
+    }
+
+    async function copyPromptText(btn, text = null) {
+        const promptText = text ?? getPromptTextForCopy(btn);
+        if (!promptText) return;
+
+        try {
+            await navigator.clipboard.writeText(promptText);
+            const originalText = btn.innerHTML;
+            btn.innerHTML = 'Copied!';
+            setTimeout(() => btn.innerHTML = originalText, 2000);
+        } catch (err) {
+            showFlash('Failed to copy prompt.', 'error');
+        }
+    }
+
+    function getPromptTextForCopy(btn) {
+        const promptOnlyContainer = btn.closest('.prompt-only-container');
+        if (promptOnlyContainer) {
+            const promptEl = promptOnlyContainer.querySelector('.step-final .prompt-step-text');
+            return promptEl ? promptEl.textContent.trim() : '';
+        }
+
+        const historyBox = btn.closest('.creative-prompt-box');
+        if (historyBox) {
+            const promptEl = historyBox.querySelector('.creative-prompt-text');
+            return promptEl ? promptEl.textContent.trim() : '';
+        }
+
+        return '';
+    }
+
+    function buildPromptOnlyBreakdown(r) {
+        const otherSteps = [
+            r.product_info ? { label: 'Product Info', text: r.product_info, cls: '' } : null,
+            { label: 'Analysis Prompt', text: r.analysis_prompt, cls: '' },
+            { label: 'Regen Prompt (from analysis)', text: r.regen_prompt, cls: '' },
+            { label: 'Base Prompt', text: r.base_prompt, cls: '' },
+        ].filter(Boolean);
+
+        const otherStepsHtml = otherSteps.map(s => `
+        <div class="prompt-step ${s.cls}">
+            <div class="prompt-step-label">${s.label}</div>
+            <p class="prompt-step-text">${escapeHtml(s.text || '')}</p>
+        </div>`).join('');
+
+        return `
+        <div class="prompt-only-container" style="border: 1px solid var(--border); border-radius: 6px; overflow: hidden; margin-top: 8px;">
+            <div class="prompt-step step-final" style="border-top: none; background: var(--surface-2, var(--surface));">
+                <div class="prompt-step-label" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <span style="font-size: 0.8rem; font-weight: 700; color: var(--text);">FINAL GENERATED PROMPT</span>
+                    <button type="button" class="btn btn-ghost btn-sm" onclick="copyPromptText(this)" style="padding: 4px 10px; font-size: 0.75rem; height: auto; border: 1px solid var(--border); background: var(--surface);">Copy</button>
+                </div>
+                <p class="prompt-step-text" style="font-size: 0.9rem; padding-bottom: 8px;">${escapeHtml(r.final_prompt)}</p>
+            </div>
+            
+            <div class="prompt-breakdown collapsed" onclick="togglePrompt(this)" style="margin-top: 0; border: none; border-top: 1px solid var(--border); border-radius: 0;">
+                <div class="prompt-breakdown-header" style="background: transparent;">
+                    <span class="prompt-breakdown-title">Expand Origin Breakdown</span>
+                    <svg class="prompt-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                </div>
+                <div class="prompt-breakdown-body">${otherStepsHtml}</div>
+            </div>
+        </div>`;
+    }
+
+    function buildPromptBreakdown(r) {
+        const steps = [
+            r.product_info ? { label: 'Product Info', text: r.product_info, cls: '' } : null,
+            { label: 'Analysis Prompt', text: r.analysis_prompt, cls: '' },
+            { label: 'Regen Prompt (from analysis)', text: r.regen_prompt, cls: '' },
+            { label: 'Base Prompt', text: r.base_prompt, cls: '' },
+            { label: 'Final Prompt (sent to generation)', text: r.final_prompt, cls: 'step-final' },
+        ].filter(Boolean);
+
+        const stepsHtml = steps.map(s => `
+        <div class="prompt-step ${s.cls}">
+            <div class="prompt-step-label">${s.label}</div>
+            <p class="prompt-step-text">${escapeHtml(s.text || '')}</p>
+        </div>`).join('');
+
+        return `
+        <div class="prompt-breakdown collapsed" onclick="togglePrompt(this)">
+            <div class="prompt-breakdown-header">
+                <span class="prompt-breakdown-title">Prompt Breakdown</span>
+                <svg class="prompt-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+            <div class="prompt-breakdown-body">${stepsHtml}</div>
+        </div>`;
+    }
+
+    function togglePrompt(box) {
+        box.classList.toggle('collapsed');
+    }
+
+    // ── Delete batch ──────────────────────────────────────────────────────
+    async function deleteCreativeBatch(batchId) {
+        const resp = await fetch(`/ai-creatives/batch/${batchId}`, { method: 'DELETE' });
+        const data = await resp.json();
+        if (!resp.ok) { showFlash(data.error || 'Delete failed', 'error'); return; }
+        const card = document.querySelector(`.prompt-history-card[data-batch-id="${batchId}"]`);
+        if (card) card.remove();
+    }
+
+    // ── Shared helpers ────────────────────────────────────────────────────
+    function showFullImage(el) {
+        const img = el.querySelector('img');
+        if (!img) return;
+        document.getElementById('modal-image').src = img.src;
+        document.getElementById('image-modal').style.display = 'flex';
+    }
+
+    function showFullImageData(src) {
+        document.getElementById('modal-image').src = src;
+        document.getElementById('image-modal').style.display = 'flex';
+    }
+
+    function closeModal(event) {
+        if (event.target.id === 'image-modal') event.target.style.display = 'none';
+    }
+
+    function escapeHtml(str) {
+        return String(str)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    function showFlash(message, type) {
+        const container = document.querySelector('.flash-container') || (() => {
+            const c = document.createElement('div');
+            c.className = 'flash-container';
+            document.body.prepend(c);
+            return c;
+        })();
+        const el = document.createElement('div');
+        el.className = `flash-message flash-${type}`;
+        el.textContent = message;
+        container.appendChild(el);
+        setTimeout(() => el.remove(), 5000);
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const productSelect = document.getElementById('creatives-product');
+        if (productSelect) {
+            productSelect.addEventListener('change', updateProductInfoPreview);
+        }
+        updateProductInfoPreview();
+    });
+</script>
+{% endblock %}

@@ -4,8 +4,12 @@ from urllib.parse import quote_plus
 from dotenv import load_dotenv
 from flask import Blueprint, Flask, redirect, render_template, session, url_for
 
+from ai_creatives import ai_creatives_bp
+from ai_image import ai_image_bp
 from auth import auth_bp, login_required
+from avatars import avatars_bp
 from db import db, migrate
+from products import products_bp
 from scraper import scraper_bp
 
 load_dotenv()
@@ -35,6 +39,10 @@ migrate.init_app(app, db)
 # Register blueprints
 app.register_blueprint(auth_bp)
 app.register_blueprint(scraper_bp)
+app.register_blueprint(ai_image_bp)
+app.register_blueprint(products_bp)
+app.register_blueprint(avatars_bp)
+app.register_blueprint(ai_creatives_bp)
 
 
 @app.route("/")
