@@ -254,6 +254,12 @@ let selectedVariations = 1;
 let uploadedFiles = [];
 let remixEnabled = false;
 
+function getInsufficientCreditsRedirect(creditsElementId) {
+    const el = document.getElementById(creditsElementId);
+    const tier = (el?.dataset?.planTier || 'free').toLowerCase();
+    return tier === 'free' ? '/upgrade' : '/credits-store';
+}
+
 /**
  * Set the number of variations for image generation.
  */
@@ -264,7 +270,8 @@ function setVariations(count) {
     });
     const costLabel = document.getElementById('cost-label');
     if (costLabel) {
-        costLabel.textContent = `Cost: ${count} credit${count > 1 ? 's' : ''}`;
+        const credits = count * 2;
+        costLabel.textContent = `Cost: ${credits} credits (2 per variation)`;
     }
 }
 
@@ -345,8 +352,10 @@ async function generateImages() {
     // Check credits
     const creditsEl = document.getElementById('credits-count');
     const currentCredits = parseInt(creditsEl?.textContent || '0');
-    if (currentCredits < selectedVariations) {
-        alert(`Not enough credits. You need ${selectedVariations} but have ${currentCredits}.`);
+    const requiredCredits = selectedVariations * 2;
+    if (currentCredits < requiredCredits) {
+        alert(`Not enough credits. You need ${requiredCredits} but have ${currentCredits}. Redirecting...`);
+        window.location.href = getInsufficientCreditsRedirect('credits-count');
         return;
     }
 
@@ -387,20 +396,18 @@ async function generateImages() {
 
         if (!resp.ok) {
             if (data.error === 'no_api_key') {
-                const banner = document.getElementById('api-key-banner');
-                if (banner) {
-                    banner.style.display = 'block';
-                    banner.innerHTML = createApiKeyBannerHTML();
-                }
+                alert('Gemini API key is not configured on the platform.');
                 return;
             }
+
             if (data.error === 'no_openai_key') {
-                const banner = document.getElementById('openai-key-banner');
-                if (banner) {
-                    banner.style.display = 'block';
-                    banner.scrollIntoView({ behavior: 'smooth' });
-                }
-                alert('OpenAI API key is required for prompt remixing. Please add your key above.');
+                alert('OpenAI API key is not configured on the platform for prompt remixing.');
+                return;
+            }
+
+            if (data.redirect_url) {
+                alert((data.error || 'Action required.') + ' Redirecting...');
+                window.location.href = data.redirect_url;
                 return;
             }
             alert(data.error || 'Generation failed.');
@@ -410,6 +417,14 @@ async function generateImages() {
         // Update credits
         if (creditsEl && data.credits_remaining !== undefined) {
             creditsEl.textContent = data.credits_remaining;
+        }
+        const monthlyEl = document.getElementById('monthly-credits-count');
+        const extraEl = document.getElementById('extra-credits-count');
+        if (monthlyEl && data.monthly_credits !== undefined) {
+            monthlyEl.textContent = data.monthly_credits;
+        }
+        if (extraEl && data.extra_credits !== undefined) {
+            extraEl.textContent = data.extra_credits;
         }
 
         // Show results
@@ -707,10 +722,10 @@ function setAvatarCount(count) {
  * Update cost label.
  */
 function updateAvatarCost() {
-    const total = selectedPersonas.length * avatarCountPerPersona;
+    const total = selectedPersonas.length * avatarCountPerPersona * 4;
     const label = document.getElementById('avatar-cost-label');
     if (label) {
-        label.textContent = `Cost: ${total} credit${total !== 1 ? 's' : ''}`;
+        label.textContent = `Cost: ${total} credits (4 per avatar pair)`;
     }
 }
 
@@ -727,11 +742,12 @@ async function generateAvatars() {
     if (!characteristic) { charInput.focus(); return; }
     if (selectedPersonas.length === 0) { alert('Select at least one persona.'); return; }
 
-    const totalCost = selectedPersonas.length * avatarCountPerPersona;
+    const totalCost = selectedPersonas.length * avatarCountPerPersona * 4;
     const creditsEl = document.getElementById('avatar-credits-count');
     const currentCredits = parseInt(creditsEl?.textContent || '0');
     if (currentCredits < totalCost) {
-        alert(`Not enough credits. You need ${totalCost} but have ${currentCredits}.`);
+        alert(`Not enough credits. You need ${totalCost} but have ${currentCredits}. Redirecting...`);
+        window.location.href = getInsufficientCreditsRedirect('avatar-credits-count');
         return;
     }
 
@@ -761,7 +777,12 @@ async function generateAvatars() {
 
         if (!resp.ok) {
             if (data.error === 'no_api_key') {
-                alert('Gemini API key required. Configure it on the AI Image page.');
+                alert('Gemini API key is not configured on the platform.');
+                return;
+            }
+            if (data.redirect_url) {
+                alert((data.error || 'Action required.') + ' Redirecting...');
+                window.location.href = data.redirect_url;
                 return;
             }
             alert(data.error || 'Generation failed.');
@@ -770,6 +791,14 @@ async function generateAvatars() {
 
         if (creditsEl && data.credits_remaining !== undefined) {
             creditsEl.textContent = data.credits_remaining;
+        }
+        const monthlyEl = document.getElementById('avatar-monthly-credits-count');
+        const extraEl = document.getElementById('avatar-extra-credits-count');
+        if (monthlyEl && data.monthly_credits !== undefined) {
+            monthlyEl.textContent = data.monthly_credits;
+        }
+        if (extraEl && data.extra_credits !== undefined) {
+            extraEl.textContent = data.extra_credits;
         }
 
         renderAvatarResults(data.results);

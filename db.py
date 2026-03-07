@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta, timezone
+
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.sql import func
@@ -14,7 +16,14 @@ class User(db.Model):
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(256), nullable=False)
-    credits = db.Column(db.Integer, nullable=False, default=10)
+    credits = db.Column(db.Integer, nullable=False, default=30)
+    extra_credits = db.Column(db.Integer, nullable=False, default=0)
+    plan_tier = db.Column(db.String(20), nullable=False, default="free")
+    next_credit_reset_at = db.Column(
+        db.DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc) + timedelta(days=30),
+    )
     default_base_prompt = db.Column(db.Text, nullable=True)
     default_analysis_prompt = db.Column(db.Text, nullable=True)
     default_product_info = db.Column(db.Text, nullable=True)
@@ -36,6 +45,15 @@ class User(db.Model):
     creative_batches = db.relationship(
         "CreativeBatch", backref="user", lazy=True, cascade="all, delete-orphan"
     )
+    credit_ledger_entries = db.relationship(
+        "CreditLedger", backref="user", lazy=True, cascade="all, delete-orphan"
+    )
+    mock_payments = db.relationship(
+        "MockPayment", backref="user", lazy=True, cascade="all, delete-orphan"
+    )
+    usage_events = db.relationship(
+        "UsageEvent", backref="user", lazy=True, cascade="all, delete-orphan"
+    )
 
 
 class ApiKey(db.Model):
@@ -51,6 +69,59 @@ class ApiKey(db.Model):
     updated_at = db.Column(
         db.DateTime(timezone=True), server_default=func.now(),
         onupdate=func.now(), nullable=False
+    )
+
+
+class CreditLedger(db.Model):
+    __tablename__ = "credit_ledger"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    entry_type = db.Column(db.String(20), nullable=False)  # credit | debit
+    source = db.Column(db.String(50), nullable=False)  # usage | plan_purchase | etc
+    monthly_delta = db.Column(db.Integer, nullable=False, default=0)
+    extra_delta = db.Column(db.Integer, nullable=False, default=0)
+    monthly_balance = db.Column(db.Integer, nullable=False, default=0)
+    extra_balance = db.Column(db.Integer, nullable=False, default=0)
+    feature = db.Column(db.String(50), nullable=True)
+    provider = db.Column(db.String(50), nullable=True)
+    description = db.Column(db.Text, nullable=True)
+    metadata_json = db.Column(db.Text, nullable=True)
+    created_at = db.Column(
+        db.DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+
+class MockPayment(db.Model):
+    __tablename__ = "mock_payments"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    payment_type = db.Column(db.String(20), nullable=False)  # plan | credits
+    plan_tier = db.Column(db.String(20), nullable=True)
+    pack_id = db.Column(db.String(50), nullable=True)
+    amount_eur = db.Column(db.Numeric(10, 2), nullable=False)
+    currency = db.Column(db.String(10), nullable=False, default="EUR")
+    status = db.Column(db.String(20), nullable=False, default="paid")
+    metadata_json = db.Column(db.Text, nullable=True)
+    created_at = db.Column(
+        db.DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+
+class UsageEvent(db.Model):
+    __tablename__ = "usage_events"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    feature = db.Column(db.String(50), nullable=False)
+    provider = db.Column(db.String(50), nullable=True)
+    units = db.Column(db.Integer, nullable=False, default=1)
+    credits_charged = db.Column(db.Integer, nullable=False)
+    estimated_cost_usd = db.Column(db.Numeric(12, 5), nullable=False, default=0)
+    metadata_json = db.Column(db.Text, nullable=True)
+    created_at = db.Column(
+        db.DateTime(timezone=True), server_default=func.now(), nullable=False
     )
 
 
@@ -127,7 +198,8 @@ class ProductImage(db.Model):
     sort_order = db.Column(db.Integer, nullable=False, default=1)
     filename = db.Column(db.String(255), nullable=True)
     mime_type = db.Column(db.String(100), nullable=False)
-    image_data = db.Column(db.Text, nullable=False)
+    storage_path = db.Column(db.String(500), nullable=True)
+    image_data = db.Column(db.Text, nullable=True)
     created_at = db.Column(
         db.DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -178,7 +250,8 @@ class CreativeInspiration(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     name = db.Column(db.String(255), nullable=True)
-    image_data = db.Column(db.Text, nullable=False)  # base64 encoded
+    storage_path = db.Column(db.String(500), nullable=True)
+    image_data = db.Column(db.Text, nullable=True)  # base64 fallback during migration
     mime_type = db.Column(db.String(100), nullable=False)
     created_at = db.Column(
         db.DateTime(timezone=True), server_default=func.now(), nullable=False

@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+{% block title %}Script Optimizer - EcomFans{% endblock %}
+{% block content %}
+<div class="ai-image-page">
+    <div class="dashboard-header">
+        <span class="page-eyebrow">AI Generation</span>
+        <h1>Script Optimizer</h1>
+        <p>Upload a video, transcribe speech to text, and return only the script.</p>
+    </div>
+
+    {% if not has_openai_key %}
+    <div class="api-key-banner">
+        <div class="api-key-banner-content">
+            <div class="api-key-icon">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path
+                        d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4" />
+                </svg>
+            </div>
+            <div class="api-key-text">
+                <h3>OpenAI Platform Key Required</h3>
+                <p>The server key <code>OPENAI_API_KEY</code> must be configured by the platform admin.</p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="prompt-section">
+        <h2>Upload Video</h2>
+        <div class="prompt-card script-opt-card">
+            <label class="upload-drop-zone script-upload-zone">
+                <input type="file" id="script-video-input" accept="video/*,audio/*" style="display:none"
+                    onchange="setSelectedVideo(this)">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="17 8 12 3 7 8" />
+                    <line x1="12" y1="3" x2="12" y2="15" />
+                </svg>
+                <span id="script-upload-label">Click to select video file</span>
+            </label>
+            <p class="field-hint" style="margin-top: 10px;">
+                Max file size: {{ max_upload_mb }}MB. File is deleted from server immediately after transcription.
+            </p>
+            <div class="prompt-controls">
+                <button id="script-transcribe-btn" class="btn btn-accent" onclick="transcribeVideo()" {% if not has_openai_key %}disabled{% endif %}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+                    </svg>
+                    <span>Transcribe</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="script-loading" class="loading-state" style="display:none;">
+        <div class="spinner"></div>
+        <p>Transcribing video speech...</p>
+    </div>
+
+    <div class="prompt-section">
+        <h2>Transcript</h2>
+        <div class="prompt-card script-result-card">
+            <textarea id="script-transcript-output" rows="12" readonly
+                placeholder="Transcript text will appear here..."></textarea>
+            <div class="prompt-controls">
+                <button id="script-copy-btn" class="btn btn-ghost" onclick="copyTranscript()" disabled>Copy Text</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .script-opt-card {
+        max-width: 760px;
+    }
+
+    .script-upload-zone {
+        margin-top: 6px;
+    }
+
+    .script-result-card textarea {
+        min-height: 260px;
+    }
+</style>
+
+<script>
+    let selectedVideoFile = null;
+    const MAX_UPLOAD_BYTES = {{ max_upload_mb|int }} * 1024 * 1024;
+
+    function setSelectedVideo(input) {
+        const label = document.getElementById('script-upload-label');
+        selectedVideoFile = (input.files && input.files[0]) ? input.files[0] : null;
+        if (!selectedVideoFile) {
+            label.textContent = 'Click to select video file';
+            return;
+        }
+        label.textContent = `${selectedVideoFile.name} (${formatBytes(selectedVideoFile.size)})`;
+    }
+
+    async function transcribeVideo() {
+        if (!selectedVideoFile) {
+            showScriptFlash('Please select a video file.', 'error');
+            return;
+        }
+        if (selectedVideoFile.size > MAX_UPLOAD_BYTES) {
+            showScriptFlash(`Video is too large. Max allowed is {{ max_upload_mb }}MB.`, 'error');
+            return;
+        }
+
+        const transcribeBtn = document.getElementById('script-transcribe-btn');
+        const loading = document.getElementById('script-loading');
+        const output = document.getElementById('script-transcript-output');
+        const copyBtn = document.getElementById('script-copy-btn');
+
+        transcribeBtn.disabled = true;
+        loading.style.display = 'flex';
+        copyBtn.disabled = true;
+
+        try {
+            const form = new FormData();
+            form.append('video', selectedVideoFile);
+
+            const resp = await fetch('/script-optimizer/transcribe', {
+                method: 'POST',
+                body: form,
+            });
+            const data = await resp.json();
+            if (!resp.ok) {
+                const msg = data.error === 'no_openai_key'
+                    ? 'OpenAI API key is not configured on the platform.'
+                    : (data.error || 'Transcription failed.');
+                showScriptFlash(msg, 'error');
+                return;
+            }
+
+            output.value = data.text || '';
+            copyBtn.disabled = !(output.value && output.value.trim());
+            showScriptFlash('Transcript ready.', 'success');
+        } catch (err) {
+            showScriptFlash('Network error while transcribing.', 'error');
+        } finally {
+            transcribeBtn.disabled = false;
+            loading.style.display = 'none';
+        }
+    }
+
+    async function copyTranscript() {
+        const output = document.getElementById('script-transcript-output');
+        const text = (output.value || '').trim();
+        if (!text) return;
+        try {
+            await navigator.clipboard.writeText(text);
+            showScriptFlash('Transcript copied.', 'success');
+        } catch (err) {
+            showScriptFlash('Copy failed.', 'error');
+        }
+    }
+
+    function formatBytes(bytes) {
+        if (!Number.isFinite(bytes) || bytes <= 0) return '0 B';
+        const units = ['B', 'KB', 'MB', 'GB'];
+        const base = 1024;
+        const i = Math.min(Math.floor(Math.log(bytes) / Math.log(base)), units.length - 1);
+        const value = bytes / (base ** i);
+        return `${value.toFixed(value >= 10 || i === 0 ? 0 : 1)} ${units[i]}`;
+    }
+
+    function showScriptFlash(message, type) {
+        const container = document.querySelector('.flash-container') || (() => {
+            const c = document.createElement('div');
+            c.className = 'flash-container';
+            document.body.prepend(c);
+            return c;
+        })();
+        const el = document.createElement('div');
+        el.className = `flash flash-${type}`;
+        el.textContent = message;
+        container.appendChild(el);
+        setTimeout(() => el.remove(), 5000);
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,62 @@
+﻿{% extends "base.html" %}
+{% block title %}Buy Credits - EcomFans{% endblock %}
+{% block content %}
+<div class="dashboard billing-page">
+    <div class="dashboard-header">
+        <span class="page-eyebrow">Billing</span>
+        <h1>Credits Store</h1>
+        <p>Top up your account when your monthly plan credits run out.</p>
+    </div>
+
+    <div class="ai-credits-bar billing-summary-bar">
+        <div class="credits-badge">
+            <span><strong>{{ billing_summary.available_credits }}</strong> total credits</span>
+        </div>
+        <div class="credits-badge">
+            <span><strong>{{ billing_summary.monthly_credits }}</strong> monthly + <strong>{{ billing_summary.extra_credits }}</strong> extra</span>
+        </div>
+        <div class="credits-badge">
+            <span>Plan: <strong>{{ billing_summary.plan_name }}</strong></span>
+        </div>
+    </div>
+
+    <div class="billing-pack-grid">
+        {% for pack in packs %}
+        <article class="billing-pack-card">
+            <h3>{{ pack.name }}</h3>
+            <p class="plan-price">€{{ pack.price_eur }}</p>
+            <p class="field-hint">Adds {{ pack.credits }} extra credits to your wallet.</p>
+            <button class="btn btn-accent btn-full" onclick="mockBuyCredits('{{ pack.id }}')">Buy {{ pack.name }}</button>
+        </article>
+        {% endfor %}
+    </div>
+
+    <div class="prompt-section">
+        <div class="prompt-card">
+            <h3>Want included monthly credits?</h3>
+            <p>Upgrade your plan to increase your monthly allowance.</p>
+            <a class="btn btn-primary" href="{{ url_for('billing.upgrade_page') }}">Back to Plans</a>
+        </div>
+    </div>
+</div>
+
+<script>
+async function mockBuyCredits(packId) {
+    const resp = await fetch('/billing/mock/checkout/credits', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pack_id: packId })
+    });
+    const data = await resp.json();
+
+    if (!resp.ok) {
+        alert(data.error || 'Checkout failed.');
+        if (data.redirect_url) window.location.href = data.redirect_url;
+        return;
+    }
+
+    alert(`Credit pack purchased successfully (mock payment).`);
+    window.location.reload();
+}
+</script>
+{% endblock %}

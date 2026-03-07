@@ -6,6 +6,7 @@ uses the same code path, model IDs, and error handling.
 """
 
 import base64
+import os
 
 import requests
 
@@ -16,6 +17,7 @@ GEMINI_VISION_MODEL = "gemini-2.5-flash"         # text / multimodal vision
 
 OPENAI_CHAT_MODEL = "gpt-4o-mini"
 OPENAI_IMAGE_MODEL = "gpt-image-1"
+OPENAI_TRANSCRIBE_MODEL = "gpt-4o-mini-transcribe"
 
 
 # ── Gemini ────────────────────────────────────────────────────────────
@@ -252,6 +254,39 @@ def openai_chat(
         return accumulated_text
 
     raise RuntimeError("OpenAI chat output was truncated before any text was returned.")
+
+
+def openai_transcribe_file(
+    api_key: str,
+    file_path: str,
+    mime_type: str | None = None,
+    model: str = OPENAI_TRANSCRIBE_MODEL,
+) -> str:
+    """Transcribe an audio/video file with OpenAI and return plain text."""
+    with open(file_path, "rb") as media_file:
+        resp = requests.post(
+            "https://api.openai.com/v1/audio/transcriptions",
+            headers={"Authorization": f"Bearer {api_key}"},
+            data={
+                "model": model,
+                "response_format": "json",
+            },
+            files={
+                "file": (
+                    os.path.basename(file_path) or "upload.bin",
+                    media_file,
+                    mime_type or "application/octet-stream",
+                ),
+            },
+            timeout=300,
+        )
+    _raise_for_openai(resp, "OpenAI transcription")
+
+    payload = resp.json() if resp.headers.get("content-type", "").startswith("application/json") else {}
+    text = (payload.get("text") or "").strip() if isinstance(payload, dict) else ""
+    if not text:
+        raise RuntimeError("OpenAI transcription returned no text.")
+    return text
 
 
 # ── Internal helpers ──────────────────────────────────────────────────

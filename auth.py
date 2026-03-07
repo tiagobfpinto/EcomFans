@@ -1,7 +1,11 @@
+from datetime import timedelta
+
 from functools import wraps
 from flask import Blueprint, request, render_template, redirect, url_for, session, flash
 from sqlalchemy import or_
 from werkzeug.security import generate_password_hash, check_password_hash
+from billing_service import utc_now
+from billing_config import BILLING_CYCLE_DAYS
 from db import User, db
 
 auth_bp = Blueprint("auth", __name__)
@@ -56,6 +60,10 @@ def register():
                 username=username,
                 email=email,
                 password_hash=password_hash,
+                plan_tier="free",
+                credits=30,
+                extra_credits=0,
+                next_credit_reset_at=utc_now() + timedelta(days=BILLING_CYCLE_DAYS),
             )
             db.session.add(user)
             db.session.commit()

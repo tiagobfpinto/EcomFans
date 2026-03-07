@@ -5,6 +5,16 @@ import mimetypes
 from flask import Blueprint, jsonify, render_template, request, session
 
 from auth import login_required
+from billing_config import CREDIT_COSTS, ESTIMATED_USAGE_COST_USD
+from billing_service import (
+    consume_credits,
+    ensure_credits_or_error,
+    get_available_credits,
+    get_billing_summary,
+    get_effective_api_key,
+    refresh_cycle_if_needed,
+    quote_ai_image,
+)
 from db import ApiKey, ImageGeneration, ImagePrompt, User, db
 from ai_service import gemini_generate_image, openai_chat
 
@@ -23,19 +33,17 @@ def _get_user():
     return db.session.get(User, session["user_id"])
 
 
-def _get_api_key(user_id, service="gemini"):
-    """Return an API key for a user and service, or None."""
-    key_row = ApiKey.query.filter_by(user_id=user_id, service=service).first()
-    return key_row.api_key if key_row else None
-
-
 # ── Page ────────────────────────────────────────────────────────────
 @ai_image_bp.route("/ai-image")
 @login_required
 def ai_image_page():
     user = _get_user()
-    gemini_key = _get_api_key(user.id, "gemini")
-    openai_key = _get_api_key(user.id, "openai")
+    changed = refresh_cycle_if_needed(user)
+    if changed:
+        db.session.commit()
+    billing_summary = get_billing_summary(user)
+    gemini_key = get_effective_api_key(user.id, "gemini")
+    openai_key = get_effective_api_key(user.id, "openai")
     prompts = (
         ImagePrompt.query
         .filter_by(user_id=user.id)
@@ -46,7 +54,10 @@ def ai_image_page():
         "ai_image.html",
         has_api_key=bool(gemini_key),
         has_openai_key=bool(openai_key),
-        credits=user.credits,
+        credits=billing_summary["available_credits"],
+        monthly_credits=billing_summary["monthly_credits"],
+        extra_credits=billing_summary["extra_credits"],
+        plan_tier=billing_summary["plan_tier"],
         prompts=prompts,
         default_remix_prompt=DEFAULT_REMIX_SYSTEM_PROMPT,
     )
@@ -94,6 +105,7 @@ def delete_api_key():
 @login_required
 def generate_images():
     user = _get_user()
+    refresh_cycle_if_needed(user)
 
     # Accept multipart/form-data for file uploads
     prompt_text = request.form.get("prompt", "").strip()
@@ -107,19 +119,23 @@ def generate_images():
     if not prompt_text:
         return jsonify({"error": "Prompt is required."}), 400
 
-    gemini_key = _get_api_key(user.id, "gemini")
+    gemini_key = get_effective_api_key(user.id, "gemini")
     if not gemini_key:
         return jsonify({"error": "no_api_key"}), 400
 
-    if user.credits < variations:
-        return jsonify({
-            "error": f"Not enough credits. You need {variations} but have {user.credits}."
-        }), 400
+    credit_quote = quote_ai_image(variations)
+    credit_error = ensure_credits_or_error(
+        user, credit_quote["credits"], feature="ai_image"
+    )
+    if credit_error:
+        status_code, payload = credit_error
+        db.session.commit()
+        return jsonify(payload), status_code
 
     # Check OpenAI key if remix is enabled
     openai_key = None
     if remix_enabled and variations > 1:
-        openai_key = _get_api_key(user.id, "openai")
+        openai_key = get_effective_api_key(user.id, "openai")
         if not openai_key:
             return jsonify({"error": "no_openai_key"}), 400
 
@@ -153,6 +169,7 @@ def generate_images():
     db.session.flush()
 
     results = []
+    latest_user = user
 
     for i in range(variations):
         generation = ImageGeneration(
@@ -167,9 +184,33 @@ def generate_images():
             image_b64 = gemini_generate_image(
                 gemini_key, variation_prompts[i], uploaded_images
             )
+            charged, charged_user, payload = consume_credits(
+                user.id,
+                CREDIT_COSTS["ai_image_variation"],
+                feature="ai_image",
+                provider="gemini",
+                units=1,
+                estimated_cost_usd=ESTIMATED_USAGE_COST_USD["ai_image_variation"],
+                metadata={"variation_index": i + 1},
+            )
+            if not charged:
+                generation.status = "failed"
+                generation.error_message = payload["error"]
+                results.append({
+                    "id": generation.id,
+                    "variation": i + 1,
+                    "prompt_used": variation_prompts[i],
+                    "image_data": None,
+                    "status": "failed",
+                    "error": payload["error"],
+                    "reason": payload.get("reason"),
+                    "redirect_url": payload.get("redirect_url"),
+                })
+                continue
+
+            latest_user = charged_user
             generation.image_data = image_b64
             generation.status = "completed"
-            user.credits -= 1
             results.append({
                 "id": generation.id,
                 "variation": i + 1,
@@ -190,12 +231,15 @@ def generate_images():
             })
 
     db.session.commit()
+    billing_summary = get_billing_summary(latest_user)
 
     return jsonify({
         "prompt_id": prompt.id,
         "prompt_text": prompt_text,
         "results": results,
-        "credits_remaining": user.credits,
+        "credits_remaining": get_available_credits(latest_user),
+        "monthly_credits": billing_summary["monthly_credits"],
+        "extra_credits": billing_summary["extra_credits"],
     })
 
 

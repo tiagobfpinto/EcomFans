@@ -1,10 +1,10 @@
-import base64
 import mimetypes
 
 from flask import Blueprint, flash, redirect, render_template, request, session, url_for
 
 from auth import login_required
 from db import Product, ProductImage, User, db
+from media_storage import delete_storage_file, save_product_image
 
 products_bp = Blueprint("products", __name__)
 
@@ -58,9 +58,10 @@ def products_page():
                 "sort_order": index,
                 "filename": file.filename,
                 "mime_type": mime_type,
-                "image_data": base64.b64encode(image_bytes).decode("utf-8"),
+                "image_bytes": image_bytes,
             })
 
+        written_paths = []
         try:
             product = Product(
                 user_id=user.id,
@@ -74,13 +75,32 @@ def products_page():
             db.session.flush()
 
             for image in prepared_images:
-                db.session.add(ProductImage(product_id=product.id, **image))
+                product_image = ProductImage(
+                    product_id=product.id,
+                    sort_order=image["sort_order"],
+                    filename=image["filename"],
+                    mime_type=image["mime_type"],
+                    image_data=None,
+                )
+                db.session.add(product_image)
+                db.session.flush()
+
+                product_image.storage_path = save_product_image(
+                    user.id,
+                    product.id,
+                    product_image.id,
+                    product_image.mime_type,
+                    image["image_bytes"],
+                )
+                written_paths.append(product_image.storage_path)
 
             db.session.commit()
             flash("Product saved successfully.", "success")
             return redirect(url_for("products.products_page"))
         except Exception:
             db.session.rollback()
+            for relative_path in written_paths:
+                delete_storage_file(relative_path)
             flash("An error occurred while saving the product.", "error")
             return redirect(url_for("products.products_page"))
 

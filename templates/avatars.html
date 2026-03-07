@@ -3,7 +3,8 @@
 {% block content %}
 <div class="ai-image-page avatars-page">
     <div class="dashboard-header">
-        <h1>Avatars – Before & After</h1>
+        <span class="page-eyebrow">AI Generation</span>
+        <h1>Avatars — Before & After</h1>
         <p>Generate realistic before/after transformation images linked to your products</p>
     </div>
 
@@ -15,7 +16,14 @@
                 <circle cx="12" cy="12" r="10" />
                 <path d="M12 6v6l4 2" />
             </svg>
-            <span><strong id="avatar-credits-count">{{ credits }}</strong> credits remaining</span>
+            <span><strong id="avatar-credits-count" data-plan-tier="{{ plan_tier }}">{{ credits }}</strong> credits available</span>
+        </div>
+        <div class="credits-badge credits-breakdown">
+            <span><strong id="avatar-monthly-credits-count">{{ monthly_credits }}</strong> monthly + <strong id="avatar-extra-credits-count">{{ extra_credits }}</strong> extra</span>
+        </div>
+        <div class="credits-actions">
+            <a class="btn btn-ghost btn-sm" href="{{ url_for('billing.upgrade_page') }}">Upgrade</a>
+            <a class="btn btn-ghost btn-sm" href="{{ url_for('billing.credits_store_page') }}">Buy Credits</a>
         </div>
     </div>
 
@@ -30,8 +38,7 @@
             </div>
             <div class="api-key-text">
                 <h3>Gemini API Key Required</h3>
-                <p>Configure your Gemini API key on the <a href="{{ url_for('ai_image.ai_image_page') }}">AI Image</a>
-                    page first.</p>
+                <p>The platform admin must configure <code>GEMINI_API_KEY</code> on the server.</p>
             </div>
         </div>
     </div>
@@ -99,7 +106,7 @@
                             <button class="var-btn" data-count="3" onclick="setAvatarCount(3)">3</button>
                         </div>
                     </div>
-                    <span class="cost-label" id="avatar-cost-label">Cost: 0 credits</span>
+                    <span class="cost-label" id="avatar-cost-label">Cost: 0 credits (4 per avatar pair)</span>
                 </div>
             </div>
 

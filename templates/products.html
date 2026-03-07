@@ -97,7 +97,7 @@
                     <div class="product-images-grid">
                         {% for image in product.images %}
                         <div class="product-image-thumb">
-                            <img src="data:{{ image.mime_type }};base64,{{ image.image_data }}"
+                            <img src="{{ url_for('media.product_image', image_id=image.id) }}"
                                 alt="{{ product.name }} context image {{ loop.index }}">
                         </div>
                         {% endfor %}

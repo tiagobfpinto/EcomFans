@@ -1,10 +1,23 @@
 import json
 
-from flask import Blueprint, jsonify, render_template, request, session
+from flask import Blueprint, jsonify, redirect, render_template, request, session, url_for
 
 from auth import login_required
-from db import ApiKey, AvatarBatch, AvatarResult, Product, User, db
+from billing_config import CREDIT_COSTS, ESTIMATED_USAGE_COST_USD
+from billing_service import (
+    build_plan_required_payload,
+    consume_credits,
+    ensure_credits_or_error,
+    get_available_credits,
+    get_billing_summary,
+    get_effective_api_key,
+    has_required_plan,
+    quote_avatars,
+    refresh_cycle_if_needed,
+)
+from db import AvatarBatch, AvatarResult, Product, User, db
 from ai_service import gemini_generate_image
+from media_storage import get_image_payload
 
 avatars_bp = Blueprint("avatars", __name__)
 
@@ -32,16 +45,17 @@ def _get_user():
     return db.session.get(User, session["user_id"])
 
 
-def _get_api_key(user_id, service="gemini"):
-    key_row = ApiKey.query.filter_by(user_id=user_id, service=service).first()
-    return key_row.api_key if key_row else None
-
-
 # ── Page ────────────────────────────────────────────────────────────
 @avatars_bp.route("/avatars")
 @login_required
 def avatars_page():
     user = _get_user()
+    if not has_required_plan(user, "pro"):
+        return redirect(url_for("billing.upgrade_page", feature="avatars"))
+    changed = refresh_cycle_if_needed(user)
+    if changed:
+        db.session.commit()
+    billing_summary = get_billing_summary(user)
     products = (
         Product.query.filter_by(user_id=user.id)
         .order_by(Product.created_at.desc())
@@ -55,8 +69,11 @@ def avatars_page():
     )
     return render_template(
         "avatars.html",
-        has_api_key=bool(_get_api_key(user.id, "gemini")),
-        credits=user.credits,
+        has_api_key=bool(get_effective_api_key(user.id, "gemini")),
+        credits=billing_summary["available_credits"],
+        monthly_credits=billing_summary["monthly_credits"],
+        extra_credits=billing_summary["extra_credits"],
+        plan_tier=billing_summary["plan_tier"],
         products=products,
         batches=batches,
         preset_personas=PRESET_PERSONAS,
@@ -68,6 +85,10 @@ def avatars_page():
 @login_required
 def generate_avatars():
     user = _get_user()
+    refresh_cycle_if_needed(user)
+    if not has_required_plan(user, "pro"):
+        status_code, payload = build_plan_required_payload("pro", feature="avatars")
+        return jsonify(payload), status_code
     data = request.get_json() or {}
 
     product_id = data.get("product_id")
@@ -88,26 +109,24 @@ def generate_avatars():
     if not product:
         return jsonify({"error": "Product not found."}), 404
 
-    gemini_key = _get_api_key(user.id, "gemini")
+    gemini_key = get_effective_api_key(user.id, "gemini")
     if not gemini_key:
         return jsonify({"error": "no_api_key"}), 400
 
     total_pairs = len(personas) * count_per_persona
-    if user.credits < total_pairs:
-        return jsonify({
-            "error": (
-                f"Not enough credits. You need {total_pairs} "
-                f"but have {user.credits}."
-            )
-        }), 400
+    credit_quote = quote_avatars(total_pairs)
+    credit_error = ensure_credits_or_error(user, credit_quote["credits"], feature="avatars")
+    if credit_error:
+        status_code, payload = credit_error
+        db.session.commit()
+        return jsonify(payload), status_code
 
     # Prepare product images for context
     product_images = []
     for img in product.images[:3]:  # max 3 product images as context
-        product_images.append({
-            "mime_type": img.mime_type,
-            "data": img.image_data,
-        })
+        payload = get_image_payload(img.storage_path, img.mime_type, img.image_data)
+        if payload:
+            product_images.append(payload)
 
     # Create batch
     batch = AvatarBatch(
@@ -122,6 +141,7 @@ def generate_avatars():
     db.session.flush()
 
     results = []
+    latest_user = user
 
     for persona in personas:
         for i in range(count_per_persona):
@@ -165,10 +185,34 @@ def generate_avatars():
                     gemini_key, after_prompt, after_context
                 )
 
+                charged, charged_user, payload = consume_credits(
+                    user.id,
+                    CREDIT_COSTS["avatars_pair"],
+                    feature="avatars",
+                    provider="gemini",
+                    units=1,
+                    estimated_cost_usd=ESTIMATED_USAGE_COST_USD["avatars_pair"],
+                    metadata={"persona": persona, "product_id": product.id},
+                )
+                if not charged:
+                    result.status = "failed"
+                    result.error_message = payload["error"]
+                    results.append({
+                        "id": result.id,
+                        "persona": persona,
+                        "before_image": None,
+                        "after_image": None,
+                        "status": "failed",
+                        "error": payload["error"],
+                        "reason": payload.get("reason"),
+                        "redirect_url": payload.get("redirect_url"),
+                    })
+                    continue
+
+                latest_user = charged_user
                 result.before_image = before_b64
                 result.after_image = after_b64
                 result.status = "completed"
-                user.credits -= 1
 
                 results.append({
                     "id": result.id,
@@ -191,11 +235,14 @@ def generate_avatars():
 
     batch.status = "completed"
     db.session.commit()
+    billing_summary = get_billing_summary(latest_user)
 
     return jsonify({
         "batch_id": batch.id,
         "results": results,
-        "credits_remaining": user.credits,
+        "credits_remaining": get_available_credits(latest_user),
+        "monthly_credits": billing_summary["monthly_credits"],
+        "extra_credits": billing_summary["extra_credits"],
     })
 
 

@@ -1,8 +1,19 @@
-from flask import Blueprint, jsonify, render_template, request, session
+import base64
+
+from flask import Blueprint, jsonify, render_template, request, session, url_for
 
 from auth import login_required
+from billing_service import (
+    consume_credits,
+    ensure_credits_or_error,
+    get_available_credits,
+    get_billing_summary,
+    get_effective_api_key,
+    quote_ai_creatives,
+    refresh_cycle_if_needed,
+)
 from db import (
-    ApiKey, CreativeBatch, CreativeInspiration, CreativeResult,
+    CreativeBatch, CreativeInspiration, CreativeResult,
     Product, User, db,
 )
 from ai_service import (
@@ -11,6 +22,7 @@ from ai_service import (
     openai_generate_image,
     openai_chat,
 )
+from media_storage import delete_storage_file, get_image_payload, save_inspiration_image
 
 ai_creatives_bp = Blueprint("ai_creatives", __name__)
 
@@ -37,18 +49,17 @@ def _get_user():
     return db.session.get(User, session["user_id"])
 
 
-def _get_api_key(user_id, service="gemini"):
-    key_row = ApiKey.query.filter_by(user_id=user_id, service=service).first()
-    return key_row.api_key if key_row else None
-
-
 # ── Page ─────────────────────────────────────────────────────────────
 @ai_creatives_bp.route("/ai-creatives")
 @login_required
 def ai_creatives_page():
     user = _get_user()
-    gemini_key = _get_api_key(user.id, "gemini")
-    openai_key = _get_api_key(user.id, "openai")
+    changed = refresh_cycle_if_needed(user)
+    if changed:
+        db.session.commit()
+    billing_summary = get_billing_summary(user)
+    gemini_key = get_effective_api_key(user.id, "gemini")
+    openai_key = get_effective_api_key(user.id, "openai")
     products = Product.query.filter_by(user_id=user.id).order_by(Product.created_at.desc()).all()
     inspirations = (
         CreativeInspiration.query
@@ -66,7 +77,10 @@ def ai_creatives_page():
         "ai_creatives.html",
         has_gemini_key=bool(gemini_key),
         has_openai_key=bool(openai_key),
-        credits=user.credits,
+        credits=billing_summary["available_credits"],
+        monthly_credits=billing_summary["monthly_credits"],
+        extra_credits=billing_summary["extra_credits"],
+        plan_tier=billing_summary["plan_tier"],
         products=products,
         inspirations=inspirations,
         batches=batches,
@@ -106,23 +120,52 @@ def upload_inspirations():
         return jsonify({"error": "No images provided."}), 400
 
     saved = []
+    written_paths = []
     for img in images:
         mime = img.get("mime_type", "image/jpeg")
         b64 = img.get("data", "")
         name = img.get("name", "")
         if not b64:
             continue
-        insp = CreativeInspiration(
-            user_id=user_id,
-            name=name,
-            image_data=b64,
-            mime_type=mime,
-        )
-        db.session.add(insp)
-        db.session.flush()
-        saved.append({"id": insp.id, "name": insp.name, "mime_type": insp.mime_type})
+        if not mime.startswith("image/"):
+            return jsonify({"error": "Only image inspirations are supported."}), 400
+        try:
+            image_bytes = base64.b64decode(b64, validate=True)
+        except Exception:
+            return jsonify({"error": "Invalid base64 image payload."}), 400
+        if not image_bytes:
+            continue
 
-    db.session.commit()
+        try:
+            insp = CreativeInspiration(
+                user_id=user_id,
+                name=name,
+                image_data=None,
+                mime_type=mime,
+            )
+            db.session.add(insp)
+            db.session.flush()
+            insp.storage_path = save_inspiration_image(
+                user_id,
+                insp.id,
+                mime,
+                image_bytes,
+            )
+            written_paths.append(insp.storage_path)
+            saved.append({"id": insp.id, "name": insp.name, "mime_type": insp.mime_type})
+        except Exception:
+            db.session.rollback()
+            for relative_path in written_paths:
+                delete_storage_file(relative_path)
+            return jsonify({"error": "Failed to save one or more inspirations."}), 500
+
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        for relative_path in written_paths:
+            delete_storage_file(relative_path)
+        return jsonify({"error": "Failed to persist inspirations."}), 500
     return jsonify({"success": True, "saved": saved})
 
 
@@ -134,8 +177,10 @@ def delete_inspiration(inspiration_id):
     ).first()
     if not insp:
         return jsonify({"error": "Not found."}), 404
+    storage_path = insp.storage_path
     db.session.delete(insp)
     db.session.commit()
+    delete_storage_file(storage_path)
     return jsonify({"success": True})
 
 
@@ -144,6 +189,7 @@ def delete_inspiration(inspiration_id):
 @login_required
 def generate_creatives():
     user = _get_user()
+    refresh_cycle_if_needed(user)
     data = request.get_json() or {}
 
     product_id = data.get("product_id")
@@ -178,26 +224,29 @@ def generate_creatives():
     if not inspirations:
         return jsonify({"error": "No valid inspirations found."}), 404
 
-    gemini_key = _get_api_key(user.id, "gemini")
-    openai_key = _get_api_key(user.id, "openai")
+    gemini_key = get_effective_api_key(user.id, "gemini")
+    openai_key = get_effective_api_key(user.id, "openai")
 
     if provider in ("gemini", "both") and not gemini_key:
         return jsonify({"error": "no_gemini_key"}), 400
     if provider in ("openai", "both") and not openai_key:
         return jsonify({"error": "no_openai_key"}), 400
 
-    images_per_inspiration = 2 if provider == "both" else 1
-    cost = 0 if prompt_only else (len(inspirations) * images_per_inspiration)
-    if user.credits < cost:
-        return jsonify({
-            "error": f"Not enough credits. You need {cost} but have {user.credits}."
-        }), 400
+    credit_quote = quote_ai_creatives(len(inspirations), provider, bool(prompt_only))
+    credit_error = ensure_credits_or_error(
+        user, credit_quote["credits"], feature="ai_creatives"
+    )
+    if credit_error:
+        status_code, payload = credit_error
+        db.session.commit()
+        return jsonify(payload), status_code
 
     # All product images — sent alongside inspiration image in every generation call
-    product_images = [
-        {"mime_type": img.mime_type, "data": img.image_data}
-        for img in product.images
-    ]
+    product_images = []
+    for img in product.images:
+        payload = get_image_payload(img.storage_path, img.mime_type, img.image_data)
+        if payload:
+            product_images.append(payload)
 
     batch = CreativeBatch(
         user_id=user.id,
@@ -208,6 +257,13 @@ def generate_creatives():
     db.session.flush()
 
     results = []
+    latest_user = user
+    per_inspiration_credits = credit_quote["per_inspiration_credits"]
+    per_inspiration_cost = (
+        credit_quote["estimated_cost_usd"] / credit_quote["units"]
+        if credit_quote["units"]
+        else 0
+    )
     for insp in inspirations:
         result = CreativeResult(
             batch_id=batch.id,
@@ -218,6 +274,13 @@ def generate_creatives():
         db.session.flush()
 
         try:
+            insp_payload = get_image_payload(
+                insp.storage_path,
+                insp.mime_type,
+                insp.image_data,
+            )
+            if not insp_payload:
+                raise RuntimeError("Inspiration image data is missing.")
             # ── Step 1: Analyze inspiration image → regen_prompt ──────────────
             # Only the analysis_prompt + inspiration image are sent here.
             # We now inject the product info (name + context + requested additional info)
@@ -239,11 +302,17 @@ def generate_creatives():
             # - openai or both → GPT-4o-mini vision
             if provider == "gemini":
                 regen_prompt = _analyze_with_gemini(
-                    gemini_key, full_analysis_prompt, insp.image_data, insp.mime_type
+                    gemini_key,
+                    full_analysis_prompt,
+                    insp_payload["data"],
+                    insp_payload["mime_type"],
                 )
             else:
                 regen_prompt = _analyze_with_openai(
-                    openai_key, full_analysis_prompt, insp.image_data, insp.mime_type
+                    openai_key,
+                    full_analysis_prompt,
+                    insp_payload["data"],
+                    insp_payload["mime_type"],
                 )
 
             # ── Step 2: Build final generation prompt ─────────────────────────
@@ -258,7 +327,10 @@ def generate_creatives():
             # The inspiration image is the visual target to recreate.
             # Product images are the visual reference for what should appear in the output.
             generation_images = [
-                {"mime_type": insp.mime_type, "data": insp.image_data},
+                {
+                    "mime_type": insp_payload["mime_type"],
+                    "data": insp_payload["data"],
+                },
                 *product_images,
             ]
 
@@ -269,12 +341,49 @@ def generate_creatives():
                 if provider in ("openai", "both"):
                     # OpenAI: text prompt only (gpt-image-1 standard endpoint)
                     openai_image = openai_generate_image(openai_key, final_prompt)
-                    user.credits -= 1
 
                 if provider in ("gemini", "both"):
                     # Gemini: full prompt + inspiration image + all product images as visual context
                     gemini_image = gemini_generate_image(gemini_key, final_prompt, generation_images)
-                    user.credits -= 1
+
+            charged, charged_user, payload = consume_credits(
+                user.id,
+                per_inspiration_credits,
+                feature="ai_creatives",
+                provider=provider,
+                units=1,
+                estimated_cost_usd=per_inspiration_cost,
+                metadata={
+                    "inspiration_id": insp.id,
+                    "prompt_only": bool(prompt_only),
+                    "product_id": product.id,
+                },
+            )
+            if not charged:
+                result.status = "failed"
+                result.error_message = payload["error"]
+                results.append({
+                    "id": result.id,
+                    "inspiration_id": insp.id,
+                    "inspiration_url": url_for("media.inspiration_image", inspiration_id=insp.id),
+                    "provider": provider,
+                    "analysis_prompt": analysis_prompt,
+                    "regen_prompt": regen_prompt,
+                    "base_prompt": base_prompt,
+                    "product_info": product.build_product_info(),
+                    "final_prompt": result.generated_prompt,
+                    "product_image_count": len(product_images),
+                    "openai_image": None,
+                    "gemini_image": None,
+                    "generated_image": None,
+                    "status": "failed",
+                    "error": payload["error"],
+                    "reason": payload.get("reason"),
+                    "redirect_url": payload.get("redirect_url"),
+                })
+                continue
+
+            latest_user = charged_user
 
             result.generated_image = gemini_image or openai_image
             result.status = "completed"
@@ -282,6 +391,7 @@ def generate_creatives():
             results.append({
                 "id": result.id,
                 "inspiration_id": insp.id,
+                "inspiration_url": url_for("media.inspiration_image", inspiration_id=insp.id),
                 "provider": provider,
                 # Full prompt breakdown for transparency
                 "analysis_prompt": analysis_prompt,
@@ -303,6 +413,7 @@ def generate_creatives():
             results.append({
                 "id": result.id,
                 "inspiration_id": insp.id,
+                "inspiration_url": url_for("media.inspiration_image", inspiration_id=insp.id),
                 "provider": provider,
                 "analysis_prompt": analysis_prompt,
                 "regen_prompt": None,
@@ -319,13 +430,17 @@ def generate_creatives():
 
     batch.status = "completed"
     db.session.commit()
+    billing_summary = get_billing_summary(latest_user)
 
     return jsonify({
         "batch_id": batch.id,
+        "batch_created_at": batch.created_at.strftime("%b %d, %Y at %H:%M"),
         "product_name": product.name,
         "provider": provider,
         "results": results,
-        "credits_remaining": user.credits,
+        "credits_remaining": get_available_credits(latest_user),
+        "monthly_credits": billing_summary["monthly_credits"],
+        "extra_credits": billing_summary["extra_credits"],
     })
 
 
