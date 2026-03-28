@@ -72,6 +72,21 @@
                 <p class="field-hint">What should the "before" avatar look like?</p>
             </div>
 
+            <div class="avatar-field">
+                <label for="avatar-gemini-model">Gemini Image Model</label>
+                <select id="avatar-gemini-model" class="avatar-select" data-default-model="{{ default_gemini_image_model }}">
+                    <option value="{{ default_gemini_image_model }}">{{ default_gemini_image_model }}</option>
+                </select>
+            </div>
+
+            <div class="avatar-field">
+                <label class="toggle-switch">
+                    <input type="checkbox" id="avatar-batch-toggle" {% if batch_api_for_queued_jobs %}checked{% endif %}>
+                    <span class="toggle-slider"></span>
+                </label>
+                <p class="field-hint">Batch API mode (Gemini): lower credit cost for non-urgent jobs.</p>
+            </div>
+
             <!-- Persona Selection -->
             <div class="avatar-field">
                 <label>Select Personas</label>
@@ -168,11 +183,11 @@
                     {% if res.status == 'completed' %}
                     <div class="avatar-pair-mini">
                         <div class="avatar-mini-img" onclick="showFullImage(this)">
-                            <img src="data:image/png;base64,{{ res.before_image }}" alt="Before">
+                            <img src="{{ url_for('media.avatar_result_before_image', result_id=res.id) }}" alt="Before">
                             <span class="ba-label ba-before">B</span>
                         </div>
                         <div class="avatar-mini-img" onclick="showFullImage(this)">
-                            <img src="data:image/png;base64,{{ res.after_image }}" alt="After">
+                            <img src="{{ url_for('media.avatar_result_after_image', result_id=res.id) }}" alt="After">
                             <span class="ba-label ba-after">A</span>
                         </div>
                     </div>

@@ -27,6 +27,21 @@ class User(db.Model):
     default_base_prompt = db.Column(db.Text, nullable=True)
     default_analysis_prompt = db.Column(db.Text, nullable=True)
     default_product_info = db.Column(db.Text, nullable=True)
+    default_gemini_image_model = db.Column(
+        db.String(120), nullable=False, default="gemini-2.5-flash-image"
+    )
+    batch_api_for_queued_jobs = db.Column(
+        db.Boolean, nullable=False, default=False
+    )
+    stripe_customer_id = db.Column(db.String(60), nullable=True, unique=True)
+    stripe_subscription_id = db.Column(db.String(60), nullable=True)
+    stripe_subscription_status = db.Column(db.String(30), nullable=True)
+    # Auth security fields
+    failed_login_attempts = db.Column(db.Integer, nullable=False, default=0)
+    locked_until = db.Column(db.DateTime(timezone=True), nullable=True)
+    last_password_reset_request_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    reset_token = db.Column(db.String(128), nullable=True, unique=True)
+    reset_token_expires_at = db.Column(db.DateTime(timezone=True), nullable=True)
     created_at = db.Column(
         db.DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -53,6 +68,15 @@ class User(db.Model):
     )
     usage_events = db.relationship(
         "UsageEvent", backref="user", lazy=True, cascade="all, delete-orphan"
+    )
+    api_request_events = db.relationship(
+        "ApiRequestEvent", backref="user", lazy=True, cascade="all, delete-orphan"
+    )
+    worker_jobs = db.relationship(
+        "WorkerJob", backref="user", lazy=True, cascade="all, delete-orphan"
+    )
+    brand_dna_analyses = db.relationship(
+        "BrandDNAAnalysis", backref="user", lazy=True, cascade="all, delete-orphan"
     )
 
 
@@ -125,6 +149,65 @@ class UsageEvent(db.Model):
     )
 
 
+class ApiRequestEvent(db.Model):
+    __tablename__ = "api_request_events"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    feature = db.Column(db.String(50), nullable=True)
+    provider = db.Column(db.String(50), nullable=False)
+    operation = db.Column(db.String(80), nullable=True)
+    model = db.Column(db.String(120), nullable=True)
+    traffic_type = db.Column(db.String(20), nullable=True)  # standard | batch
+    status = db.Column(db.String(20), nullable=False, default="completed")
+    http_status = db.Column(db.Integer, nullable=True)
+    latency_ms = db.Column(db.Integer, nullable=True)
+    input_tokens = db.Column(db.Integer, nullable=True)
+    cached_tokens = db.Column(db.Integer, nullable=True)
+    output_tokens = db.Column(db.Integer, nullable=True)
+    total_tokens = db.Column(db.Integer, nullable=True)
+    input_image_count = db.Column(db.Integer, nullable=True, default=0)
+    images_generated = db.Column(db.Integer, nullable=True, default=0)
+    estimated_cost_usd = db.Column(db.Numeric(12, 6), nullable=True)
+    estimated_cost_eur = db.Column(db.Numeric(12, 6), nullable=True)
+    request_id = db.Column(db.String(120), nullable=True)
+    error_message = db.Column(db.Text, nullable=True)
+    metadata_json = db.Column(db.Text, nullable=True)
+    created_at = db.Column(
+        db.DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+
+class WorkerJob(db.Model):
+    __tablename__ = "worker_jobs"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    queue_name = db.Column(db.String(50), nullable=False, default="default")
+    job_type = db.Column(db.String(80), nullable=False)
+    status = db.Column(db.String(20), nullable=False, default="queued")
+    payload_json = db.Column(db.Text, nullable=False)
+    result_json = db.Column(db.Text, nullable=True)
+    error_message = db.Column(db.Text, nullable=True)
+    attempts = db.Column(db.Integer, nullable=False, default=0)
+    max_attempts = db.Column(db.Integer, nullable=False, default=2)
+    available_at = db.Column(
+        db.DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    started_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    finished_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    locked_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    lock_token = db.Column(db.String(64), nullable=True)
+    worker_name = db.Column(db.String(120), nullable=True)
+    created_at = db.Column(
+        db.DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at = db.Column(
+        db.DateTime(timezone=True), server_default=func.now(),
+        onupdate=func.now(), nullable=False
+    )
+
+
 class ImagePrompt(db.Model):
     __tablename__ = "image_prompts"
 
@@ -149,6 +232,7 @@ class ImageGeneration(db.Model):
         db.Integer, db.ForeignKey("image_prompts.id"), nullable=False
     )
     variation_index = db.Column(db.Integer, nullable=False, default=1)
+    storage_path = db.Column(db.String(500), nullable=True)
     image_data = db.Column(db.Text, nullable=True)  # base64 encoded image
     status = db.Column(db.String(20), nullable=False, default="pending")
     error_message = db.Column(db.Text, nullable=True)
@@ -235,6 +319,8 @@ class AvatarResult(db.Model):
         db.Integer, db.ForeignKey("avatar_batches.id"), nullable=False
     )
     persona = db.Column(db.String(200), nullable=False)
+    before_storage_path = db.Column(db.String(500), nullable=True)
+    after_storage_path = db.Column(db.String(500), nullable=True)
     before_image = db.Column(db.Text, nullable=True)
     after_image = db.Column(db.Text, nullable=True)
     status = db.Column(db.String(20), nullable=False, default="pending")
@@ -292,9 +378,65 @@ class CreativeResult(db.Model):
         db.Integer, db.ForeignKey("creative_inspirations.id"), nullable=True
     )
     generated_prompt = db.Column(db.Text, nullable=True)
+    generated_storage_path = db.Column(db.String(500), nullable=True)
     generated_image = db.Column(db.Text, nullable=True)  # base64 encoded
     status = db.Column(db.String(20), nullable=False, default="pending")
     error_message = db.Column(db.Text, nullable=True)
     created_at = db.Column(
         db.DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+
+class CreativeInspirationAnalysis(db.Model):
+    """Cached vision analysis results for creative inspiration images.
+
+    Keyed by (inspiration_id, product_id, provider, prompt_hash) so that
+    re-running creatives generation on the same inspiration+product combination
+    skips the expensive vision API call.
+    """
+    __tablename__ = "creative_inspiration_analyses"
+
+    id = db.Column(db.Integer, primary_key=True)
+    inspiration_id = db.Column(
+        db.Integer, db.ForeignKey("creative_inspirations.id"), nullable=False
+    )
+    product_id = db.Column(
+        db.Integer, db.ForeignKey("products.id"), nullable=False
+    )
+    provider = db.Column(db.String(20), nullable=False)
+    prompt_hash = db.Column(db.String(64), nullable=False)
+    result_text = db.Column(db.Text, nullable=False)
+    created_at = db.Column(
+        db.DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    __table_args__ = (
+        db.Index(
+            "ix_creative_inspiration_analyses_lookup",
+            "inspiration_id", "product_id", "provider", "prompt_hash",
+        ),
+    )
+
+
+class BrandDNAAnalysis(db.Model):
+    __tablename__ = "brand_dna_analyses"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    url = db.Column(db.String(2048), nullable=False)
+    status = db.Column(db.String(20), nullable=False, default="queued")
+    brand_name = db.Column(db.String(255), nullable=True)
+    brand_description = db.Column(db.Text, nullable=True)
+    color_palette = db.Column(db.Text, nullable=True)  # JSON array of hex strings
+    products_created = db.Column(db.Integer, nullable=False, default=0)
+    error = db.Column(db.Text, nullable=True)
+    worker_job_id = db.Column(db.Integer, db.ForeignKey("worker_jobs.id"), nullable=True)
+    created_at = db.Column(
+        db.DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    completed_at = db.Column(db.DateTime(timezone=True), nullable=True)
+
+    __table_args__ = (
+        db.Index("ix_brand_dna_analyses_user_id", "user_id"),
+        db.Index("ix_brand_dna_analyses_worker_job_id", "worker_job_id"),
     )

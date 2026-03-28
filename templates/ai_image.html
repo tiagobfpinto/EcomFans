@@ -178,6 +178,29 @@
                 </div>
             </div>
 
+            <!-- Gemini model selection -->
+            <div class="avatar-field">
+                <label for="gemini-model-select">Gemini Image Model</label>
+                <select id="gemini-model-select" class="avatar-select" data-default-model="{{ default_gemini_image_model }}">
+                    <option value="{{ default_gemini_image_model }}">{{ default_gemini_image_model }}</option>
+                </select>
+                <p class="field-hint">Available models are loaded from Gemini and saved as your default.</p>
+            </div>
+
+            <!-- Batch API toggle -->
+            <div class="remix-section">
+                <div class="remix-toggle-row">
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="ai-image-batch-toggle" {% if batch_api_for_queued_jobs %}checked{% endif %}>
+                        <span class="toggle-slider"></span>
+                    </label>
+                    <div class="remix-label">
+                        <span class="remix-title">Batch API Mode</span>
+                        <span class="remix-description">Cheaper credits for queued-style runs (Gemini only).</span>
+                    </div>
+                </div>
+            </div>
+
             <div class="prompt-controls">
                 <div class="variations-selector">
                     <label>Variations:</label>
@@ -242,9 +265,10 @@
                 {% if prompt.generations %}
                 <div class="prompt-images-row">
                     {% for gen in prompt.generations %}
-                    {% if gen.status == 'completed' and gen.image_data %}
+                    {% if gen.status == 'completed' and (gen.storage_path or gen.image_data) %}
                     <div class="prompt-thumb" onclick="showFullImage(this)">
-                        <img src="data:image/png;base64,{{ gen.image_data }}" alt="Variation {{ gen.variation_index }}">
+                        <img src="{{ url_for('media.ai_image_generation_image', generation_id=gen.id) }}"
+                            alt="Variation {{ gen.variation_index }}">
                     </div>
                     {% elif gen.status == 'failed' %}
                     <div class="prompt-thumb prompt-thumb-failed">

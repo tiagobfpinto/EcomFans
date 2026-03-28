@@ -5,6 +5,45 @@
 let scrapedImages = [];
 let selectedImages = new Set();
 
+function getCsrfToken() {
+    const meta = document.querySelector('meta[name="csrf-token"]');
+    return meta ? (meta.getAttribute('content') || '') : '';
+}
+
+const _nativeFetch = window.fetch.bind(window);
+window.fetch = function withCsrfFetch(input, init = {}) {
+    const reqInit = { ...init };
+    const requestMethod = ((reqInit.method) || (input instanceof Request ? input.method : 'GET') || 'GET')
+        .toUpperCase();
+    const unsafeMethod = !['GET', 'HEAD', 'OPTIONS', 'TRACE'].includes(requestMethod);
+
+    const headers = new Headers(
+        reqInit.headers || (input instanceof Request ? input.headers : undefined)
+    );
+
+    let sameOrigin = true;
+    try {
+        const rawUrl = typeof input === 'string' ? input : input.url;
+        sameOrigin = new URL(rawUrl, window.location.origin).origin === window.location.origin;
+    } catch {
+        sameOrigin = true;
+    }
+
+    if (unsafeMethod && sameOrigin) {
+        const csrfToken = getCsrfToken();
+        if (csrfToken && !headers.has('X-CSRF-Token')) {
+            headers.set('X-CSRF-Token', csrfToken);
+        }
+    }
+
+    reqInit.headers = headers;
+    if (reqInit.credentials === undefined) {
+        reqInit.credentials = 'same-origin';
+    }
+
+    return _nativeFetch(input, reqInit);
+};
+
 /**
  * Scrape images from the URL provided in the input field.
  */
@@ -243,6 +282,46 @@ document.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => flash.remove(), 300);
         }, 5000);
     });
+
+    const aiModelSelect = document.getElementById('gemini-model-select');
+    if (aiModelSelect) {
+        loadGeminiImageModels();
+        aiModelSelect.addEventListener('change', onGeminiModelChange);
+    }
+
+    const aiBatchToggle = document.getElementById('ai-image-batch-toggle');
+    if (aiBatchToggle) {
+        aiBatchToggle.addEventListener('change', onAiImageBatchToggleChanged);
+        setVariations(selectedVariations);
+    }
+
+    const avatarModelSelect = document.getElementById('avatar-gemini-model');
+    if (avatarModelSelect) {
+        loadGeminiImageModelsIntoSelect(avatarModelSelect);
+        avatarModelSelect.addEventListener('change', async () => {
+            try {
+                await saveAiImagePreferences({ default_gemini_image_model: avatarModelSelect.value });
+            } catch (err) {
+                alert(err.message || 'Failed to update model preference.');
+            }
+        });
+    }
+
+    const avatarBatchToggle = document.getElementById('avatar-batch-toggle');
+    if (avatarBatchToggle) {
+        avatarBatchToggle.addEventListener('change', async () => {
+            updateAvatarCost();
+            try {
+                await saveAiImagePreferences({ batch_api_for_queued_jobs: Boolean(avatarBatchToggle.checked) });
+            } catch (err) {
+                alert(err.message || 'Failed to update batch preference.');
+            }
+        });
+    }
+
+    if (document.getElementById('avatar-cost-label')) {
+        updateAvatarCost();
+    }
 });
 
 
@@ -253,6 +332,18 @@ document.addEventListener('DOMContentLoaded', () => {
 let selectedVariations = 1;
 let uploadedFiles = [];
 let remixEnabled = false;
+let geminiModelOptionsLoaded = false;
+
+function isAiImageBatchMode() {
+    const toggle = document.getElementById('ai-image-batch-toggle');
+    return Boolean(toggle && toggle.checked);
+}
+
+function calculateAiImageCredits(variations) {
+    const base = Math.max(1, Number(variations || 1)) * 2;
+    if (!isAiImageBatchMode()) return base;
+    return Math.max(1, Math.ceil(base * 0.5));
+}
 
 function getInsufficientCreditsRedirect(creditsElementId) {
     const el = document.getElementById(creditsElementId);
@@ -270,8 +361,9 @@ function setVariations(count) {
     });
     const costLabel = document.getElementById('cost-label');
     if (costLabel) {
-        const credits = count * 2;
-        costLabel.textContent = `Cost: ${credits} credits (2 per variation)`;
+        const credits = calculateAiImageCredits(count);
+        const suffix = isAiImageBatchMode() ? ' (Batch mode)' : ' (2 per variation)';
+        costLabel.textContent = `Cost: ${credits} credits${suffix}`;
     }
 }
 
@@ -325,6 +417,76 @@ function toggleOpenAIKeyUpdate() {
     }
 }
 
+async function saveAiImagePreferences(payload) {
+    const resp = await fetch('/ai-image/preferences', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+    });
+    const data = await resp.json();
+    if (!resp.ok) {
+        throw new Error(data.error || 'Failed to save preferences.');
+    }
+    return data;
+}
+
+async function loadGeminiImageModels() {
+    if (geminiModelOptionsLoaded) return;
+    const select = document.getElementById('gemini-model-select');
+    if (!select) return;
+    await loadGeminiImageModelsIntoSelect(select);
+    geminiModelOptionsLoaded = true;
+}
+
+async function loadGeminiImageModelsIntoSelect(selectEl) {
+    if (!selectEl) return;
+    try {
+        const resp = await fetch('/ai-image/gemini-models');
+        const data = await resp.json();
+        if (!resp.ok || !Array.isArray(data.models)) return;
+
+        const defaultModel = selectEl.dataset.defaultModel || data.default_model || '';
+        selectEl.innerHTML = '';
+        data.models.forEach(model => {
+            const opt = document.createElement('option');
+            opt.value = model.name;
+            opt.textContent = model.display_name || model.name;
+            if (model.name === defaultModel) opt.selected = true;
+            selectEl.appendChild(opt);
+        });
+        if (!selectEl.value && defaultModel) {
+            const fallback = document.createElement('option');
+            fallback.value = defaultModel;
+            fallback.textContent = defaultModel;
+            fallback.selected = true;
+            selectEl.appendChild(fallback);
+        }
+    } catch {
+        // Keep fallback.
+    }
+}
+
+async function onGeminiModelChange() {
+    const select = document.getElementById('gemini-model-select');
+    if (!select) return;
+    try {
+        await saveAiImagePreferences({ default_gemini_image_model: select.value });
+    } catch (err) {
+        alert(err.message || 'Failed to update model preference.');
+    }
+}
+
+async function onAiImageBatchToggleChanged() {
+    const toggle = document.getElementById('ai-image-batch-toggle');
+    if (!toggle) return;
+    setVariations(selectedVariations);
+    try {
+        await saveAiImagePreferences({ batch_api_for_queued_jobs: Boolean(toggle.checked) });
+    } catch (err) {
+        alert(err.message || 'Failed to update batch preference.');
+    }
+}
+
 /**
  * Toggle the remix prompt feature on/off.
  */
@@ -337,8 +499,11 @@ function toggleRemix() {
     }
 }
 
+const AI_IMAGE_JOB_POLL_INTERVAL_MS = 1800;
+const AI_IMAGE_JOB_POLL_TIMEOUT_MS = 20 * 60 * 1000;
+
 /**
- * Generate images from the prompt input.
+ * Generate images from the prompt input (async job queue).
  */
 async function generateImages() {
     const promptInput = document.getElementById('prompt-input');
@@ -352,7 +517,7 @@ async function generateImages() {
     // Check credits
     const creditsEl = document.getElementById('credits-count');
     const currentCredits = parseInt(creditsEl?.textContent || '0');
-    const requiredCredits = selectedVariations * 2;
+    const requiredCredits = calculateAiImageCredits(selectedVariations);
     if (currentCredits < requiredCredits) {
         alert(`Not enough credits. You need ${requiredCredits} but have ${currentCredits}. Redirecting...`);
         window.location.href = getInsufficientCreditsRedirect('credits-count');
@@ -373,6 +538,12 @@ async function generateImages() {
         formData.append('prompt', prompt);
         formData.append('variations', selectedVariations);
         formData.append('remix', remixEnabled ? 'true' : 'false');
+        formData.append('use_batch_api', isAiImageBatchMode() ? 'true' : 'false');
+
+        const modelSelect = document.getElementById('gemini-model-select');
+        if (modelSelect && modelSelect.value) {
+            formData.append('gemini_model', modelSelect.value);
+        }
 
         if (remixEnabled) {
             const remixPrompt = document.getElementById('remix-system-prompt');
@@ -391,20 +562,15 @@ async function generateImages() {
         });
         const data = await resp.json();
 
-        if (genLoading) genLoading.style.display = 'none';
-        if (genBtn) genBtn.disabled = false;
-
         if (!resp.ok) {
             if (data.error === 'no_api_key') {
                 alert('Gemini API key is not configured on the platform.');
                 return;
             }
-
             if (data.error === 'no_openai_key') {
                 alert('OpenAI API key is not configured on the platform for prompt remixing.');
                 return;
             }
-
             if (data.redirect_url) {
                 alert((data.error || 'Action required.') + ' Redirecting...');
                 window.location.href = data.redirect_url;
@@ -414,21 +580,14 @@ async function generateImages() {
             return;
         }
 
-        // Update credits
-        if (creditsEl && data.credits_remaining !== undefined) {
-            creditsEl.textContent = data.credits_remaining;
-        }
-        const monthlyEl = document.getElementById('monthly-credits-count');
-        const extraEl = document.getElementById('extra-credits-count');
-        if (monthlyEl && data.monthly_credits !== undefined) {
-            monthlyEl.textContent = data.monthly_credits;
-        }
-        if (extraEl && data.extra_credits !== undefined) {
-            extraEl.textContent = data.extra_credits;
+        const jobId = Number(data.job_id || 0);
+        if (!jobId) {
+            alert('Generation job was not created.');
+            return;
         }
 
-        // Show results
-        renderGenerationResults(data.results);
+        const result = await pollAiImageJob(jobId, genLoading);
+        renderGenerationResults(result.results || []);
 
         // Clear input and uploaded files
         promptInput.value = '';
@@ -441,11 +600,41 @@ async function generateImages() {
         // Reload page after short delay to update history
         setTimeout(() => window.location.reload(), 1500);
 
-    } catch {
+    } catch (err) {
+        alert(err?.message || 'Network error. Please try again.');
+    } finally {
         if (genLoading) genLoading.style.display = 'none';
         if (genBtn) genBtn.disabled = false;
-        alert('Network error. Please try again.');
     }
+}
+
+async function pollAiImageJob(jobId, loadingEl) {
+    const startedAt = Date.now();
+    while ((Date.now() - startedAt) < AI_IMAGE_JOB_POLL_TIMEOUT_MS) {
+        const resp = await fetch(`/ai-image/jobs/${jobId}`);
+        const data = await resp.json();
+        if (!resp.ok) {
+            throw new Error(data.error || 'Could not fetch image generation job status.');
+        }
+        if (data.status === 'completed') {
+            return data;
+        }
+        if (data.status === 'failed') {
+            throw new Error(data.error || 'Image generation failed.');
+        }
+        if (loadingEl) {
+            const p = loadingEl.querySelector('p');
+            if (p) {
+                if (data.status === 'queued') {
+                    p.textContent = 'Queued... waiting for an available worker.';
+                } else if (data.status === 'running') {
+                    p.textContent = 'Generating your images... This may take a moment.';
+                }
+            }
+        }
+        await new Promise(resolve => setTimeout(resolve, AI_IMAGE_JOB_POLL_INTERVAL_MS));
+    }
+    throw new Error('Image generation timed out. Please try again.');
 }
 
 /**
@@ -461,10 +650,11 @@ function renderGenerationResults(results) {
     results.forEach(r => {
         const card = document.createElement('div');
         card.className = 'gen-result-card';
+        const imageSrc = r.image_url || (r.image_data ? `data:image/png;base64,${r.image_data}` : '');
 
-        if (r.status === 'completed' && r.image_data) {
+        if (r.status === 'completed' && imageSrc) {
             card.innerHTML = `
-                <img src="data:image/png;base64,${r.image_data}"
+                <img src="${imageSrc}"
                      alt="Generated variation ${r.variation}"
                      onclick="showFullImageSrc(this.src)">
                 <div class="gen-result-label">
@@ -662,6 +852,18 @@ function renderImagePreviews() {
 let selectedPersonas = [];
 let avatarCountPerPersona = 1;
 
+function isAvatarBatchMode() {
+    const toggle = document.getElementById('avatar-batch-toggle');
+    return Boolean(toggle && toggle.checked);
+}
+
+function calculateAvatarCredits() {
+    const base = selectedPersonas.length * avatarCountPerPersona * 4;
+    if (base <= 0) return 0;
+    if (!isAvatarBatchMode()) return base;
+    return Math.max(1, Math.ceil(base * 0.5));
+}
+
 /**
  * Toggle a persona chip on/off.
  */
@@ -722,15 +924,19 @@ function setAvatarCount(count) {
  * Update cost label.
  */
 function updateAvatarCost() {
-    const total = selectedPersonas.length * avatarCountPerPersona * 4;
+    const total = calculateAvatarCredits();
     const label = document.getElementById('avatar-cost-label');
     if (label) {
-        label.textContent = `Cost: ${total} credits (4 per avatar pair)`;
+        const suffix = isAvatarBatchMode() ? ' (Batch mode)' : ' (4 per avatar pair)';
+        label.textContent = `Cost: ${total} credits${suffix}`;
     }
 }
 
+const AVATAR_JOB_POLL_INTERVAL_MS = 1800;
+const AVATAR_JOB_POLL_TIMEOUT_MS = 30 * 60 * 1000;
+
 /**
- * Generate avatar before/after pairs.
+ * Generate avatar before/after pairs (async job queue).
  */
 async function generateAvatars() {
     const productSelect = document.getElementById('avatar-product');
@@ -742,7 +948,7 @@ async function generateAvatars() {
     if (!characteristic) { charInput.focus(); return; }
     if (selectedPersonas.length === 0) { alert('Select at least one persona.'); return; }
 
-    const totalCost = selectedPersonas.length * avatarCountPerPersona * 4;
+    const totalCost = calculateAvatarCredits();
     const creditsEl = document.getElementById('avatar-credits-count');
     const currentCredits = parseInt(creditsEl?.textContent || '0');
     if (currentCredits < totalCost) {
@@ -768,12 +974,11 @@ async function generateAvatars() {
                 characteristic,
                 personas: selectedPersonas,
                 count_per_persona: avatarCountPerPersona,
+                use_batch_api: isAvatarBatchMode(),
+                gemini_model: document.getElementById('avatar-gemini-model')?.value || undefined,
             }),
         });
         const data = await resp.json();
-
-        if (loading) loading.style.display = 'none';
-        if (btn) btn.disabled = false;
 
         if (!resp.ok) {
             if (data.error === 'no_api_key') {
@@ -789,26 +994,51 @@ async function generateAvatars() {
             return;
         }
 
-        if (creditsEl && data.credits_remaining !== undefined) {
-            creditsEl.textContent = data.credits_remaining;
-        }
-        const monthlyEl = document.getElementById('avatar-monthly-credits-count');
-        const extraEl = document.getElementById('avatar-extra-credits-count');
-        if (monthlyEl && data.monthly_credits !== undefined) {
-            monthlyEl.textContent = data.monthly_credits;
-        }
-        if (extraEl && data.extra_credits !== undefined) {
-            extraEl.textContent = data.extra_credits;
+        const jobId = Number(data.job_id || 0);
+        if (!jobId) {
+            alert('Avatar generation job was not created.');
+            return;
         }
 
-        renderAvatarResults(data.results);
+        const result = await pollAvatarJob(jobId, loading);
+        renderAvatarResults(result.results || []);
         setTimeout(() => window.location.reload(), 2000);
 
-    } catch {
+    } catch (err) {
+        alert(err?.message || 'Network error. Please try again.');
+    } finally {
         if (loading) loading.style.display = 'none';
         if (btn) btn.disabled = false;
-        alert('Network error. Please try again.');
     }
+}
+
+async function pollAvatarJob(jobId, loadingEl) {
+    const startedAt = Date.now();
+    while ((Date.now() - startedAt) < AVATAR_JOB_POLL_TIMEOUT_MS) {
+        const resp = await fetch(`/avatars/jobs/${jobId}`);
+        const data = await resp.json();
+        if (!resp.ok) {
+            throw new Error(data.error || 'Could not fetch avatar generation job status.');
+        }
+        if (data.status === 'completed') {
+            return data;
+        }
+        if (data.status === 'failed') {
+            throw new Error(data.error || 'Avatar generation failed.');
+        }
+        if (loadingEl) {
+            const p = loadingEl.querySelector('p');
+            if (p) {
+                if (data.status === 'queued') {
+                    p.textContent = 'Queued... waiting for an available worker.';
+                } else if (data.status === 'running') {
+                    p.textContent = 'Generating avatars... This may take a while for multiple personas.';
+                }
+            }
+        }
+        await new Promise(resolve => setTimeout(resolve, AVATAR_JOB_POLL_INTERVAL_MS));
+    }
+    throw new Error('Avatar generation timed out. Please try again.');
 }
 
 /**
@@ -825,13 +1055,15 @@ function renderAvatarResults(results) {
     results.forEach(r => {
         const card = document.createElement('div');
         card.className = 'avatar-result-card';
+        const beforeSrc = r.before_image_url || (r.before_image ? `data:image/png;base64,${r.before_image}` : '');
+        const afterSrc = r.after_image_url || (r.after_image ? `data:image/png;base64,${r.after_image}` : '');
 
-        if (r.status === 'completed') {
+        if (r.status === 'completed' && beforeSrc && afterSrc) {
             card.innerHTML = `
                 <div class="avatar-persona-label">${escapeHtml(r.persona)}</div>
                 <div class="avatar-ba-pair">
                     <div class="avatar-ba-img" onclick="showFullImage(this)">
-                        <img src="data:image/png;base64,${r.before_image}" alt="Before">
+                        <img src="${beforeSrc}" alt="Before">
                         <span class="ba-label ba-before">Before</span>
                     </div>
                     <div class="avatar-ba-arrow">
@@ -842,7 +1074,7 @@ function renderAvatarResults(results) {
                         </svg>
                     </div>
                     <div class="avatar-ba-img" onclick="showFullImage(this)">
-                        <img src="data:image/png;base64,${r.after_image}" alt="After">
+                        <img src="${afterSrc}" alt="After">
                         <span class="ba-label ba-after">After</span>
                     </div>
                 </div>

@@ -1,16 +1,18 @@
-﻿{% extends "base.html" %}
-{% block title %}Buy Credits - EcomFans{% endblock %}
+{% extends "base.html" %}
+{% block title %}Buy Credits — EcomFans{% endblock %}
 {% block content %}
 <div class="dashboard billing-page">
     <div class="dashboard-header">
         <span class="page-eyebrow">Billing</span>
         <h1>Credits Store</h1>
-        <p>Top up your account when your monthly plan credits run out.</p>
+        <p>Top up your wallet anytime. Credits never expire and stack with your monthly allowance.</p>
     </div>
 
-    <div class="ai-credits-bar billing-summary-bar">
+    <!-- Credits summary -->
+    <div class="billing-summary-bar">
         <div class="credits-badge">
-            <span><strong>{{ billing_summary.available_credits }}</strong> total credits</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+            <span><strong>{{ billing_summary.available_credits }}</strong> credits available</span>
         </div>
         <div class="credits-badge">
             <span><strong>{{ billing_summary.monthly_credits }}</strong> monthly + <strong>{{ billing_summary.extra_credits }}</strong> extra</span>
@@ -23,40 +25,64 @@
     <div class="billing-pack-grid">
         {% for pack in packs %}
         <article class="billing-pack-card">
+            <div class="pack-credits">{{ pack.credits }}</div>
+            <div class="pack-credits-label">credits</div>
             <h3>{{ pack.name }}</h3>
-            <p class="plan-price">€{{ pack.price_eur }}</p>
-            <p class="field-hint">Adds {{ pack.credits }} extra credits to your wallet.</p>
-            <button class="btn btn-accent btn-full" onclick="mockBuyCredits('{{ pack.id }}')">Buy {{ pack.name }}</button>
+            <p class="plan-price" style="font-size:1.6rem;">€{{ pack.price_eur }}</p>
+            <p class="field-hint" style="font-size:0.8rem;color:var(--text-muted);text-align:center;">
+                One-time · No expiry · Instant top-up
+            </p>
+            <button class="btn btn-accent btn-full" onclick="buyCredits('{{ pack.id }}', this)">
+                Buy {{ pack.name }}
+            </button>
         </article>
         {% endfor %}
     </div>
 
     <div class="prompt-section">
-        <div class="prompt-card">
-            <h3>Want included monthly credits?</h3>
-            <p>Upgrade your plan to increase your monthly allowance.</p>
-            <a class="btn btn-primary" href="{{ url_for('billing.upgrade_page') }}">Back to Plans</a>
+        <div class="prompt-card" style="display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;">
+            <div>
+                <h3 style="font-size:1rem;font-weight:700;margin-bottom:4px;color:var(--text-primary);">Want monthly credits instead?</h3>
+                <p style="font-size:0.875rem;color:var(--text-secondary);">Upgrade your plan to get a higher monthly credit allowance at a better per-credit rate.</p>
+            </div>
+            <a class="btn btn-primary" href="{{ url_for('billing.upgrade_page') }}" style="flex-shrink:0;">View Plans</a>
         </div>
     </div>
 </div>
 
 <script>
-async function mockBuyCredits(packId) {
-    const resp = await fetch('/billing/mock/checkout/credits', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pack_id: packId })
-    });
-    const data = await resp.json();
+const _stripeEnabled = {{ 'true' if stripe_enabled else 'false' }};
 
-    if (!resp.ok) {
-        alert(data.error || 'Checkout failed.');
-        if (data.redirect_url) window.location.href = data.redirect_url;
+async function buyCredits(packId, btn) {
+    if (!_stripeEnabled) {
+        alert('Payment processing is not yet configured. Please contact support.');
         return;
     }
-
-    alert(`Credit pack purchased successfully (mock payment).`);
-    window.location.reload();
+    const origText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Redirecting to checkout…';
+    try {
+        const resp = await fetch('/billing/stripe/checkout/credits', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ pack_id: packId })
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+            alert(data.error || 'Checkout failed. Please try again.');
+            if (data.redirect_url) { window.location.href = data.redirect_url; return; }
+            btn.disabled = false;
+            btn.textContent = origText;
+            return;
+        }
+        if (data.checkout_url) {
+            window.location.href = data.checkout_url;
+        }
+    } catch (err) {
+        alert('Network error. Please try again.');
+        btn.disabled = false;
+        btn.textContent = origText;
+    }
 }
 </script>
 {% endblock %}

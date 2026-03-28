@@ -1,27 +1,37 @@
-﻿{% extends "base.html" %}
-{% block title %}Upgrade Plan - EcomFans{% endblock %}
+{% extends "base.html" %}
+{% block title %}Upgrade Plan — EcomFans{% endblock %}
 {% block content %}
 <div class="dashboard billing-page">
     <div class="dashboard-header">
         <span class="page-eyebrow">Billing</span>
-        <h1>Upgrade Your Plan</h1>
-        <p>Choose the best plan for your generation volume and unlock advanced features.</p>
+        <h1>Choose Your Plan</h1>
+        <p>Unlock more credits and advanced features. Upgrade or downgrade anytime.</p>
     </div>
 
     {% if feature == 'avatars' %}
     <div class="api-key-banner">
         <div class="api-key-banner-content">
+            <div class="api-key-icon">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                    <circle cx="9" cy="7" r="4"/>
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                </svg>
+            </div>
             <div class="api-key-text">
                 <h3>Avatars require Pro or Ultra</h3>
-                <p>Upgrade now to unlock avatar generation.</p>
+                <p>Upgrade now to unlock AI avatar generation.</p>
             </div>
         </div>
     </div>
     {% endif %}
 
-    <div class="ai-credits-bar billing-summary-bar">
+    <!-- Credits summary -->
+    <div class="billing-summary-bar">
         <div class="credits-badge">
-            <span><strong>{{ billing_summary.available_credits }}</strong> total credits</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+            <span><strong>{{ billing_summary.available_credits }}</strong> credits available</span>
         </div>
         <div class="credits-badge">
             <span><strong>{{ billing_summary.monthly_credits }}</strong> monthly + <strong>{{ billing_summary.extra_credits }}</strong> extra</span>
@@ -34,52 +44,97 @@
     <div class="billing-plan-grid">
         {% for plan in plans %}
         <article class="billing-plan-card {% if plan.is_current %}is-current{% endif %}">
-            <header>
-                <h3>{{ plan.name }}</h3>
-                <p class="plan-price">€{{ plan.price_eur }}<span>/month</span></p>
-            </header>
+
+            {% if plan.is_current %}
+            <div class="plan-badge plan-badge--current">Current plan</div>
+            {% elif plan.id == 'pro' %}
+            <div class="plan-badge">Most Popular</div>
+            {% else %}
+            <div style="height: 24px;"></div>
+            {% endif %}
+
+            <div>
+                <h3 style="font-size:1.25rem;font-weight:800;letter-spacing:-0.02em;margin-bottom:6px;color:var(--text-primary);">{{ plan.name }}</h3>
+                <p class="plan-price">
+                    €{{ plan.price_eur }}<span>/month</span>
+                </p>
+            </div>
+
             <ul class="plan-features">
-                <li>{{ plan.monthly_credits }} monthly credits</li>
-                <li>{% if plan.avatars_enabled %}Avatars enabled{% else %}Avatars locked{% endif %}</li>
-                <li>AI Image + AI Creatives</li>
+                <li>{{ plan.monthly_credits }} credits / month</li>
+                {% if plan.id == 'pro' or plan.id == 'ultra' %}
+                <li>AI Image generation</li>
+                <li>AI Creatives generation</li>
+                <li>{% if plan.avatars_enabled %}Avatar generation{% else %}<span style="opacity:.5;">Avatars locked</span>{% endif %}</li>
+                <li>Script optimizer</li>
+                <li>Brand DNA analysis</li>
+                {% else %}
+                <li>AI Image generation</li>
+                <li>AI Creatives generation</li>
+                <li style="opacity:.45;text-decoration:line-through;">Avatar generation</li>
+                <li>Script optimizer</li>
+                <li>Brand DNA analysis</li>
+                {% endif %}
+                {% if plan.id == 'ultra' %}
+                <li>Priority support</li>
+                {% endif %}
             </ul>
+
             {% if plan.id == 'free' %}
-            <button class="btn btn-ghost btn-full" disabled>{{ 'Current Plan' if plan.is_current else 'Free Plan' }}</button>
+            <button class="btn btn-ghost btn-full" disabled>{{ 'Current Plan' if plan.is_current else 'Free — No card needed' }}</button>
             {% elif plan.is_current %}
             <button class="btn btn-ghost btn-full" disabled>Current Plan</button>
             {% else %}
-            <button class="btn btn-accent btn-full" onclick="mockBuyPlan('{{ plan.id }}')">Upgrade to {{ plan.name }}</button>
+            <button class="btn btn-accent btn-full" onclick="buyPlan('{{ plan.id }}')">Upgrade to {{ plan.name }} →</button>
             {% endif %}
+
         </article>
         {% endfor %}
     </div>
 
     <div class="prompt-section">
-        <div class="prompt-card">
-            <h3>Need extra credits?</h3>
-            <p>Paid plans can buy individual top-up credit packs at any time.</p>
-            <a class="btn btn-primary" href="{{ url_for('billing.credits_store_page') }}">Open Credits Store</a>
+        <div class="prompt-card" style="display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;">
+            <div>
+                <h3 style="font-size:1rem;font-weight:700;margin-bottom:4px;color:var(--text-primary);">Need more credits now?</h3>
+                <p style="font-size:0.875rem;color:var(--text-secondary);">Buy a one-time credit pack. Works on top of your plan — no expiry.</p>
+            </div>
+            <a class="btn btn-primary" href="{{ url_for('billing.credits_store_page') }}" style="flex-shrink:0;">Buy Credit Pack</a>
         </div>
     </div>
 </div>
 
 <script>
-async function mockBuyPlan(plan) {
-    const resp = await fetch('/billing/mock/checkout/plan', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan })
-    });
-    const data = await resp.json();
+const _stripeEnabled = {{ 'true' if stripe_enabled else 'false' }};
 
-    if (!resp.ok) {
-        alert(data.error || 'Checkout failed.');
-        if (data.redirect_url) window.location.href = data.redirect_url;
+async function buyPlan(plan) {
+    if (!_stripeEnabled) {
+        alert('Payment processing is not yet configured. Please contact support.');
         return;
     }
-
-    alert(`Plan ${plan.toUpperCase()} activated successfully (mock payment).`);
-    window.location.reload();
+    const btn = event.currentTarget;
+    btn.disabled = true;
+    btn.textContent = 'Redirecting to checkout…';
+    try {
+        const resp = await fetch('/billing/stripe/checkout/plan', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ plan })
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+            alert(data.error || 'Checkout failed. Please try again.');
+            btn.disabled = false;
+            btn.textContent = 'Upgrade to ' + plan.charAt(0).toUpperCase() + plan.slice(1) + ' →';
+            return;
+        }
+        if (data.checkout_url) {
+            window.location.href = data.checkout_url;
+        }
+    } catch (err) {
+        alert('Network error. Please try again.');
+        btn.disabled = false;
+        btn.textContent = 'Upgrade to ' + plan.charAt(0).toUpperCase() + plan.slice(1) + ' →';
+    }
 }
 </script>
 {% endblock %}

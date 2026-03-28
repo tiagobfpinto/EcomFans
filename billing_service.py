@@ -1,4 +1,5 @@
 ﻿import json
+import math
 import os
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
@@ -14,11 +15,22 @@ from billing_config import (
     PLAN_DEFINITIONS,
     PLAN_ORDER,
 )
-from db import ApiKey, CreditLedger, MockPayment, UsageEvent, User, db
+from db import ApiKey, ApiRequestEvent, CreditLedger, MockPayment, UsageEvent, User, db
+from utils_crypto import decrypt_api_key
 
 
 def utc_now():
     return datetime.now(timezone.utc)
+
+
+def _env_truthy(raw_value: str | None, default: bool = False) -> bool:
+    if raw_value is None:
+        return default
+    return raw_value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def allow_user_api_keys() -> bool:
+    return _env_truthy(os.getenv("ALLOW_USER_API_KEYS"), default=False)
 
 
 def normalize_plan_tier(plan_tier: str | None) -> str:
@@ -74,6 +86,14 @@ def ensure_user_billing_defaults(user: User) -> bool:
 
     if getattr(user, "next_credit_reset_at", None) is None:
         user.next_credit_reset_at = utc_now() + timedelta(days=BILLING_CYCLE_DAYS)
+        changed = True
+
+    if not getattr(user, "default_gemini_image_model", None):
+        user.default_gemini_image_model = "gemini-2.5-flash-image"
+        changed = True
+
+    if getattr(user, "batch_api_for_queued_jobs", None) is None:
+        user.batch_api_for_queued_jobs = False
         changed = True
 
     return changed
@@ -181,15 +201,31 @@ def ensure_credits_or_error(user: User, required_credits: int, feature: str | No
     return build_credit_error_payload(user, required_credits, feature=feature)
 
 
-def quote_ai_image(variations: int) -> dict:
+def _apply_batch_discount_credits(base_credits: int, enabled: bool) -> int:
+    if not enabled:
+        return int(base_credits)
+    return max(1, int(math.ceil(float(base_credits) * 0.5)))
+
+
+def quote_ai_image(variations: int, traffic_type: str = "standard") -> dict:
     variations = max(1, int(variations))
-    credits = variations * CREDIT_COSTS["ai_image_variation"]
+    batch_mode = traffic_type == "batch"
+    base_credits = variations * CREDIT_COSTS["ai_image_variation"]
+    credits = _apply_batch_discount_credits(base_credits, batch_mode)
     estimated = ESTIMATED_USAGE_COST_USD["ai_image_variation"] * variations
+    if batch_mode:
+        estimated = estimated * Decimal("0.5")
     return {"credits": credits, "estimated_cost_usd": estimated, "units": variations}
 
 
-def quote_ai_creatives(inspiration_count: int, provider: str, prompt_only: bool) -> dict:
+def quote_ai_creatives(
+    inspiration_count: int,
+    provider: str,
+    prompt_only: bool,
+    traffic_type: str = "standard",
+) -> dict:
     inspiration_count = max(1, int(inspiration_count))
+    batch_mode = traffic_type == "batch" and provider == "gemini"
 
     if prompt_only:
         per = CREDIT_COSTS["ai_creatives_prompt_only_inspiration"]
@@ -204,20 +240,28 @@ def quote_ai_creatives(inspiration_count: int, provider: str, prompt_only: bool)
         per = CREDIT_COSTS["ai_creatives_single_provider_inspiration"]
         estimated_per = ESTIMATED_USAGE_COST_USD["ai_creatives_gemini_inspiration"]
 
-    credits = inspiration_count * per
+    base_credits = inspiration_count * per
+    credits = _apply_batch_discount_credits(base_credits, batch_mode)
     estimated = estimated_per * inspiration_count
+    if batch_mode:
+        estimated = estimated * Decimal("0.5")
     return {
         "credits": credits,
         "estimated_cost_usd": estimated,
         "units": inspiration_count,
         "per_inspiration_credits": per,
+        "batch_mode": batch_mode,
     }
 
 
-def quote_avatars(total_pairs: int) -> dict:
+def quote_avatars(total_pairs: int, traffic_type: str = "standard") -> dict:
     total_pairs = max(1, int(total_pairs))
-    credits = total_pairs * CREDIT_COSTS["avatars_pair"]
+    batch_mode = traffic_type == "batch"
+    base_credits = total_pairs * CREDIT_COSTS["avatars_pair"]
+    credits = _apply_batch_discount_credits(base_credits, batch_mode)
     estimated = ESTIMATED_USAGE_COST_USD["avatars_pair"] * total_pairs
+    if batch_mode:
+        estimated = estimated * Decimal("0.5")
     return {"credits": credits, "estimated_cost_usd": estimated, "units": total_pairs}
 
 
@@ -378,10 +422,12 @@ def get_platform_api_key(service: str) -> str | None:
 
 
 def get_user_api_key(user_id: int, service: str) -> str | None:
-    if not user_id:
+    if not allow_user_api_keys() or not user_id:
         return None
     key_row = ApiKey.query.filter_by(user_id=user_id, service=service).first()
-    return key_row.api_key if key_row else None
+    if not key_row or not key_row.api_key:
+        return None
+    return decrypt_api_key(key_row.api_key)
 
 
 def get_effective_api_key(user_id: int, service: str) -> str | None:
@@ -432,3 +478,49 @@ def list_credit_packs() -> list[dict]:
         }
         for pack in CREDIT_PACKS.values()
     ]
+
+
+def record_api_request_event(
+    *,
+    user_id: int | None,
+    feature: str | None,
+    provider: str,
+    operation: str | None,
+    meta: dict | None = None,
+    status: str = "completed",
+    error_message: str | None = None,
+    metadata: dict | None = None,
+) -> ApiRequestEvent:
+    meta = meta or {}
+    event = ApiRequestEvent(
+        user_id=user_id,
+        feature=feature,
+        provider=provider,
+        operation=operation,
+        model=meta.get("model"),
+        traffic_type=meta.get("traffic_type"),
+        status=status,
+        http_status=meta.get("http_status"),
+        latency_ms=meta.get("latency_ms"),
+        input_tokens=meta.get("input_tokens"),
+        cached_tokens=meta.get("cached_tokens"),
+        output_tokens=meta.get("output_tokens"),
+        total_tokens=meta.get("total_tokens"),
+        input_image_count=meta.get("input_image_count"),
+        images_generated=meta.get("images_generated"),
+        estimated_cost_usd=(
+            Decimal(str(meta["estimated_cost_usd"]))
+            if meta.get("estimated_cost_usd") is not None
+            else None
+        ),
+        estimated_cost_eur=(
+            Decimal(str(meta["estimated_cost_eur"]))
+            if meta.get("estimated_cost_eur") is not None
+            else None
+        ),
+        request_id=meta.get("request_id"),
+        error_message=error_message,
+        metadata_json=_json_or_none(metadata),
+    )
+    db.session.add(event)
+    return event

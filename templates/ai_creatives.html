@@ -3,6 +3,7 @@
 {% block content %}
 <div class="ai-image-page avatars-page ai-creatives-page">
     <div class="dashboard-header">
+        <span class="page-eyebrow">AI Generation</span>
         <h1>AI Creatives</h1>
         <p>Turn inspiration ads into creatives for your own product, automatically.</p>
     </div>
@@ -53,6 +54,11 @@
             <div class="flow-stage-toolbar">
                 <h2>Creative Flow</h2>
                 <p>Drag nodes around. Click a core node to edit its settings.</p>
+                <div id="flow-run-indicator" class="flow-run-indicator" aria-live="polite" style="display:none;">
+                    <span class="flow-run-spinner" aria-hidden="true"></span>
+                    <span id="flow-run-status-text">Preparing run...</span>
+                    <span id="flow-run-elapsed">00:00</span>
+                </div>
             </div>
 
             <div class="creative-flow-stage-scroll">
@@ -62,31 +68,78 @@
 
                     <button type="button" id="flow-node-product"
                         class="flow-node flow-node-core draggable is-selected"
-                        data-node-id="flow-node-product" data-panel="product" style="left:40px; top:170px;">
+                        data-node-id="flow-node-product" data-panel="product"
+                        data-default-left="40px" data-default-top="170px"
+                        style="left:40px; top:170px;">
                         <span class="flow-node-badge">Node</span>
                         <span class="flow-node-title">Product</span>
                         <span class="flow-node-meta" id="flow-product-meta">No product selected</span>
                     </button>
 
+                    <button type="button" id="flow-node-gentype" class="flow-node flow-node-core flow-node-agent draggable"
+                        data-node-id="flow-node-gentype" data-panel="gentype"
+                        data-default-left="210px" data-default-top="163px"
+                        style="left:210px; top:163px;">
+                        <span class="flow-node-badge flow-node-badge-agent">Agent</span>
+                        <div class="flow-node-agent-icon" aria-hidden="true">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="3" y="9" width="18" height="12" rx="2.5"/>
+                                <path d="M8 9V6a4 4 0 0 1 8 0v3"/>
+                                <circle cx="9" cy="15" r="1.2" fill="currentColor" stroke="none"/>
+                                <circle cx="15" cy="15" r="1.2" fill="currentColor" stroke="none"/>
+                                <path d="M9 19h6"/>
+                                <path d="M12 3v3" stroke-width="2"/>
+                                <circle cx="12" cy="2.5" r="1" fill="currentColor" stroke="none"/>
+                            </svg>
+                        </div>
+                        <span class="flow-node-title">Generation Type</span>
+                        <span class="flow-node-meta" id="flow-gentype-meta">Competitor Inspiration</span>
+                    </button>
+
                     <button type="button" id="flow-node-prompt" class="flow-node flow-node-core draggable"
-                        data-node-id="flow-node-prompt" data-panel="prompt" style="left:300px; top:155px;">
+                        data-node-id="flow-node-prompt" data-panel="prompt"
+                        data-default-left="610px" data-default-top="155px"
+                        style="left:610px; top:155px;">
                         <span class="flow-node-badge">Node</span>
                         <span class="flow-node-title">Prompt Editor</span>
                         <span class="flow-node-meta">Configure base + analysis prompts</span>
                     </button>
+                    <button type="button" id="flow-prompt-preview-trigger" class="flow-node-side-action"
+                        onclick="openPromptQuickView(event)" aria-label="View final prompt" title="View final prompt"
+                        style="display:none;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                        </svg>
+                    </button>
 
                     <button type="button" id="flow-node-library" class="flow-node flow-node-core draggable"
-                        data-node-id="flow-node-library" data-panel="library" style="left:290px; top:335px;">
+                        data-node-id="flow-node-library" data-panel="library"
+                        data-default-left="610px" data-default-top="335px"
+                        style="left:610px; top:335px;">
                         <span class="flow-node-badge">Node</span>
                         <span class="flow-node-title">Inspiration Library</span>
                         <span class="flow-node-meta" id="flow-library-meta">0 inspirations selected</span>
                     </button>
 
-                    <button type="button" id="flow-node-model" class="flow-node flow-node-core draggable"
-                        data-node-id="flow-node-model" data-panel="model" style="left:560px; top:170px;">
-                        <span class="flow-node-badge">Node</span>
+                    <button type="button" id="flow-node-awareness" class="flow-node flow-node-core flow-node-awareness draggable"
+                        data-node-id="flow-node-awareness" data-panel="awareness"
+                        data-default-left="410px" data-default-top="155px"
+                        style="left:410px; top:155px; display:none;">
+                        <span class="flow-node-badge flow-node-badge-awareness">Targeting</span>
+                        <span class="flow-node-title">Awareness Level</span>
+                        <span class="flow-node-meta" id="flow-awareness-meta">Solution Aware · Meta Feed</span>
+                    </button>
+
+                    <button type="button" id="flow-node-model"
+                        class="flow-node flow-node-core flow-node-model-{% if has_openai_key and not has_gemini_key %}openai{% else %}gemini{% endif %} draggable"
+                        data-node-id="flow-node-model" data-panel="model"
+                        data-default-left="820px" data-default-top="170px"
+                        style="left:820px; top:170px;">
+                        <span class="flow-node-badge" id="flow-model-badge">{% if has_openai_key and not has_gemini_key %}ChatGPT{% else %}Gemini{% endif %}</span>
+                        <div id="flow-model-icon" class="flow-node-model-icon" aria-hidden="true"></div>
                         <span class="flow-node-title">AI Model</span>
-                        <span class="flow-node-meta" id="flow-model-meta">Gemini selected</span>
+                        <span class="flow-node-meta" id="flow-model-meta">{% if has_openai_key and not has_gemini_key %}ChatGPT selected{% else %}Gemini selected{% endif %}</span>
                     </button>
 
                     <div id="flow-output-nodes" class="flow-output-nodes"></div>
@@ -142,6 +195,48 @@
                 </div>
             </div>
 
+            <div id="panel-gentype" class="prompt-card avatar-generator-card flow-panel panel-agent" data-panel="gentype">
+                <div class="panel-agent-header">
+                    <div class="panel-agent-icon">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="9" width="18" height="12" rx="2.5"/>
+                            <path d="M8 9V6a4 4 0 0 1 8 0v3"/>
+                            <circle cx="9" cy="15" r="1.2" fill="currentColor" stroke="none"/>
+                            <circle cx="15" cy="15" r="1.2" fill="currentColor" stroke="none"/>
+                            <path d="M9 19h6"/>
+                            <path d="M12 3v3" stroke-width="2"/>
+                            <circle cx="12" cy="2.5" r="1" fill="currentColor" stroke="none"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <div class="panel-agent-badge">Agent Node</div>
+                        <h3 style="margin:0; font-size:1rem;">Generation Type</h3>
+                    </div>
+                </div>
+                <p class="field-hint flow-panel-hint">Choose what kind of creative to generate. Automatically loads the matching prompts into the Prompt Editor.</p>
+
+                <div class="avatar-field">
+                    <label>Generation Mode</label>
+                    <div class="gentype-selector">
+                        <label class="gentype-option gentype-option-selected" id="gentype-label-competitor" onclick="selectGenerationType('competitor_inspiration')">
+                            <input type="radio" name="generation-type" id="gentype-competitor" value="competitor_inspiration" checked>
+                            <div class="gentype-option-body">
+                                <span class="gentype-option-title">Competitor Inspiration</span>
+                                <span class="gentype-option-desc">Copies the visual layout and style of competitor ads. Uses your inspiration library as references and adapts each ad's aesthetics to your product.</span>
+                            </div>
+                        </label>
+                        <label class="gentype-option" id="gentype-label-winner" onclick="selectGenerationType('winner_ad_variation')">
+                            <input type="radio" name="generation-type" id="gentype-winner" value="winner_ad_variation">
+                            <div class="gentype-option-body">
+                                <span class="gentype-option-title">Winner Ad Variation</span>
+                                <span class="gentype-option-desc">Creates fresh variations of a proven winning ad. Preserves the core winning formula — hook, emotional appeal, and visual hierarchy — while adapting it to your product.</span>
+                            </div>
+                        </label>
+                    </div>
+                    <p class="field-hint" style="margin-top:8px;">Selecting a mode updates the Prompt Editor with the recommended prompts. You can still customise them afterwards.</p>
+                </div>
+            </div>
+
             <div id="panel-prompt" class="prompt-card avatar-generator-card flow-panel" data-panel="prompt">
                 <h3>Prompt Editor Node</h3>
                 <p class="field-hint flow-panel-hint">Define how inspiration is analyzed and merged into final prompts.
@@ -193,6 +288,14 @@
                         <span class="pf-step pf-final">Final Prompt</span>
                     </div>
                 </div>
+
+                <div id="prompt-final-preview" class="prompt-final-preview" style="display:none;">
+                    <div class="prompt-step-label" style="display:flex; justify-content:space-between; align-items:center;">
+                        <span>Latest Final Prompt</span>
+                        <button type="button" class="btn btn-ghost btn-sm" onclick="copyFinalPrompt(event)">Copy</button>
+                    </div>
+                    <p id="prompt-final-preview-text" class="prompt-step-text"></p>
+                </div>
             </div>
 
             <div id="panel-library" class="prompt-card avatar-generator-card flow-panel" data-panel="library">
@@ -226,7 +329,8 @@
                                 <polyline points="20 6 9 17 4 12" />
                             </svg>
                         </div>
-                        <button class="inspiration-delete-btn" onclick="deleteInspiration(event, {{ insp.id }})">
+                        <button class="inspiration-delete-btn" data-inspiration-id="{{ insp.id }}"
+                            onclick="deleteInspiration(event, this.dataset.inspirationId)">
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                 stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                                 <line x1="18" y1="6" x2="6" y2="18" />
@@ -257,6 +361,37 @@
                             id="creatives-clear-btn" style="display:none">Clear</button>
                     </div>
                     <p class="field-hint">Each selected inspiration becomes one output node.</p>
+                </div>
+
+            </div>
+
+            <div id="panel-awareness" class="prompt-card avatar-generator-card flow-panel" data-panel="awareness">
+                <h3>Awareness Level Node</h3>
+                <p class="field-hint flow-panel-hint">Configure targeting for Competitor Inspiration mode. These settings drive the two-phase prompt pipeline.</p>
+
+                <div class="avatar-field">
+                    <label for="competitor-awareness-level">Awareness Level</label>
+                    <select id="competitor-awareness-level" class="avatar-select" onchange="updateAwarenessNodeMeta()">
+                        <option value="unaware">Unaware — Don't know they have the problem</option>
+                        <option value="problem_aware">Problem Aware — Feel the pain, no fix yet</option>
+                        <option value="solution_aware" selected>Solution Aware — Comparing options</option>
+                        <option value="product_aware">Product Aware — Know your product, haven't bought</option>
+                        <option value="most_aware">Most Aware — Past buyers or very familiar</option>
+                    </select>
+                    <p class="field-hint">Which stage of awareness is your target audience at? This shapes the ad angle, hook, and copy tone.</p>
+                </div>
+
+                <div class="avatar-field">
+                    <label for="competitor-platform">Platform</label>
+                    <select id="competitor-platform" class="avatar-select" onchange="updateAwarenessNodeMeta()">
+                        <option value="meta_feed">Meta Feed (1080×1080 / 1080×1350)</option>
+                        <option value="meta_stories">Meta Stories / Reels (1080×1920)</option>
+                        <option value="google_display">Google Display</option>
+                        <option value="tiktok_feed">TikTok Feed (1080×1920)</option>
+                        <option value="email_banner">Email Banner</option>
+                        <option value="other">Other</option>
+                    </select>
+                    <p class="field-hint">Platform affects format guidance in the generated ad concept.</p>
                 </div>
             </div>
 
@@ -305,6 +440,22 @@
                 </div>
 
                 <div class="avatar-field">
+                    <label for="creatives-gemini-model">Gemini Image Model</label>
+                    <select id="creatives-gemini-model" class="avatar-select" data-default-model="{{ default_gemini_image_model }}">
+                        <option value="{{ default_gemini_image_model }}">{{ default_gemini_image_model }}</option>
+                    </select>
+                    <p class="field-hint">Model list is fetched from Gemini and saved as your default.</p>
+                </div>
+
+                <div class="avatar-field">
+                    <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:500; font-size:0.875rem;">
+                        <input type="checkbox" id="creatives-batch-toggle" {% if batch_api_for_queued_jobs %}checked{% endif %}>
+                        Use Gemini Batch API pricing
+                    </label>
+                    <p class="field-hint" style="margin-top:4px;">Applies only to Gemini-only runs. OpenAI and Both stay standard.</p>
+                </div>
+
+                <div class="avatar-field">
                     <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:500; font-size:0.875rem;">
                         <input type="checkbox" id="prompt-only-toggle" onchange="updateSelectionSummary()">
                         Generate Prompt Only (Do not generate image)
@@ -326,7 +477,17 @@
                 </button>
             </div>
 
+            <div id="panel-output" class="prompt-card avatar-generator-card flow-panel" data-panel="output">
+                <h3>Generated Output Node</h3>
+                <p class="field-hint flow-panel-hint">Preview and download generated image(s) from this node.</p>
+                <div id="flow-output-empty" class="empty-state">
+                    <p>Select an output node to inspect details.</p>
+                </div>
+                <div id="flow-output-details" style="display:none;"></div>
+            </div>
+
         </div>
+    </div>
     </div>
 
     <div class="prompt-history">
@@ -346,7 +507,8 @@
                         </span>
                     </div>
                     <div class="prompt-actions">
-                        <button class="btn btn-ghost btn-sm btn-danger-hover" onclick="deleteCreativeBatch({{ batch.id }})">
+                        <button class="btn btn-ghost btn-sm btn-danger-hover" data-batch-id="{{ batch.id }}"
+                            onclick="deleteCreativeBatch(this.dataset.batchId)">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <polyline points="3 6 5 6 21 6" />
                                 <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
@@ -367,9 +529,9 @@
                                 <span class="ba-label ba-before">IN</span>
                             </div>
                             {% endif %}
-                            {% if res.generated_image %}
+                            {% if res.generated_storage_path or res.generated_image %}
                             <div class="creative-mini-img" onclick="showFullImage(this)" title="Generated">
-                                <img src="data:image/png;base64,{{ res.generated_image }}" alt="Generated">
+                                <img src="{{ url_for('media.creative_result_generated_image', result_id=res.id) }}" alt="Generated">
                                 <span class="ba-label ba-after">OUT</span>
                             </div>
                             {% else %}
@@ -382,7 +544,7 @@
                         <div class="creative-prompt-box collapsed" onclick="togglePrompt(this)">
                             <div class="creative-prompt-header">
                                 <span class="creative-prompt-label">Final Prompt</span>
-                                {% if not res.generated_image %}
+                                {% if not (res.generated_storage_path or res.generated_image) %}
                                 <button type="button" class="btn btn-ghost btn-sm" onclick="copyPromptText(this); event.stopPropagation();" style="margin-left:auto; margin-right:8px;">Copy</button>
                                 {% endif %}
                                 <svg class="prompt-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -431,6 +593,11 @@
         width: 100%;
     }
 
+    .ai-creatives-page.is-overlay-scroll-locked {
+        overflow: hidden;
+        overscroll-behavior: contain;
+    }
+
     .creative-flow-shell {
         display: block;
     }
@@ -456,6 +623,46 @@
         color: var(--text-muted, #9999b2);
     }
 
+    .flow-run-indicator {
+        margin-top: 8px;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        background: color-mix(in srgb, var(--surface) 86%, transparent);
+        color: var(--text-secondary);
+        font-size: 0.75rem;
+        font-weight: 600;
+        width: fit-content;
+    }
+
+    .flow-run-spinner {
+        width: 12px;
+        height: 12px;
+        border: 2px solid color-mix(in srgb, var(--text-muted) 45%, transparent);
+        border-top-color: color-mix(in srgb, var(--accent) 80%, #ffffff 8%);
+        border-radius: 999px;
+        animation: flowRunSpin 0.7s linear infinite;
+    }
+
+    .flow-run-indicator.is-finished .flow-run-spinner,
+    .flow-run-indicator.is-error .flow-run-spinner {
+        animation-play-state: paused;
+    }
+
+    @keyframes flowRunSpin {
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    #flow-run-elapsed {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+        letter-spacing: 0.02em;
+    }
+
     .creative-flow-stage-scroll {
         flex: 1;
         overflow: auto;
@@ -469,13 +676,12 @@
     .creative-flow-stage {
         position: relative;
         min-width: 1080px;
-        height: 100%;
-        min-height: 620px;
+        min-height: max(100%, 620px);
         background-image:
             linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
             linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
         background-size: 22px 22px;
-        overflow: hidden;
+        overflow: visible;
     }
 
     .flow-connectors {
@@ -614,6 +820,137 @@
 
     .flow-node.is-running {
         box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 72%, transparent), 0 0 26px color-mix(in srgb, var(--accent) 46%, transparent), 0 12px 30px rgba(0, 0, 0, 0.28);
+    }
+
+    /* ── Agent / Generation Type node ───────────────────────────── */
+    .flow-node-agent {
+        --agent: #a855f7;
+        --agent-dim: rgba(168, 85, 247, 0.18);
+        --agent-glow: rgba(168, 85, 247, 0.32);
+        border-color: rgba(168, 85, 247, 0.55);
+        background: linear-gradient(145deg,
+            color-mix(in srgb, #a855f7 9%, var(--surface, #121326)) 0%,
+            color-mix(in srgb, #7c3aed 5%, var(--surface, #121326)) 100%);
+        box-shadow:
+            0 0 0 1px rgba(168, 85, 247, 0.22),
+            0 0 18px rgba(168, 85, 247, 0.14),
+            0 8px 24px rgba(0, 0, 0, 0.3);
+        overflow: hidden;
+    }
+
+    .flow-node-agent::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        background: linear-gradient(
+            180deg,
+            transparent 0%,
+            rgba(168, 85, 247, 0.055) 50%,
+            transparent 100%
+        );
+        transform: translateY(-100%);
+        animation: agentScan 4s ease-in-out infinite;
+        pointer-events: none;
+    }
+
+    @keyframes agentScan {
+        0%   { transform: translateY(-100%); opacity: 0; }
+        15%  { opacity: 1; }
+        85%  { opacity: 1; }
+        100% { transform: translateY(200%); opacity: 0; }
+    }
+
+    .flow-node-agent:hover {
+        border-color: rgba(168, 85, 247, 0.85);
+        box-shadow:
+            0 0 0 1px rgba(168, 85, 247, 0.5),
+            0 0 28px rgba(168, 85, 247, 0.28),
+            0 12px 30px rgba(0, 0, 0, 0.32);
+        transform: translateY(-2px);
+    }
+
+    .flow-node-agent.is-selected {
+        border-color: #a855f7;
+        box-shadow:
+            0 0 0 1px rgba(168, 85, 247, 0.7),
+            0 0 32px rgba(168, 85, 247, 0.3),
+            0 12px 30px rgba(0, 0, 0, 0.28);
+    }
+
+    .flow-node-badge-agent {
+        color: #c084fc;
+        letter-spacing: 0.12em;
+    }
+
+    .flow-node-agent .flow-node-title {
+        color: #e9d5ff;
+    }
+
+    .flow-node-agent .flow-node-meta {
+        color: #c084fc;
+        opacity: 0.8;
+    }
+
+    .flow-node-agent-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 38px;
+        height: 38px;
+        border-radius: 10px;
+        background: linear-gradient(135deg,
+            rgba(168, 85, 247, 0.22) 0%,
+            rgba(109, 40, 217, 0.14) 100%);
+        border: 1px solid rgba(168, 85, 247, 0.35);
+        margin-bottom: 6px;
+        color: #c084fc;
+        box-shadow: 0 0 12px rgba(168, 85, 247, 0.2), inset 0 1px 0 rgba(255,255,255,0.07);
+        flex-shrink: 0;
+        position: relative;
+        z-index: 1;
+    }
+
+    .flow-node-agent-icon svg {
+        filter: drop-shadow(0 0 4px rgba(168, 85, 247, 0.6));
+    }
+
+    /* connector overrides for agent edges */
+    .flow-connector-agent.flow-connector-base {
+        stroke: rgba(168, 85, 247, 0.55);
+        opacity: 0.65;
+    }
+
+    .flow-connector-agent.flow-connector-pulse {
+        stroke: rgba(200, 130, 255, 0.75);
+    }
+
+    .flow-node-side-action {
+        position: absolute;
+        z-index: 24;
+        width: 30px;
+        height: 30px;
+        border-radius: 999px;
+        border: 1px solid color-mix(in srgb, var(--border) 80%, #ffffff 10%);
+        background: color-mix(in srgb, var(--surface) 90%, transparent);
+        color: var(--text-secondary);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.28);
+        transition: all .15s ease;
+    }
+
+    .flow-node-side-action:hover {
+        border-color: color-mix(in srgb, var(--accent) 70%, #ffffff 8%);
+        color: var(--text-primary);
+        transform: translateY(-1px);
+    }
+
+    .flow-node-side-action:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 1px;
     }
 
     .flow-output-node.flow-node-enter {
@@ -774,6 +1111,107 @@
         margin-bottom: 12px;
     }
 
+    .gentype-selector {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .gentype-option {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        padding: 12px 14px;
+        border: 1.5px solid var(--border);
+        border-radius: 10px;
+        cursor: pointer;
+        transition: border-color 0.15s, background 0.15s;
+        background: var(--surface);
+        user-select: none;
+    }
+
+    .gentype-option-selected {
+        border-color: var(--accent);
+        background: color-mix(in srgb, var(--accent) 10%, transparent);
+    }
+
+    .gentype-option input[type="radio"] {
+        display: none;
+    }
+
+    .gentype-option-body {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .gentype-option-title {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+
+    .gentype-option-selected .gentype-option-title {
+        color: var(--accent);
+    }
+
+    .gentype-option-desc {
+        font-size: 0.78rem;
+        color: var(--text-secondary, #ababc4);
+        line-height: 1.45;
+    }
+
+    /* override selected state to use agent purple instead of default accent */
+    .gentype-option-selected {
+        border-color: rgba(168, 85, 247, 0.7) !important;
+        background: color-mix(in srgb, #a855f7 10%, transparent) !important;
+    }
+
+    .gentype-option-selected .gentype-option-title {
+        color: #c084fc !important;
+    }
+
+    /* Panel agent header */
+    .panel-agent {
+        border-top: 2px solid rgba(168, 85, 247, 0.5);
+    }
+
+    .panel-agent-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 14px;
+    }
+
+    .panel-agent-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 44px;
+        height: 44px;
+        flex-shrink: 0;
+        border-radius: 12px;
+        background: linear-gradient(135deg,
+            rgba(168, 85, 247, 0.22) 0%,
+            rgba(109, 40, 217, 0.14) 100%);
+        border: 1px solid rgba(168, 85, 247, 0.35);
+        color: #c084fc;
+        box-shadow: 0 0 14px rgba(168, 85, 247, 0.18), inset 0 1px 0 rgba(255,255,255,0.06);
+    }
+
+    .panel-agent-icon svg {
+        filter: drop-shadow(0 0 5px rgba(168, 85, 247, 0.55));
+    }
+
+    .panel-agent-badge {
+        font-size: 0.65rem;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: #a855f7;
+        font-weight: 600;
+        margin-bottom: 2px;
+    }
+
     .provider-selector {
         display: flex;
         gap: 8px;
@@ -815,10 +1253,32 @@
         align-items: center;
     }
 
+    .avatar-textarea {
+        width: 100%;
+        padding: 10px 12px;
+        border-radius: var(--radius-sm);
+        border: 1px solid color-mix(in srgb, var(--border) 72%, var(--text-muted) 28%);
+        background: linear-gradient(180deg,
+                color-mix(in srgb, var(--bg-tertiary) 92%, white 8%) 0%,
+                color-mix(in srgb, var(--bg-tertiary) 98%, black 2%) 100%);
+        color: var(--text-primary);
+        transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .avatar-textarea:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    .avatar-textarea::placeholder {
+        color: color-mix(in srgb, var(--text-muted) 90%, white 10%);
+    }
+
     .prompt-textarea {
-        font-family: inherit;
-        font-size: 0.875rem;
-        line-height: 1.5;
+        font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+        font-size: 0.82rem;
+        line-height: 1.45;
+        letter-spacing: 0.01em;
         resize: vertical;
         min-height: 60px;
     }
@@ -966,6 +1426,32 @@
 
     .prompt-step.step-final .prompt-step-label {
         color: var(--accent);
+    }
+
+    .prompt-final-preview {
+        margin-top: 10px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: color-mix(in srgb, var(--surface) 92%, transparent);
+        padding: 10px;
+    }
+
+    .prompt-final-preview .prompt-step-text {
+        font-size: 0.84rem;
+    }
+
+    #flow-output-details {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .flow-output-error {
+        border: 1px solid color-mix(in srgb, var(--error) 60%, transparent);
+        border-radius: 8px;
+        background: color-mix(in srgb, var(--error-subtle, rgba(248, 113, 113, 0.08)) 84%, transparent);
+        padding: 10px;
+        font-size: .82rem;
     }
 
     .creative-result-images {
@@ -1126,27 +1612,335 @@
             padding: 12px;
         }
     }
+
+    /* ── Competitor Inspiration UI ─────────────────── */
+    .competitor-analysis-card {
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        overflow: hidden;
+    }
+
+    .competitor-analysis-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        background: var(--surface-2, var(--surface));
+        cursor: pointer;
+        font-size: 0.875rem;
+        font-weight: 600;
+        user-select: none;
+    }
+
+    .competitor-analysis-header .prompt-chevron {
+        margin-left: auto;
+        transition: transform 0.2s;
+    }
+
+    .competitor-analysis-card.is-open .competitor-analysis-header .prompt-chevron {
+        transform: rotate(180deg);
+    }
+
+    .competitor-analysis-body {
+        display: none;
+        padding: 10px 12px;
+        border-top: 1px solid var(--border);
+        background: var(--surface);
+    }
+
+    .competitor-analysis-card.is-open .competitor-analysis-body {
+        display: block;
+    }
+
+    .competitor-analysis-pre {
+        font-size: 0.82rem;
+        line-height: 1.6;
+        color: var(--text-secondary);
+        white-space: pre-wrap;
+        word-break: break-word;
+        margin: 0;
+    }
+
+    .awareness-level-badge {
+        font-size: 0.72rem;
+        font-weight: 700;
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: color-mix(in srgb, var(--accent) 18%, transparent);
+        color: var(--accent);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+
+    .concept-output-card {
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        overflow: hidden;
+    }
+
+    .concept-output-header {
+        padding: 8px 12px;
+        background: var(--surface-2, var(--surface));
+        font-size: 0.875rem;
+        font-weight: 600;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .concept-tabs {
+        display: flex;
+        border-bottom: 1px solid var(--border);
+        background: var(--surface-2, var(--surface));
+    }
+
+    .concept-tab {
+        flex: 1;
+        padding: 7px 4px;
+        font-size: 0.78rem;
+        font-weight: 600;
+        background: transparent;
+        border: none;
+        border-bottom: 2px solid transparent;
+        color: var(--text-muted);
+        cursor: pointer;
+        transition: color 0.15s, border-color 0.15s;
+    }
+
+    .concept-tab.active {
+        color: var(--accent);
+        border-bottom-color: var(--accent);
+    }
+
+    .concept-panel {
+        padding: 12px;
+        background: var(--surface);
+    }
+
+    .concept-panel.hidden {
+        display: none;
+    }
+
+    .concept-text {
+        font-size: 0.82rem;
+        line-height: 1.65;
+        color: var(--text-secondary);
+        white-space: pre-wrap;
+        word-break: break-word;
+        margin: 0 0 10px;
+        font-family: inherit;
+    }
+
+    .concept-recommendation {
+        padding: 10px 12px;
+        border-top: 1px solid var(--border);
+        background: color-mix(in srgb, var(--accent) 6%, var(--surface));
+    }
+
+    .concept-rec-label {
+        font-size: 0.78rem;
+        font-weight: 700;
+        color: var(--accent);
+        margin-bottom: 6px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+
+    /* ── Awareness Level node (emerald green) ────────────────── */
+    .flow-node-awareness {
+        --awareness: #10b981;
+        border-color: rgba(16, 185, 129, 0.55);
+        background: linear-gradient(145deg,
+            rgba(16, 185, 129, 0.09) 0%,
+            color-mix(in srgb, var(--surface, #15172a) 90%, transparent) 60%);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .flow-node-awareness::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(ellipse at 50% -20%, rgba(16, 185, 129, 0.18) 0%, transparent 65%);
+        pointer-events: none;
+    }
+
+    .flow-node-awareness:hover {
+        border-color: rgba(16, 185, 129, 0.85);
+        box-shadow:
+            0 0 0 1px rgba(16, 185, 129, 0.25),
+            0 4px 20px rgba(16, 185, 129, 0.22),
+            0 1px 4px rgba(0,0,0,0.18);
+    }
+
+    .flow-node-awareness.is-selected {
+        border-color: #10b981;
+        box-shadow:
+            0 0 0 3px rgba(16, 185, 129, 0.28),
+            0 6px 24px rgba(16, 185, 129, 0.3),
+            0 1px 4px rgba(0,0,0,0.18);
+    }
+
+    .flow-node-badge-awareness {
+        background: rgba(16, 185, 129, 0.15);
+        color: #34d399;
+        letter-spacing: 0.1em;
+    }
+
+    .flow-node-awareness .flow-node-title {
+        color: #d1fae5;
+    }
+
+    .flow-node-awareness .flow-node-meta {
+        color: #6ee7b7;
+        opacity: 0.85;
+    }
+
+    /* awareness connector color override */
+    .flow-connector-awareness.flow-connector-base {
+        stroke: rgba(16, 185, 129, 0.55);
+        opacity: 0.7;
+    }
+
+    .flow-connector-awareness.flow-connector-pulse {
+        stroke: rgba(52, 211, 153, 0.78);
+    }
+
+    /* ── AI Model node — provider-themed ──────────────────────── */
+    .flow-node-model-icon {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        margin: 1px 0 2px;
+        transition: color 0.2s, filter 0.2s;
+    }
+
+    /* Gemini = indigo/violet */
+    .flow-node-model-gemini {
+        border-color: rgba(129, 140, 248, 0.55);
+        background: linear-gradient(145deg, rgba(99, 102, 241, 0.09) 0%,
+            color-mix(in srgb, var(--surface, #15172a) 90%, transparent) 60%);
+    }
+    .flow-node-model-gemini .flow-node-model-icon {
+        color: #818cf8;
+        filter: drop-shadow(0 0 5px rgba(129, 140, 248, 0.65));
+    }
+    .flow-node-model-gemini .flow-node-badge  { color: #a5b4fc; }
+    .flow-node-model-gemini .flow-node-title  { color: #e0e7ff; }
+    .flow-node-model-gemini .flow-node-meta   { color: #a5b4fc; opacity: 0.9; }
+    .flow-node-model-gemini:hover {
+        border-color: rgba(129, 140, 248, 0.85);
+        box-shadow: 0 0 0 1px rgba(129, 140, 248, 0.25), 0 4px 20px rgba(99, 102, 241, 0.22);
+    }
+    .flow-node-model-gemini.is-selected {
+        border-color: #818cf8;
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.28), 0 6px 24px rgba(99, 102, 241, 0.3);
+    }
+
+    /* ChatGPT / OpenAI = teal-green */
+    .flow-node-model-openai {
+        border-color: rgba(20, 184, 166, 0.55);
+        background: linear-gradient(145deg, rgba(20, 184, 166, 0.09) 0%,
+            color-mix(in srgb, var(--surface, #15172a) 90%, transparent) 60%);
+    }
+    .flow-node-model-openai .flow-node-model-icon {
+        color: #2dd4bf;
+        filter: drop-shadow(0 0 5px rgba(20, 184, 166, 0.65));
+    }
+    .flow-node-model-openai .flow-node-badge  { color: #5eead4; }
+    .flow-node-model-openai .flow-node-title  { color: #ccfbf1; }
+    .flow-node-model-openai .flow-node-meta   { color: #5eead4; opacity: 0.9; }
+    .flow-node-model-openai:hover {
+        border-color: rgba(45, 212, 191, 0.85);
+        box-shadow: 0 0 0 1px rgba(20, 184, 166, 0.25), 0 4px 20px rgba(20, 184, 166, 0.22);
+    }
+    .flow-node-model-openai.is-selected {
+        border-color: #2dd4bf;
+        box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.28), 0 6px 24px rgba(20, 184, 166, 0.3);
+    }
+
+    /* Both = amber */
+    .flow-node-model-both {
+        border-color: rgba(251, 146, 60, 0.55);
+        background: linear-gradient(145deg, rgba(249, 115, 22, 0.09) 0%,
+            color-mix(in srgb, var(--surface, #15172a) 90%, transparent) 60%);
+    }
+    .flow-node-model-both .flow-node-model-icon {
+        color: #fb923c;
+        filter: drop-shadow(0 0 5px rgba(251, 146, 60, 0.55));
+    }
+    .flow-node-model-both .flow-node-badge  { color: #fdba74; }
+    .flow-node-model-both .flow-node-title  { color: #ffedd5; }
+    .flow-node-model-both .flow-node-meta   { color: #fdba74; opacity: 0.9; }
+    .flow-node-model-both:hover {
+        border-color: rgba(251, 146, 60, 0.85);
+        box-shadow: 0 0 0 1px rgba(251, 146, 60, 0.25), 0 4px 20px rgba(249, 115, 22, 0.22);
+    }
+    .flow-node-model-both.is-selected {
+        border-color: #fb923c;
+        box-shadow: 0 0 0 3px rgba(251, 146, 60, 0.28), 0 6px 24px rgba(249, 115, 22, 0.3);
+    }
 </style>
+
+<script id="ai-creatives-bootstrap" type="application/json">
+{
+    "defaultBasePrompt": {{ default_base_prompt | tojson }},
+    "defaultAnalysisPrompt": {{ default_analysis_prompt | tojson }},
+    "creditsRedirectUrl": {{ ('/upgrade' if plan_tier == 'free' else '/credits-store') | tojson }},
+    "productInfoEntries": [
+        {% for product in products %}
+        {
+            "id": {{ product.id | tojson }},
+            "info": {{ product.build_product_info() | tojson }}
+        }{% if not loop.last %},{% endif %}
+        {% endfor %}
+    ]
+}
+</script>
 
 
 <script>
-    let DEFAULT_BASE_PROMPT = {{ default_base_prompt | tojson }};
-    let DEFAULT_ANALYSIS_PROMPT = {{ default_analysis_prompt | tojson }};
-    const PRODUCT_INFO_BY_ID = {
-        {% for product in products %}
-        {{ product.id }}: {{ product.build_product_info() | tojson }}{% if not loop.last %},{% endif %}
-        {% endfor %}
-    };
+    function parseAiCreativesBootstrap() {
+        const bootstrapEl = document.getElementById('ai-creatives-bootstrap');
+        if (!bootstrapEl) return {};
+        try {
+            return JSON.parse(bootstrapEl.textContent || '{}');
+        } catch (err) {
+            return {};
+        }
+    }
+
+    const AI_CREATIVES_BOOTSTRAP = parseAiCreativesBootstrap();
+    let DEFAULT_BASE_PROMPT = AI_CREATIVES_BOOTSTRAP.defaultBasePrompt || '';
+    let DEFAULT_ANALYSIS_PROMPT = AI_CREATIVES_BOOTSTRAP.defaultAnalysisPrompt || '';
+    const PRODUCT_INFO_BY_ID = Object.fromEntries(
+        (AI_CREATIVES_BOOTSTRAP.productInfoEntries || []).map(entry => [String(entry.id), entry.info || ''])
+    );
+    const CREDITS_REDIRECT_URL = AI_CREATIVES_BOOTSTRAP.creditsRedirectUrl || '/credits-store';
 
     const selectedInspirationIds = new Set();
-    const FLOW_STORAGE_KEY = 'ai_creatives_flow_core_nodes_v1';
-    const FLOW_CORE_NODE_IDS = ['flow-node-product', 'flow-node-prompt', 'flow-node-library', 'flow-node-model'];
+    const flowResultsById = new Map();
+    const FLOW_STORAGE_KEY = 'ai_creatives_flow_core_nodes_v2';
+    const FLOW_CORE_NODE_IDS = ['flow-node-product', 'flow-node-gentype', 'flow-node-prompt', 'flow-node-library', 'flow-node-awareness', 'flow-node-model'];
     const FLOW_PANEL_TO_NODE = {
         product: 'flow-node-product',
+        gentype: 'flow-node-gentype',
         prompt: 'flow-node-prompt',
         library: 'flow-node-library',
+        awareness: 'flow-node-awareness',
         model: 'flow-node-model',
     };
+    const GENTYPE_PRESETS = {
+        competitor_inspiration: {
+            label: 'Competitor Inspiration',
+            base_prompt: DEFAULT_BASE_PROMPT,
+            analysis_prompt: DEFAULT_ANALYSIS_PROMPT,
+        },
+        winner_ad_variation: {
+            label: 'Winner Ad Variation',
+            base_prompt: "Create a high-converting ad variation that preserves the winning visual formula of the inspiration, featuring the product prominently.",
+            analysis_prompt: "You are analyzing a winning ad creative. Identify what makes this ad effective: the visual hook, emotional appeal, composition, color use, and call-to-action. Then write an image generation prompt to create a fresh variation of this winning ad for a different product, keeping the core winning elements intact. Output only the image generation prompt — no explanation.",
+        },
+    };
+    let activeGenerationType = 'competitor_inspiration';
     const HISTORY_EMPTY_HTML = `
         <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
             <rect x="3" y="3" width="18" height="18" rx="2" />
@@ -1166,6 +1960,24 @@
     let dragState = null;
     let flowRunState = FLOW_RUN_STATE.IDLE;
     let flowRunTimers = [];
+    let flowScrollLockY = 0;
+    let isFlowScrollLocked = false;
+    let activeFlowOutputId = null;
+    let latestFinalPromptText = '';
+    let flowRunStartedAt = 0;
+    let flowElapsedIntervalId = null;
+
+    function getCsrfToken() {
+        const meta = document.querySelector('meta[name="csrf-token"]');
+        return meta ? (meta.getAttribute('content') || '') : '';
+    }
+
+    function withCsrfHeaders(baseHeaders = {}) {
+        const headers = { ...baseHeaders };
+        const token = getCsrfToken();
+        if (token) headers['X-CSRF-Token'] = token;
+        return headers;
+    }
 
     function checkDefault(field, value) {
         let isDifferent = false;
@@ -1187,7 +1999,7 @@
         try {
             const resp = await fetch('/ai-creatives/save-default', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: withCsrfHeaders({ 'Content-Type': 'application/json' }),
                 body: JSON.stringify({ field, value }),
             });
             const data = await resp.json();
@@ -1231,6 +2043,86 @@
         return 'Gemini';
     }
 
+    function getCreativesBatchMode() {
+        const toggle = document.getElementById('creatives-batch-toggle');
+        const provider = getSelectedProvider();
+        return Boolean(toggle && toggle.checked && provider === 'gemini');
+    }
+
+    function calculateCreativesCredits(count, provider, isPromptOnly) {
+        if (count <= 0) return 0;
+        const basePerInspiration = isPromptOnly
+            ? 1
+            : (provider === 'both' ? 4 : 2);
+        const baseTotal = count * basePerInspiration;
+        if (provider === 'gemini' && getCreativesBatchMode()) {
+            return Math.max(1, Math.ceil(baseTotal * 0.5));
+        }
+        return baseTotal;
+    }
+
+    async function saveAiPreference(payload) {
+        const resp = await fetch('/ai-image/preferences', {
+            method: 'POST',
+            headers: withCsrfHeaders({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify(payload),
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+            throw new Error(data.error || 'Failed to save preference.');
+        }
+        return data;
+    }
+
+    async function loadCreativesGeminiModels() {
+        const select = document.getElementById('creatives-gemini-model');
+        if (!select) return;
+        try {
+            const resp = await fetch('/ai-image/gemini-models');
+            const data = await resp.json();
+            if (!resp.ok || !Array.isArray(data.models)) return;
+            const defaultModel = select.dataset.defaultModel || data.default_model || '';
+            select.innerHTML = '';
+            data.models.forEach(model => {
+                const option = document.createElement('option');
+                option.value = model.name;
+                option.textContent = model.display_name || model.name;
+                if (model.name === defaultModel) option.selected = true;
+                select.appendChild(option);
+            });
+            if (!select.value && defaultModel) {
+                const fallback = document.createElement('option');
+                fallback.value = defaultModel;
+                fallback.textContent = defaultModel;
+                fallback.selected = true;
+                select.appendChild(fallback);
+            }
+        } catch (err) {
+            // Keep fallback option when model lookup fails.
+        }
+    }
+
+    async function onCreativesModelChange() {
+        const select = document.getElementById('creatives-gemini-model');
+        if (!select || !select.value) return;
+        try {
+            await saveAiPreference({ default_gemini_image_model: select.value });
+        } catch (err) {
+            showFlash(err.message || 'Failed to save model preference.', 'error');
+        }
+    }
+
+    async function onBatchToggleChange() {
+        updateSelectionSummary();
+        const toggle = document.getElementById('creatives-batch-toggle');
+        if (!toggle) return;
+        try {
+            await saveAiPreference({ batch_api_for_queued_jobs: Boolean(toggle.checked) });
+        } catch (err) {
+            showFlash(err.message || 'Failed to save batch preference.', 'error');
+        }
+    }
+
     function updateProductInfoPreview() {
         const productSelect = document.getElementById('creatives-product');
         const productId = productSelect.value;
@@ -1240,6 +2132,34 @@
             const option = productSelect.options[productSelect.selectedIndex];
             meta.textContent = productId && option ? option.text : 'No product selected';
         }
+    }
+
+    const MODEL_NODE_ICONS = {
+        gemini: `<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M12 1.5C10.18 7.8 6.2 11.3 0 12c6.2.7 10.18 4.2 12 10.5C13.82 16.2 17.8 12.7 24 12c-6.2-.7-10.18-4.2-12-10.5z"/>
+        </svg>`,
+        openai: `<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M22.28 9.29a5.96 5.96 0 0 0-.43-4.9 6.04 6.04 0 0 0-6.41-2.9A5.97 5.97 0 0 0 11 1.49a6.04 6.04 0 0 0-5.74 4.19 5.97 5.97 0 0 0-4 2.92 6.05 6.05 0 0 0 .74 7.07 5.96 5.96 0 0 0 .44 4.9 6.04 6.04 0 0 0 6.4 2.9A5.97 5.97 0 0 0 13 22.51a6.04 6.04 0 0 0 5.74-4.19 5.97 5.97 0 0 0 4-2.92 6.05 6.05 0 0 0-.46-6.11zm-9.67 12.2a4.3 4.3 0 0 1-2.77-1l.14-.08 4.6-2.65a.76.76 0 0 0 .38-.66v-6.47l1.95 1.12v5.73a4.31 4.31 0 0 1-4.3 4.31v-.3zM4.33 17.33a4.3 4.3 0 0 1-.5-2.9l.13.08 4.6 2.65a.75.75 0 0 0 .77 0l5.63-3.25v2.25l-4.6 2.65a4.31 4.31 0 0 1-5.96-1.48zM3.11 7.96a4.3 4.3 0 0 1 2.25-1.89V11.5a.75.75 0 0 0 .38.65l5.63 3.25-1.95 1.13-4.6-2.65a4.31 4.31 0 0 1-1.71-5.92zm16.05 3.7-5.63-3.24 1.95-1.12 4.6 2.65a4.31 4.31 0 0 1-.66 7.78v-5.4a.75.75 0 0 0-.26-.67zm1.93-2.92-.13-.08-4.6-2.65a.75.75 0 0 0-.77 0l-5.63 3.25V7.01l4.6-2.65a4.31 4.31 0 0 1 6.53 4.88zm-11.25 3.4-1.95-1.13V6.5a4.31 4.31 0 0 1 7.08-3.32l-.14.08-4.6 2.65a.76.76 0 0 0-.38.66v5.57zm1.06-2.28 2.5-1.45 2.5 1.45v2.88l-2.5 1.45-2.5-1.45v-2.88z"/>
+        </svg>`,
+        both: `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="opacity:.9">
+            <path d="M12 1.5C10.18 7.8 6.2 11.3 0 12c6.2.7 10.18 4.2 12 10.5C13.82 16.2 17.8 12.7 24 12c-6.2-.7-10.18-4.2-12-10.5z"/>
+        </svg><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="opacity:.9">
+            <path d="M22.28 9.29a5.96 5.96 0 0 0-.43-4.9 6.04 6.04 0 0 0-6.41-2.9A5.97 5.97 0 0 0 11 1.49a6.04 6.04 0 0 0-5.74 4.19 5.97 5.97 0 0 0-4 2.92 6.05 6.05 0 0 0 .74 7.07 5.96 5.96 0 0 0 .44 4.9 6.04 6.04 0 0 0 6.4 2.9A5.97 5.97 0 0 0 13 22.51a6.04 6.04 0 0 0 5.74-4.19 5.97 5.97 0 0 0 4-2.92 6.05 6.05 0 0 0-.46-6.11zm-9.67 12.2a4.3 4.3 0 0 1-2.77-1l.14-.08 4.6-2.65a.76.76 0 0 0 .38-.66v-6.47l1.95 1.12v5.73a4.31 4.31 0 0 1-4.3 4.31v-.3zM4.33 17.33a4.3 4.3 0 0 1-.5-2.9l.13.08 4.6 2.65a.75.75 0 0 0 .77 0l5.63-3.25v2.25l-4.6 2.65a4.31 4.31 0 0 1-5.96-1.48zM3.11 7.96a4.3 4.3 0 0 1 2.25-1.89V11.5a.75.75 0 0 0 .38.65l5.63 3.25-1.95 1.13-4.6-2.65a4.31 4.31 0 0 1-1.71-5.92zm16.05 3.7-5.63-3.24 1.95-1.12 4.6 2.65a4.31 4.31 0 0 1-.66 7.78v-5.4a.75.75 0 0 0-.26-.67zm1.93-2.92-.13-.08-4.6-2.65a.75.75 0 0 0-.77 0l-5.63 3.25V7.01l4.6-2.65a4.31 4.31 0 0 1 6.53 4.88zm-11.25 3.4-1.95-1.13V6.5a4.31 4.31 0 0 1 7.08-3.32l-.14.08-4.6 2.65a.76.76 0 0 0-.38.66v5.57zm1.06-2.28 2.5-1.45 2.5 1.45v2.88l-2.5 1.45-2.5-1.45v-2.88z"/>
+        </svg>`,
+    };
+
+    const MODEL_NODE_BADGE = { gemini: 'Gemini', openai: 'ChatGPT', both: 'Both' };
+
+    function updateModelNodeAppearance() {
+        const modelNode = document.getElementById('flow-node-model');
+        if (!modelNode) return;
+        const provider = getSelectedProvider();
+        modelNode.classList.remove('flow-node-model-gemini', 'flow-node-model-openai', 'flow-node-model-both');
+        modelNode.classList.add(`flow-node-model-${provider}`);
+        const iconEl = document.getElementById('flow-model-icon');
+        if (iconEl) iconEl.innerHTML = MODEL_NODE_ICONS[provider] || MODEL_NODE_ICONS.gemini;
+        const badgeEl = document.getElementById('flow-model-badge');
+        if (badgeEl) badgeEl.textContent = MODEL_NODE_BADGE[provider] || 'Model';
     }
 
     function updateFlowNodeMeta() {
@@ -1252,8 +2172,32 @@
         if (modelMeta) {
             const provider = providerLabel(getSelectedProvider());
             const promptOnly = document.getElementById('prompt-only-toggle').checked;
-            modelMeta.textContent = `${provider}${promptOnly ? ' / Prompt Only' : ''}`;
+            const batch = getCreativesBatchMode();
+            modelMeta.textContent = `${provider}${promptOnly ? ' / Prompt Only' : ''}${batch ? ' / Batch' : ''}`;
         }
+        updateModelNodeAppearance();
+    }
+
+    function selectGenerationType(type) {
+        if (!GENTYPE_PRESETS[type]) return;
+        activeGenerationType = type;
+        // update radio state
+        document.querySelectorAll('input[name="generation-type"]').forEach(r => r.checked = r.value === type);
+        // update label highlight
+        document.querySelectorAll('.gentype-option').forEach(el => el.classList.remove('gentype-option-selected'));
+        const label = document.getElementById('gentype-label-' + (type === 'competitor_inspiration' ? 'competitor' : 'winner'));
+        if (label) label.classList.add('gentype-option-selected');
+        // update node meta
+        const meta = document.getElementById('flow-gentype-meta');
+        if (meta) meta.textContent = GENTYPE_PRESETS[type].label;
+        // auto-fill prompts
+        const preset = GENTYPE_PRESETS[type];
+        const baseEl = document.getElementById('base-prompt');
+        const analysisEl = document.getElementById('analysis-prompt');
+        if (baseEl) { baseEl.value = preset.base_prompt; checkDefault('base_prompt', preset.base_prompt); }
+        if (analysisEl) { analysisEl.value = preset.analysis_prompt; checkDefault('analysis_prompt', preset.analysis_prompt); }
+        // show/hide competitor-specific controls
+        updateCompetitorControlsVisibility();
     }
 
     function onProviderChange() {
@@ -1265,6 +2209,10 @@
             both: 'Both: generates one image per provider. Costs 4 credits per inspiration.',
         };
         document.getElementById('provider-hint').textContent = hints[provider] || '';
+        const batchToggle = document.getElementById('creatives-batch-toggle');
+        if (batchToggle) {
+            batchToggle.disabled = provider !== 'gemini';
+        }
         updateFlowNodeMeta();
     }
 
@@ -1273,9 +2221,95 @@
         flowRunTimers = [];
     }
 
+    function formatElapsed(ms) {
+        const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+        const mins = String(Math.floor(totalSeconds / 60)).padStart(2, '0');
+        const secs = String(totalSeconds % 60).padStart(2, '0');
+        return `${mins}:${secs}`;
+    }
+
+    function stopFlowElapsedClock() {
+        if (flowElapsedIntervalId) {
+            clearInterval(flowElapsedIntervalId);
+            flowElapsedIntervalId = null;
+        }
+    }
+
+    function startFlowElapsedClock() {
+        flowRunStartedAt = Date.now();
+        stopFlowElapsedClock();
+        flowElapsedIntervalId = setInterval(() => {
+            const elapsed = document.getElementById('flow-run-elapsed');
+            if (elapsed) {
+                elapsed.textContent = formatElapsed(Date.now() - flowRunStartedAt);
+            }
+        }, 1000);
+    }
+
+    function updateFlowRunIndicator() {
+        const indicator = document.getElementById('flow-run-indicator');
+        const text = document.getElementById('flow-run-status-text');
+        const elapsed = document.getElementById('flow-run-elapsed');
+        if (!indicator || !text || !elapsed) return;
+
+        const running = flowRunState === FLOW_RUN_STATE.ANALYZING
+            || flowRunState === FLOW_RUN_STATE.PROMPT_READY
+            || flowRunState === FLOW_RUN_STATE.GENERATING;
+
+        indicator.classList.toggle('is-finished', flowRunState === FLOW_RUN_STATE.DONE);
+        indicator.classList.toggle('is-error', flowRunState === FLOW_RUN_STATE.ERROR);
+
+        if (running) {
+            if (!flowElapsedIntervalId) {
+                startFlowElapsedClock();
+                elapsed.textContent = '00:00';
+            }
+            indicator.style.display = 'inline-flex';
+            if (flowRunState === FLOW_RUN_STATE.ANALYZING) {
+                text.textContent = 'Analyzing inspirations...';
+            } else if (flowRunState === FLOW_RUN_STATE.PROMPT_READY) {
+                text.textContent = 'Final prompt ready...';
+            } else {
+                text.textContent = 'Generating images...';
+            }
+            return;
+        }
+
+        if (flowRunState === FLOW_RUN_STATE.DONE) {
+            stopFlowElapsedClock();
+            const total = flowRunStartedAt ? formatElapsed(Date.now() - flowRunStartedAt) : '00:00';
+            elapsed.textContent = total;
+            text.textContent = 'Generation complete';
+            indicator.style.display = 'inline-flex';
+            return;
+        }
+
+        if (flowRunState === FLOW_RUN_STATE.ERROR) {
+            stopFlowElapsedClock();
+            const total = flowRunStartedAt ? formatElapsed(Date.now() - flowRunStartedAt) : '00:00';
+            elapsed.textContent = total;
+            text.textContent = 'Generation failed';
+            indicator.style.display = 'inline-flex';
+            return;
+        }
+
+        stopFlowElapsedClock();
+        indicator.style.display = 'none';
+        text.textContent = 'Preparing run...';
+        elapsed.textContent = '00:00';
+    }
+
+    function setLatestFinalPrompt(results) {
+        const source = (results || []).find(r => r && r.final_prompt) || null;
+        latestFinalPromptText = source ? String(source.final_prompt || '').trim() : '';
+        updatePromptQuickViewUI();
+    }
+
     function setFlowRunState(nextState) {
         flowRunState = nextState;
         updateFlowRunVisuals();
+        updateFlowRunIndicator();
+        updatePromptQuickViewUI();
     }
 
     function startFlowRunSimulation(totalInspirations, provider, promptOnly) {
@@ -1336,7 +2370,7 @@
         }
         const resp = await fetch('/ai-creatives/inspirations', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: withCsrfHeaders({ 'Content-Type': 'application/json' }),
             body: JSON.stringify({ images }),
         });
         const data = await resp.json();
@@ -1378,15 +2412,14 @@
         const count = selectedInspirationIds.size;
         const provider = getSelectedProvider();
         const isPromptOnly = document.getElementById('prompt-only-toggle').checked;
-        const creditsPerInspiration = isPromptOnly
-            ? 1
-            : (provider === 'both' ? 4 : 2);
-        const totalCredits = count * creditsPerInspiration;
+        const totalCredits = calculateCreativesCredits(count, provider, isPromptOnly);
         document.getElementById('creatives-selected-count').textContent =
             count === 0 ? '0 selected' : `${count} inspiration${count !== 1 ? 's' : ''} selected`;
 
         let costText = `Cost: ${totalCredits} credit${totalCredits !== 1 ? 's' : ''}`;
-        if (isPromptOnly) {
+        if (provider === 'gemini' && getCreativesBatchMode()) {
+            costText += ' (Batch mode)';
+        } else if (isPromptOnly) {
             costText += ' (Prompt only)';
         } else if (provider === 'both') {
             costText += ' (4 per inspiration)';
@@ -1400,7 +2433,10 @@
 
     async function deleteInspiration(event, id) {
         event.stopPropagation();
-        const resp = await fetch(`/ai-creatives/inspirations/${id}`, { method: 'DELETE' });
+        const resp = await fetch(`/ai-creatives/inspirations/${id}`, {
+            method: 'DELETE',
+            headers: withCsrfHeaders(),
+        });
         const data = await resp.json();
         if (!resp.ok) {
             showFlash(data.error || 'Delete failed', 'error');
@@ -1428,7 +2464,44 @@
         }
     }
 
+    const CREATIVES_JOB_POLL_INTERVAL_MS = 1800;
+    const CREATIVES_JOB_POLL_TIMEOUT_MS = 30 * 60 * 1000;
+
+    // ── Competitor Inspiration helpers ────────────────────────────────
+    const AWARENESS_LABELS = {
+        unaware: 'Unaware',
+        problem_aware: 'Problem Aware',
+        solution_aware: 'Solution Aware',
+        product_aware: 'Product Aware',
+        most_aware: 'Most Aware',
+    };
+
+    const PLATFORM_LABELS = {
+        meta_feed: 'Meta Feed',
+        meta_stories: 'Meta Stories / Reels',
+        google_display: 'Google Display',
+        tiktok_feed: 'TikTok Feed',
+        email_banner: 'Email Banner',
+        other: 'Other',
+    };
+
+    function updateAwarenessNodeMeta() {
+        const level = document.getElementById('competitor-awareness-level')?.value || 'solution_aware';
+        const platform = document.getElementById('competitor-platform')?.value || 'meta_feed';
+        const meta = document.getElementById('flow-awareness-meta');
+        if (meta) meta.textContent = `${AWARENESS_LABELS[level] || level} · ${PLATFORM_LABELS[platform] || platform}`;
+    }
+
+    function updateCompetitorControlsVisibility() {
+        const isCompetitor = activeGenerationType === 'competitor_inspiration';
+        const awarenessNode = document.getElementById('flow-node-awareness');
+        if (awarenessNode) awarenessNode.style.display = isCompetitor ? '' : 'none';
+        normalizeCoreNodePositions();
+        drawFlowConnections();
+    }
+
     async function generateCreatives() {
+        const isCompetitorMode = activeGenerationType === 'competitor_inspiration';
         const productId = document.getElementById('creatives-product').value;
         if (!productId) {
             showFlash('Please select a product.', 'error');
@@ -1442,24 +2515,24 @@
         const analysisPrompt = document.getElementById('analysis-prompt').value.trim();
         const productInfoSource = document.getElementById('product-info-source').value;
         const isPromptOnly = document.getElementById('prompt-only-toggle').checked;
-        if (!basePrompt) {
-            showFlash('Base prompt is required.', 'error');
-            return;
-        }
-        if (!analysisPrompt) {
-            showFlash('Analysis prompt is required.', 'error');
-            return;
+        if (!isCompetitorMode) {
+            if (!basePrompt) {
+                showFlash('Base prompt is required.', 'error');
+                return;
+            }
+            if (!analysisPrompt) {
+                showFlash('Analysis prompt is required.', 'error');
+                return;
+            }
         }
         const provider = getSelectedProvider();
-        const creditsPerInspiration = isPromptOnly
-            ? 1
-            : (provider === 'both' ? 4 : 2);
-        const cost = selectedInspirationIds.size * creditsPerInspiration;
+        const useBatchApi = provider === 'gemini' && getCreativesBatchMode();
+        const cost = calculateCreativesCredits(selectedInspirationIds.size, provider, isPromptOnly);
+        const geminiModel = document.getElementById('creatives-gemini-model')?.value || '';
         const credits = parseInt(document.getElementById('creatives-credits-count').textContent, 10);
         if (cost > credits) {
-            const redirectUrl = `{{ '/upgrade' if plan_tier == 'free' else '/credits-store' }}`;
             showFlash(`Not enough credits. Need ${cost}, have ${credits}. Redirecting...`, 'error');
-            setTimeout(() => window.location.href = redirectUrl, 450);
+            setTimeout(() => window.location.href = CREDITS_REDIRECT_URL, 450);
             return;
         }
 
@@ -1472,18 +2545,24 @@
         if (outputContainer) {
             outputContainer.innerHTML = '';
         }
+        flowResultsById.clear();
+        setLatestFinalPrompt([]);
+        resetFlowOutputPanel();
         drawFlowConnections();
         startFlowRunSimulation(selectedInspirationIds.size, provider, isPromptOnly);
-        if (isPromptOnly) {
-            loadingText.textContent = `Analyzing ${selectedInspirationIds.size} inspiration(s) to generate prompts only... This may take a while.`;
+        if (isCompetitorMode) {
+            loadingText.textContent = `Queuing ${selectedInspirationIds.size} competitor inspiration(s) — analysing + generating...`;
+        } else if (isPromptOnly) {
+            loadingText.textContent = `Queuing ${selectedInspirationIds.size} inspiration(s) for prompt generation...`;
         } else {
-            loadingText.textContent = `Analyzing ${selectedInspirationIds.size} inspiration(s) and generating with ${provider === 'both' ? 'Gemini + OpenAI' : provider}... This may take a while.`;
+            const modeLabel = useBatchApi ? ' (batch mode)' : '';
+            loadingText.textContent = `Queuing ${selectedInspirationIds.size} inspiration(s) for generation with ${provider === 'both' ? 'Gemini + OpenAI' : provider}${modeLabel}...`;
         }
 
         try {
             const resp = await fetch('/ai-creatives/generate', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: withCsrfHeaders({ 'Content-Type': 'application/json' }),
                 body: JSON.stringify({
                     product_id: parseInt(productId, 10),
                     inspiration_ids: Array.from(selectedInspirationIds),
@@ -1492,6 +2571,11 @@
                     analysis_prompt: analysisPrompt,
                     product_info_source: productInfoSource,
                     prompt_only: isPromptOnly,
+                    use_batch_api: useBatchApi,
+                    gemini_model: geminiModel,
+                    generation_mode: isCompetitorMode ? 'competitor_inspiration' : 'standard',
+                    awareness_level: document.getElementById('competitor-awareness-level')?.value || 'solution_aware',
+                    platform: document.getElementById('competitor-platform')?.value || 'meta_feed',
                 }),
             });
             const data = await resp.json();
@@ -1509,28 +2593,86 @@
                 showFlash(msgs[data.error] || data.error || 'Generation failed.', 'error');
                 return;
             }
-            document.getElementById('creatives-credits-count').textContent = data.credits_remaining;
-            if (data.monthly_credits !== undefined) {
-                document.getElementById('creatives-monthly-credits-count').textContent = data.monthly_credits;
+
+            const jobId = Number(data.job_id || 0);
+            if (!jobId) {
+                markFlowRunError();
+                showFlash('Generation job was not created.', 'error');
+                return;
             }
-            if (data.extra_credits !== undefined) {
-                document.getElementById('creatives-extra-credits-count').textContent = data.extra_credits;
-            }
-            renderNewResults(data);
+
+            const jobResult = await pollCreativesJob(jobId, loadingText, isPromptOnly, provider, useBatchApi);
+            renderNewResults(jobResult);
             clearInspirationSelection();
             markFlowRunDone();
         } catch (err) {
-            showFlash('Network error. Please try again.', 'error');
+            showFlash(err?.message || 'Network error. Please try again.', 'error');
             markFlowRunError();
         } finally {
             btn.disabled = false;
             loadingEl.style.display = 'none';
         }
     }
+
+    async function pollCreativesJob(jobId, loadingTextEl, isPromptOnly, provider, useBatchApi) {
+        const startedAt = Date.now();
+        while ((Date.now() - startedAt) < CREATIVES_JOB_POLL_TIMEOUT_MS) {
+            const resp = await fetch(`/ai-creatives/jobs/${jobId}`);
+            const data = await resp.json();
+            if (!resp.ok) {
+                throw new Error(data.error || 'Could not fetch creatives job status.');
+            }
+            if (data.status === 'completed') {
+                return {
+                    batch_id: data.batch_id,
+                    results: (data.results || []).map(r => ({
+                        id: r.id,
+                        inspiration_id: r.inspiration_id,
+                        inspiration_url: r.inspiration_url,
+                        provider: provider,
+                        status: r.status,
+                        generated_image_url: r.generated_image_url || null,
+                        generated_image: null,
+                        openai_image: null,
+                        gemini_image: null,
+                        final_prompt: r.generated_prompt || null,
+                        error: r.error || null,
+                        product_image_count: 0,
+                    })),
+                };
+            }
+            if (data.status === 'failed') {
+                throw new Error(data.error || 'Creatives generation failed.');
+            }
+            if (loadingTextEl) {
+                const inspirationCount = data.results ? data.results.length : 0;
+                if (data.status === 'queued') {
+                    loadingTextEl.textContent = 'Queued... waiting for an available worker.';
+                } else if (data.status === 'running') {
+                    if (isPromptOnly) {
+                        loadingTextEl.textContent = `Analyzing inspirations and generating prompts...`;
+                    } else {
+                        const modeLabel = useBatchApi ? ' (batch mode)' : '';
+                        loadingTextEl.textContent = `Analyzing inspirations and generating with ${provider === 'both' ? 'Gemini + OpenAI' : provider}${modeLabel}...`;
+                    }
+                }
+            }
+            await new Promise(resolve => setTimeout(resolve, CREATIVES_JOB_POLL_INTERVAL_MS));
+        }
+        throw new Error('Creatives generation timed out. Please try again.');
+    }
     function renderNewResults(payload) {
         const results = payload.results || [];
         const provider = payload.provider || getSelectedProvider();
+        flowResultsById.clear();
+        results.forEach(r => flowResultsById.set(String(r.id), { ...r, _provider: provider }));
+        setLatestFinalPrompt(results);
         renderFlowOutputNodes(results, provider);
+        if (results.length > 0) {
+            openFlowResultNode(results[0].id);
+        } else {
+            resetFlowOutputPanel();
+        }
         appendBatchToHistory({
             batchId: payload.batch_id,
             batchCreatedAt: payload.batch_created_at,
@@ -1618,6 +2760,7 @@
         }
 
         const imageB64 = r.generated_image || r.gemini_image || r.openai_image;
+        const imageSrc = r.generated_image_url || (imageB64 ? `data:image/png;base64,${imageB64}` : '');
         const inspirationHtml = r.inspiration_url
             ? `
                 <div class="creative-mini-img creative-inspiration-thumb" onclick="showFullImage(this)" title="Inspiration">
@@ -1627,10 +2770,10 @@
             `
             : '';
 
-        const outputHtml = imageB64
+        const outputHtml = imageSrc
             ? `
                 <div class="creative-mini-img" onclick="showFullImage(this)" title="Generated">
-                    <img src="data:image/png;base64,${imageB64}" alt="Generated">
+                    <img src="${escapeHtml(imageSrc)}" alt="Generated">
                     <span class="ba-label ba-after">OUT</span>
                 </div>
             `
@@ -1645,7 +2788,7 @@
                 <div class="creative-prompt-box collapsed" onclick="togglePrompt(this)">
                     <div class="creative-prompt-header">
                         <span class="creative-prompt-label">Final Prompt</span>
-                        ${imageB64 ? '' : '<button type="button" class="btn btn-ghost btn-sm" onclick="copyPromptText(this); event.stopPropagation();" style="margin-left:auto; margin-right:8px;">Copy</button>'}
+                        ${imageSrc ? '' : '<button type="button" class="btn btn-ghost btn-sm" onclick="copyPromptText(this); event.stopPropagation();" style="margin-left:auto; margin-right:8px;">Copy</button>'}
                         <svg class="prompt-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                             <polyline points="6 9 12 15 18 9" />
                         </svg>
@@ -1677,11 +2820,14 @@
             node.id = nodeId;
             node.className = 'flow-node flow-output-node draggable';
             node.dataset.nodeId = nodeId;
+            node.dataset.panel = 'output';
+            node.dataset.resultId = String(r.id);
             const position = getDefaultOutputPosition(index);
             node.style.left = `${position.x}px`;
             node.style.top = `${position.y}px`;
 
-            const isPromptOnly = !(r.openai_image || r.gemini_image);
+            const hasAnyImage = Boolean(r.generated_image_url || r.generated_image || r.openai_image || r.gemini_image);
+            const isPromptOnly = !hasAnyImage;
             if (isPromptOnly) node.classList.add('prompt-only');
             if (r.status === 'failed') node.classList.add('failed');
             node.classList.add('flow-node-enter');
@@ -1699,9 +2845,9 @@
                     <img class="flow-output-thumb" src="data:image/png;base64,${r.gemini_image}" alt="Gemini output">
                 </div>`;
             } else {
-                const image = r.gemini_image || r.openai_image;
+                const image = r.generated_image_url || (r.generated_image ? `data:image/png;base64,${r.generated_image}` : (r.gemini_image ? `data:image/png;base64,${r.gemini_image}` : (r.openai_image ? `data:image/png;base64,${r.openai_image}` : '')));
                 previewHtml = image
-                    ? `<img class="flow-output-thumb" src="data:image/png;base64,${image}" alt="Generated output">`
+                    ? `<img class="flow-output-thumb" src="${image}" alt="Generated output">`
                     : '<span class="flow-output-pill">No image</span>';
             }
 
@@ -1719,11 +2865,100 @@
             container.appendChild(node);
         });
 
+        resizeFlowStage(results.length);
         drawFlowConnections();
+    }
+
+    function resizeFlowStage(nodeCount) {
+        const stage = document.getElementById('creative-flow-stage');
+        if (!stage) return;
+        // Each output node is 122px apart starting at y=60, plus ~130px for node height + bottom padding
+        const needed = Math.max(620, 60 + nodeCount * 122 + 130);
+        stage.style.minHeight = `${needed}px`;
     }
 
     function getDefaultOutputPosition(index) {
         return { x: 790, y: 60 + (index * 122) };
+    }
+
+    function resetFlowOutputPanel() {
+        activeFlowOutputId = null;
+        const empty = document.getElementById('flow-output-empty');
+        const details = document.getElementById('flow-output-details');
+        if (empty) empty.style.display = '';
+        if (details) {
+            details.style.display = 'none';
+            details.innerHTML = '';
+        }
+    }
+
+    function openFlowResultNode(resultId) {
+        const result = flowResultsById.get(String(resultId));
+        if (!result) {
+            resetFlowOutputPanel();
+            return;
+        }
+        activeFlowOutputId = String(resultId);
+        openFlowPanel('output', `flow-node-output-${resultId}`);
+        const empty = document.getElementById('flow-output-empty');
+        const details = document.getElementById('flow-output-details');
+        if (!empty || !details) return;
+        empty.style.display = 'none';
+        details.style.display = 'flex';
+        details.innerHTML = buildFlowOutputDetail(result);
+    }
+
+    function buildFlowOutputDetail(r) {
+        if (r.status === 'failed') {
+            return `<div class="flow-output-error">${escapeHtml(r.error || 'Unknown generation error')}</div>`;
+        }
+        const provider = r._provider || (r.gemini_image && r.openai_image ? 'both' : (r.gemini_image ? 'gemini' : 'openai'));
+        const hasAnyImage = Boolean(r.generated_image_url || r.generated_image || r.openai_image || r.gemini_image);
+        const isPromptOnly = !hasAnyImage;
+        let imagesHtml = '';
+        if (!isPromptOnly) {
+            if (provider === 'both') {
+                imagesHtml = '<div class="creative-result-images">';
+                if (r.openai_image) imagesHtml += imageWrapHtml(r.openai_image, 'OpenAI', `creative_openai_${r.id}.png`);
+                if (r.gemini_image) imagesHtml += imageWrapHtml(r.gemini_image, 'Gemini', `creative_gemini_${r.id}.png`);
+                imagesHtml += '</div>';
+            } else {
+                const img = r.generated_image_url || r.generated_image || r.gemini_image || r.openai_image;
+                const label = r.gemini_image ? 'Gemini' : (r.openai_image ? 'OpenAI' : providerLabel(provider));
+                imagesHtml = `<div class="creative-result-images">${imageWrapHtml(img, label, `creative_${r.id}.png`)}</div>`;
+            }
+        }
+        const metaHtml = `
+            <div class="creative-result-meta">
+                <span class="meta-badge">${providerLabel(provider)}</span>
+                <span class="meta-badge">${r.product_image_count || 0} product img${(r.product_image_count || 0) !== 1 ? 's' : ''} used</span>
+                <span class="meta-badge">Inspiration attached</span>
+            </div>`;
+        const breakdown = isPromptOnly ? buildPromptOnlyBreakdown(r) : buildPromptBreakdown(r);
+        return imagesHtml + metaHtml + breakdown;
+    }
+
+    function imageWrapHtml(imageValue, label, filename) {
+        if (!imageValue) return '';
+        const src = imageValue.startsWith('data:image/')
+            ? imageValue
+            : (imageValue.startsWith('http') || imageValue.startsWith('/') ? imageValue : `data:image/png;base64,${imageValue}`);
+        return `
+        <div class="creative-result-image-wrap">
+            <span class="creative-result-provider-label">${label}</span>
+            <div class="creative-result-image" onclick="showFullImageData('${src}')">
+                <img src="${src}" alt="${label} creative">
+                <a class="creative-download-btn" href="${src}"
+                   download="${filename}" onclick="event.stopPropagation()">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="7 10 12 15 17 10"/>
+                        <line x1="12" y1="15" x2="12" y2="3"/>
+                    </svg>
+                </a>
+            </div>
+        </div>`;
     }
 
     async function copyPromptText(btn, text = null) {
@@ -1751,6 +2986,65 @@
             return promptEl ? promptEl.textContent.trim() : '';
         }
         return '';
+    }
+
+    function updatePromptQuickViewUI() {
+        const previewBox = document.getElementById('prompt-final-preview');
+        const previewText = document.getElementById('prompt-final-preview-text');
+        if (previewBox && previewText) {
+            const hasPrompt = Boolean(latestFinalPromptText);
+            previewBox.style.display = hasPrompt ? '' : 'none';
+            previewText.textContent = hasPrompt ? latestFinalPromptText : '';
+        }
+
+        const trigger = document.getElementById('flow-prompt-preview-trigger');
+        const promptNode = document.getElementById('flow-node-prompt');
+        if (!trigger || !promptNode) return;
+        const promptReady = flowRunState === FLOW_RUN_STATE.PROMPT_READY
+            || flowRunState === FLOW_RUN_STATE.GENERATING
+            || flowRunState === FLOW_RUN_STATE.DONE;
+        const shouldShow = promptReady;
+        trigger.style.display = shouldShow ? 'inline-flex' : 'none';
+        if (!shouldShow) return;
+        const nodeLeft = parseFloat(promptNode.style.left || '0');
+        const nodeTop = parseFloat(promptNode.style.top || '0');
+        trigger.style.left = `${nodeLeft + promptNode.offsetWidth + 8}px`;
+        trigger.style.top = `${nodeTop + 14}px`;
+    }
+
+    function openPromptQuickView(event) {
+        event.preventDefault();
+        event.stopPropagation();
+        if (!latestFinalPromptText) {
+            showFlash('Final prompt is not available yet.', 'error');
+            return;
+        }
+        openFlowPanel('prompt', 'flow-node-prompt');
+        const preview = document.getElementById('prompt-final-preview');
+        if (preview) {
+            preview.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+    }
+
+    async function copyFinalPrompt(event) {
+        if (event) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+        if (!latestFinalPromptText) return;
+        try {
+            await navigator.clipboard.writeText(latestFinalPromptText);
+            const btn = event?.currentTarget;
+            if (btn) {
+                const original = btn.textContent;
+                btn.textContent = 'Copied!';
+                setTimeout(() => {
+                    btn.textContent = original;
+                }, 1800);
+            }
+        } catch (err) {
+            showFlash('Failed to copy prompt.', 'error');
+        }
     }
 
     function buildPromptOnlyBreakdown(r) {
@@ -1812,7 +3106,10 @@
     }
 
     async function deleteCreativeBatch(batchId) {
-        const resp = await fetch(`/ai-creatives/batch/${batchId}`, { method: 'DELETE' });
+        const resp = await fetch(`/ai-creatives/batch/${batchId}`, {
+            method: 'DELETE',
+            headers: withCsrfHeaders(),
+        });
         const data = await resp.json();
         if (!resp.ok) {
             showFlash(data.error || 'Delete failed', 'error');
@@ -1823,11 +3120,40 @@
         ensureCreativesHistoryEmptyState();
     }
 
+    function setFlowScrollLock(locked) {
+        const page = document.querySelector('.ai-image-page.avatars-page.ai-creatives-page');
+        if (locked) {
+            if (isFlowScrollLocked) return;
+            flowScrollLockY = window.scrollY || window.pageYOffset || 0;
+            document.body.style.position = 'fixed';
+            document.body.style.top = `-${flowScrollLockY}px`;
+            document.body.style.left = '0';
+            document.body.style.right = '0';
+            document.body.style.width = '100%';
+            document.body.style.overflow = 'hidden';
+            if (page) page.classList.add('is-overlay-scroll-locked');
+            isFlowScrollLocked = true;
+            return;
+        }
+
+        if (!isFlowScrollLocked) return;
+        document.body.style.position = '';
+        document.body.style.top = '';
+        document.body.style.left = '';
+        document.body.style.right = '';
+        document.body.style.width = '';
+        document.body.style.overflow = '';
+        if (page) page.classList.remove('is-overlay-scroll-locked');
+        window.scrollTo(0, flowScrollLockY);
+        isFlowScrollLocked = false;
+    }
+
     function openFlowPanel(panelName, nodeId = null) {
         const overlay = document.getElementById('flow-overlay');
         if (overlay) {
             overlay.classList.add('is-open');
             overlay.setAttribute('aria-hidden', 'false');
+            setFlowScrollLock(true);
         }
         document.querySelectorAll('.flow-panel').forEach(panel => {
             panel.classList.toggle('is-active', panel.dataset.panel === panelName);
@@ -1849,6 +3175,7 @@
         if (!overlay) return;
         overlay.classList.remove('is-open');
         overlay.setAttribute('aria-hidden', 'true');
+        setFlowScrollLock(false);
     }
 
     function setSelectedFlowNode(nodeId) {
@@ -1860,6 +3187,10 @@
     function activateFlowNode(node) {
         if (!node) return;
         const panel = node.dataset.panel;
+        if (panel === 'output') {
+            openFlowResultNode(node.dataset.resultId);
+            return;
+        }
         if (!panel || !FLOW_PANEL_TO_NODE[panel]) {
             setSelectedFlowNode(node.id);
             return;
@@ -1949,7 +3280,15 @@
         if (!stage || !svg) return;
         svg.setAttribute('viewBox', `0 0 ${stage.clientWidth} ${stage.clientHeight}`);
         svg.innerHTML = '';
-        appendConnector(svg, 'flow-node-product', 'flow-node-prompt', 'right', 'left', 'flow-connector-core', 'product-prompt');
+        appendConnector(svg, 'flow-node-product', 'flow-node-gentype', 'right', 'left', 'flow-connector-core flow-connector-agent', 'product-gentype');
+        const _awarenessEl = document.getElementById('flow-node-awareness');
+        const _awarenessVisible = _awarenessEl && _awarenessEl.style.display !== 'none';
+        if (_awarenessVisible) {
+            appendConnector(svg, 'flow-node-gentype', 'flow-node-awareness', 'right', 'left', 'flow-connector-core flow-connector-agent flow-connector-awareness', 'gentype-awareness');
+            appendConnector(svg, 'flow-node-awareness', 'flow-node-prompt', 'right', 'left', 'flow-connector-core flow-connector-agent flow-connector-awareness', 'awareness-prompt');
+        } else {
+            appendConnector(svg, 'flow-node-gentype', 'flow-node-prompt', 'right', 'left', 'flow-connector-core flow-connector-agent', 'gentype-prompt');
+        }
         appendConnector(svg, 'flow-node-prompt', 'flow-node-model', 'right', 'left', 'flow-connector-core', 'prompt-model');
         appendConnector(svg, 'flow-node-library', 'flow-node-prompt', 'top', 'bottom', 'flow-connector-core', 'library-prompt');
         document.querySelectorAll('.flow-output-node').forEach(outputNode => {
@@ -1964,6 +3303,7 @@
             );
         });
         updateFlowRunVisuals();
+        updatePromptQuickViewUI();
     }
 
     function appendConnector(svg, fromId, toId, fromSide, toSide, extraClass, connectionKey) {
@@ -2087,21 +3427,86 @@
         }
     }
 
+    function parsePixelValue(value) {
+        const parsed = Number.parseFloat(value);
+        return Number.isFinite(parsed) ? parsed : Number.NaN;
+    }
+
+    function getDefaultCoreNodePosition(node) {
+        return {
+            left: node?.dataset.defaultLeft || node?.style.left || '6px',
+            top: node?.dataset.defaultTop || node?.style.top || '6px',
+        };
+    }
+
+    function clampCoreNodePosition(node, stage) {
+        if (!node || !stage) return false;
+        const defaults = getDefaultCoreNodePosition(node);
+        const width = node.offsetWidth || 182;
+        const height = node.offsetHeight || 90;
+        const maxX = Math.max(6, stage.clientWidth - width - 6);
+        const maxY = Math.max(6, stage.clientHeight - height - 6);
+        let left = parsePixelValue(node.style.left);
+        let top = parsePixelValue(node.style.top);
+
+        if (!Number.isFinite(left)) left = parsePixelValue(defaults.left);
+        if (!Number.isFinite(top)) top = parsePixelValue(defaults.top);
+        if (!Number.isFinite(left)) left = 6;
+        if (!Number.isFinite(top)) top = 6;
+
+        const nextLeft = `${Math.round(Math.max(6, Math.min(maxX, left)))}px`;
+        const nextTop = `${Math.round(Math.max(6, Math.min(maxY, top)))}px`;
+        const changed = node.style.left !== nextLeft || node.style.top !== nextTop;
+        node.style.left = nextLeft;
+        node.style.top = nextTop;
+        return changed;
+    }
+
+    function persistCoreNodePositions() {
+        const saved = {};
+        FLOW_CORE_NODE_IDS.forEach(id => {
+            const node = document.getElementById(id);
+            if (!node) return;
+            const defaults = getDefaultCoreNodePosition(node);
+            saved[id] = {
+                left: node.style.left || defaults.left,
+                top: node.style.top || defaults.top,
+            };
+        });
+        localStorage.setItem(FLOW_STORAGE_KEY, JSON.stringify(saved));
+    }
+
+    function normalizeCoreNodePositions() {
+        const stage = document.getElementById('creative-flow-stage');
+        if (!stage) return;
+        let changed = false;
+        FLOW_CORE_NODE_IDS.forEach(id => {
+            const node = document.getElementById(id);
+            if (!node) return;
+            changed = clampCoreNodePosition(node, stage) || changed;
+        });
+        if (changed) {
+            persistCoreNodePositions();
+        }
+    }
+
     function applySavedCoreNodePositions() {
         const saved = loadCoreNodePositions();
         FLOW_CORE_NODE_IDS.forEach(id => {
             const node = document.getElementById(id);
-            if (!node || !saved[id]) return;
-            node.style.left = saved[id].left;
-            node.style.top = saved[id].top;
+            if (!node) return;
+            const defaults = getDefaultCoreNodePosition(node);
+            node.style.left = saved[id]?.left || defaults.left;
+            node.style.top = saved[id]?.top || defaults.top;
         });
+        normalizeCoreNodePositions();
     }
 
     function saveCoreNodePosition(node) {
         if (!FLOW_CORE_NODE_IDS.includes(node.id)) return;
-        const saved = loadCoreNodePositions();
-        saved[node.id] = { left: node.style.left, top: node.style.top };
-        localStorage.setItem(FLOW_STORAGE_KEY, JSON.stringify(saved));
+        const stage = document.getElementById('creative-flow-stage');
+        if (stage) clampCoreNodePosition(node, stage);
+        persistCoreNodePositions();
     }
 
     function truncateText(text, max) {
@@ -2157,6 +3562,15 @@
                 drawFlowConnections();
             });
         }
+        const modelSelect = document.getElementById('creatives-gemini-model');
+        if (modelSelect) {
+            loadCreativesGeminiModels();
+            modelSelect.addEventListener('change', onCreativesModelChange);
+        }
+        const batchToggle = document.getElementById('creatives-batch-toggle');
+        if (batchToggle) {
+            batchToggle.addEventListener('change', onBatchToggleChange);
+        }
         document.addEventListener('keydown', event => {
             if (event.key !== 'Escape') return;
             const overlay = document.getElementById('flow-overlay');
@@ -2172,10 +3586,14 @@
         updateProductInfoPreview();
         updateSelectionSummary();
         onProviderChange();
+        updateCompetitorControlsVisibility();
         setSelectedFlowNode('flow-node-product');
         initFlowCanvas();
         setFlowRunState(FLOW_RUN_STATE.IDLE);
-        window.addEventListener('resize', drawFlowConnections);
+        window.addEventListener('resize', () => {
+            normalizeCoreNodePositions();
+            drawFlowConnections();
+        });
     });
 </script>
 

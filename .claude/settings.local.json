@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(python -c \"from app import app; print\\(''App imports OK''\\)\")"
+      "Bash(python -c \"from app import app; print\\(''App imports OK''\\)\")",
+      "Bash(\"/c/Users/Tiago/AppData/Local/Programs/Python/Python310/python.exe\" -m pip install -r requirements.txt)",
+      "mcp__stitch__list_projects"
     ]
   }
 }

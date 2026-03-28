@@ -108,6 +108,66 @@ def save_inspiration_image(
     )
 
 
+def save_ai_generation_image(
+    user_id: int,
+    prompt_id: int,
+    generation_id: int,
+    mime_type: str,
+    data: bytes,
+) -> str:
+    return _save_image(
+        Path("users") / str(user_id) / "ai_image" / str(prompt_id),
+        generation_id,
+        mime_type,
+        data,
+    )
+
+
+def save_avatar_result_before_image(
+    user_id: int,
+    batch_id: int,
+    result_id: int,
+    mime_type: str,
+    data: bytes,
+) -> str:
+    return _save_image(
+        Path("users") / str(user_id) / "avatars" / str(batch_id) / "before",
+        result_id,
+        mime_type,
+        data,
+    )
+
+
+def save_avatar_result_after_image(
+    user_id: int,
+    batch_id: int,
+    result_id: int,
+    mime_type: str,
+    data: bytes,
+) -> str:
+    return _save_image(
+        Path("users") / str(user_id) / "avatars" / str(batch_id) / "after",
+        result_id,
+        mime_type,
+        data,
+    )
+
+
+def save_creative_result_image(
+    user_id: int,
+    batch_id: int,
+    result_id: int,
+    mime_type: str,
+    data: bytes,
+) -> str:
+    return _save_image(
+        Path("users") / str(user_id) / "creatives" / str(batch_id),
+        result_id,
+        mime_type,
+        data,
+    )
+
+
 def read_storage_bytes(storage_path: str | None) -> bytes | None:
     if not storage_path:
         return None

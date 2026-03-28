@@ -1,0 +1,311 @@
+{% extends "base.html" %}
+{% block title %}API Cost Dashboard{% endblock %}
+
+{% block content %}
+<style>
+.costs-page { padding: 28px 32px; max-width: 1200px; }
+.costs-page h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.03em; color: var(--text-primary); margin-bottom: 4px; }
+.costs-subtitle { color: var(--text-muted); font-size: 0.85rem; margin-bottom: 28px; }
+.summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 32px; }
+.stat-card { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px; }
+.stat-card .stat-label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); margin-bottom: 6px; }
+.stat-card .stat-value { font-size: 1.7rem; font-weight: 700; letter-spacing: -0.03em; color: var(--text-primary); }
+.stat-card .stat-sub { font-size: 0.78rem; color: var(--text-muted); margin-top: 2px; }
+.costs-section { margin-bottom: 36px; }
+.costs-section h2 { font-size: 1rem; font-weight: 700; letter-spacing: -0.02em; color: var(--text-primary); margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+.data-table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
+.data-table th { text-align: left; padding: 8px 12px; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); border-bottom: 1px solid var(--border); white-space: nowrap; }
+.data-table td { padding: 9px 12px; border-bottom: 1px solid rgba(255,255,255,0.04); color: var(--text-secondary); vertical-align: middle; }
+.data-table tr:last-child td { border-bottom: none; }
+.data-table tr:hover td { background: rgba(255,255,255,0.02); }
+.table-wrap { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.cost-high { color: #f87171; font-weight: 600; }
+.cost-med { color: #fb923c; font-weight: 600; }
+.cost-low { color: var(--text-secondary); }
+.badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 0.72rem; font-weight: 600; }
+.badge-gemini { background: rgba(66, 133, 244, 0.15); color: #60a5fa; }
+.badge-openai { background: rgba(16, 163, 127, 0.15); color: #34d399; }
+.badge-free { background: rgba(148,163,184,0.12); color: var(--text-muted); }
+.badge-pro { background: rgba(124,109,232,0.15); color: #a78bfa; }
+.badge-ultra { background: rgba(245,158,11,0.15); color: #fbbf24; }
+.trend-bar-wrap { display: flex; align-items: center; gap: 10px; }
+.trend-bar-bg { flex: 1; background: var(--bg-primary); border-radius: 4px; height: 6px; overflow: hidden; }
+.trend-bar { height: 6px; border-radius: 4px; background: var(--accent); }
+.no-data { color: var(--text-muted); font-size: 0.85rem; padding: 16px; }
+</style>
+
+<div class="costs-page">
+    <h1>API Cost Dashboard</h1>
+    <p class="costs-subtitle">Last {{ days }} days &mdash; updated {{ now.strftime('%Y-%m-%d %H:%M UTC') }}</p>
+
+    <!-- Summary cards -->
+    <div class="summary-grid">
+        <div class="stat-card">
+            <div class="stat-label">Total Cost</div>
+            <div class="stat-value">&euro;{{ "%.2f"|format(total_usd * 0.92) }}</div>
+            <div class="stat-sub">${{ "%.4f"|format(total_usd) }} USD</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">API Calls</div>
+            <div class="stat-value">{{ "{:,}".format(total_calls) }}</div>
+            <div class="stat-sub">last {{ days }} days</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Avg Cost / Call</div>
+            <div class="stat-value">${{ "%.5f"|format(total_usd / total_calls if total_calls else 0) }}</div>
+            <div class="stat-sub">all providers</div>
+        </div>
+        {% if cache_stats %}
+        <div class="stat-card">
+            <div class="stat-label">Analysis API Calls</div>
+            <div class="stat-value">{{ cache_stats.analysis_calls }}</div>
+            <div class="stat-sub">inspiration analyses billed</div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Daily trend -->
+    <div class="costs-section">
+        <h2>Daily Cost Trend</h2>
+        {% if daily_trend %}
+        {% set max_usd = daily_trend | map(attribute='total_usd') | map('float') | max %}
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead><tr>
+                    <th>Date</th>
+                    <th>Cost (USD)</th>
+                    <th>Calls</th>
+                    <th style="width:240px">Bar</th>
+                </tr></thead>
+                <tbody>
+                {% for row in daily_trend %}
+                <tr>
+                    <td>{{ row.day }}</td>
+                    <td class="{{ 'cost-high' if row.total_usd|float > 1 else ('cost-med' if row.total_usd|float > 0.1 else 'cost-low') }}">${{ "%.4f"|format(row.total_usd|float) }}</td>
+                    <td>{{ row.calls }}</td>
+                    <td>
+                        <div class="trend-bar-wrap">
+                            <div class="trend-bar-bg">
+                                <div class="trend-bar" style="width:{{ ((row.total_usd|float / max_usd) * 100)|int if max_usd > 0 else 0 }}%"></div>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="no-data">No data yet.</p>
+        {% endif %}
+    </div>
+
+    <!-- Cost by feature -->
+    <div class="costs-section">
+        <h2>Cost by Feature</h2>
+        {% if by_feature %}
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead><tr>
+                    <th>Feature</th>
+                    <th>Provider</th>
+                    <th>Calls</th>
+                    <th>Total (USD)</th>
+                    <th>Avg / Call</th>
+                </tr></thead>
+                <tbody>
+                {% for row in by_feature %}
+                <tr>
+                    <td>{{ row.feature }}</td>
+                    <td><span class="badge badge-{{ row.provider }}">{{ row.provider }}</span></td>
+                    <td>{{ row.calls }}</td>
+                    <td class="{{ 'cost-high' if row.total_usd|float > 1 else ('cost-med' if row.total_usd|float > 0.1 else 'cost-low') }}">${{ "%.4f"|format(row.total_usd|float) }}</td>
+                    <td>${{ "%.5f"|format(row.avg_usd|float) }}</td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="no-data">No data yet.</p>
+        {% endif %}
+    </div>
+
+    <!-- Cost by operation -->
+    <div class="costs-section">
+        <h2>Cost by Operation (detailed)</h2>
+        {% if by_operation %}
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead><tr>
+                    <th>Feature</th>
+                    <th>Operation</th>
+                    <th>Provider</th>
+                    <th>Model</th>
+                    <th>Calls</th>
+                    <th>Total (USD)</th>
+                    <th>Avg Tokens</th>
+                    <th>Max Tokens</th>
+                </tr></thead>
+                <tbody>
+                {% for row in by_operation %}
+                <tr>
+                    <td>{{ row.feature }}</td>
+                    <td>{{ row.operation }}</td>
+                    <td><span class="badge badge-{{ row.provider }}">{{ row.provider }}</span></td>
+                    <td style="font-size:0.78rem; color:var(--text-muted)">{{ row.model }}</td>
+                    <td>{{ row.calls }}</td>
+                    <td class="{{ 'cost-high' if row.total_usd|float > 1 else ('cost-med' if row.total_usd|float > 0.1 else 'cost-low') }}">${{ "%.4f"|format(row.total_usd|float) }}</td>
+                    <td>{{ row.avg_tokens|int }}</td>
+                    <td>{{ row.max_tokens|int }}</td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="no-data">No data yet.</p>
+        {% endif %}
+    </div>
+
+    <!-- AI Creatives: prompt-only vs full-image split -->
+    <div class="costs-section">
+        <h2>AI Creatives — Analysis Cost Split (prompt-only vs with-image)</h2>
+        <p style="font-size:0.82rem; color:var(--text-muted); margin-bottom:12px;">
+            Each inspiration requires a vision API call to generate a prompt. This shows whether that cost led to an image or was prompt-only mode.
+            Rows only appear for events with the <code>prompt_only</code> flag recorded (new events after the last deploy).
+        </p>
+        {% if creatives_split %}
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead><tr>
+                    <th>Mode</th>
+                    <th>Provider</th>
+                    <th>Calls</th>
+                    <th>Total (USD)</th>
+                    <th>Avg Tokens</th>
+                </tr></thead>
+                <tbody>
+                {% for row in creatives_split %}
+                <tr>
+                    <td>
+                        {% if row.mode == 'prompt_only' %}
+                        <span class="badge" style="background:rgba(148,163,184,0.12);color:var(--text-muted)">prompt only</span>
+                        {% else %}
+                        <span class="badge" style="background:rgba(124,109,232,0.15);color:#a78bfa">+ image gen</span>
+                        {% endif %}
+                    </td>
+                    <td><span class="badge badge-{{ row.provider }}">{{ row.provider }}</span></td>
+                    <td>{{ row.calls }}</td>
+                    <td class="{{ 'cost-high' if row.total_usd|float > 1 else ('cost-med' if row.total_usd|float > 0.1 else 'cost-low') }}">${{ "%.4f"|format(row.total_usd|float) }}</td>
+                    <td>{{ row.avg_tokens|int }}</td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="no-data">No data yet — this requires events recorded after the prompt_only flag was added.</p>
+        {% endif %}
+    </div>
+
+    <!-- Top users -->
+    <div class="costs-section">
+        <h2>Top Users by Cost</h2>
+        {% if top_users %}
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead><tr>
+                    <th>Username</th>
+                    <th>Email</th>
+                    <th>Plan</th>
+                    <th>Calls</th>
+                    <th>Total (USD)</th>
+                </tr></thead>
+                <tbody>
+                {% for row in top_users %}
+                <tr>
+                    <td>{{ row.username }}</td>
+                    <td style="color:var(--text-muted)">{{ row.email }}</td>
+                    <td><span class="badge badge-{{ row.plan_tier }}">{{ row.plan_tier }}</span></td>
+                    <td>{{ row.calls }}</td>
+                    <td class="{{ 'cost-high' if row.total_usd|float > 1 else ('cost-med' if row.total_usd|float > 0.1 else 'cost-low') }}">${{ "%.4f"|format(row.total_usd|float) }}</td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="no-data">No data yet.</p>
+        {% endif %}
+    </div>
+
+    <!-- Heaviest individual calls -->
+    <div class="costs-section">
+        <h2>Most Expensive Individual Calls</h2>
+        {% if heavy_calls %}
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead><tr>
+                    <th>Feature</th>
+                    <th>Operation</th>
+                    <th>Provider</th>
+                    <th>Model</th>
+                    <th>Tokens</th>
+                    <th>Cost (USD)</th>
+                    <th>User</th>
+                    <th>Date</th>
+                </tr></thead>
+                <tbody>
+                {% for row in heavy_calls %}
+                <tr>
+                    <td>{{ row.feature }}</td>
+                    <td>{{ row.operation }}</td>
+                    <td><span class="badge badge-{{ row.provider }}">{{ row.provider }}</span></td>
+                    <td style="font-size:0.78rem; color:var(--text-muted)">{{ row.model }}</td>
+                    <td class="{{ 'cost-high' if row.total_tokens > 8000 else ('cost-med' if row.total_tokens > 4000 else '') }}">{{ "{:,}".format(row.total_tokens) }}</td>
+                    <td class="{{ 'cost-high' if row.estimated_cost_usd and row.estimated_cost_usd|float > 0.05 else '' }}">${{ "%.5f"|format(row.estimated_cost_usd|float if row.estimated_cost_usd else 0) }}</td>
+                    <td>{{ row.username or '—' }}</td>
+                    <td style="font-size:0.78rem; color:var(--text-muted)">{{ row.created_at.strftime('%m-%d %H:%M') if row.created_at else '' }}</td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="no-data">No data yet.</p>
+        {% endif %}
+    </div>
+
+    <!-- Failed calls -->
+    <div class="costs-section">
+        <h2>Failed Calls (errors / retries)</h2>
+        {% if failed_calls %}
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead><tr>
+                    <th>Feature</th>
+                    <th>Operation</th>
+                    <th>Provider</th>
+                    <th>Error Count</th>
+                    <th>Last Error</th>
+                </tr></thead>
+                <tbody>
+                {% for row in failed_calls %}
+                <tr>
+                    <td>{{ row.feature }}</td>
+                    <td>{{ row.operation }}</td>
+                    <td><span class="badge badge-{{ row.provider }}">{{ row.provider }}</span></td>
+                    <td class="cost-high">{{ row.error_count }}</td>
+                    <td style="font-size:0.78rem; color:var(--text-muted)">{{ row.last_error.strftime('%Y-%m-%d %H:%M') if row.last_error else '' }}</td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="no-data">No failed calls in this period.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

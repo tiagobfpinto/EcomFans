@@ -2,125 +2,409 @@
 {% block title %}Products - EcomFans{% endblock %}
 {% block content %}
 <div class="products-page">
-    <div class="dashboard-header">
-        <h1>Products</h1>
-        <p>Create products, save product context, and keep up to 4 reference images in your workspace.</p>
+
+    <!-- Top bar -->
+    <div class="products-page-topbar">
+        <div class="dashboard-header" style="margin-bottom:0;">
+            <h1>Products</h1>
+            <p>Manage your products and reusable creative context.</p>
+        </div>
+        <button type="button" class="btn btn-primary" id="add-product-btn" onclick="toggleAddProductPanel()">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+            Add product
+        </button>
     </div>
 
-    <div class="products-layout">
+    <!-- Collapsible add-product form -->
+    <div id="add-product-panel" class="add-product-panel" style="display:none;">
         <section class="product-form-card">
             <div class="section-heading">
                 <h2>New product</h2>
                 <p>Add the product details you want available later for creatives and prompts.</p>
             </div>
-
             <form method="POST" enctype="multipart/form-data" class="product-form">
-                <div class="form-group">
-                    <label for="product-name">Product name</label>
-                    <input id="product-name" type="text" name="name" maxlength="160" required
-                        placeholder="Summer Linen Shirt">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                <div class="product-form-grid">
+                    <div class="form-group">
+                        <label for="product-name">Product name</label>
+                        <input id="product-name" type="text" name="name" maxlength="160" required
+                            placeholder="Summer Linen Shirt">
+                    </div>
+                    <div class="form-group">
+                        <label for="product-price">Price</label>
+                        <input id="product-price" type="text" name="price" maxlength="200"
+                            placeholder="$49.90 or 3x of $16.63">
+                    </div>
                 </div>
-
                 <div class="form-group">
                     <label for="product-context">Product context</label>
-                    <textarea id="product-context" name="context" rows="6" required
+                    <textarea id="product-context" name="context" rows="5" required
                         placeholder="Describe the product, audience, features, tone, brand style, and anything the AI should know."></textarea>
                 </div>
-
-                <div class="form-group">
-                    <label for="product-price">Price</label>
-                    <input id="product-price" type="text" name="price" maxlength="200"
-                        placeholder="$49.90 or 3x of $16.63">
+                <div class="product-form-grid">
+                    <div class="form-group">
+                        <label for="product-offer">Offer</label>
+                        <textarea id="product-offer" name="offer" rows="3"
+                            placeholder="What is the current offer, bundle, discount, or CTA?"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="product-benefits">Benefits</label>
+                        <textarea id="product-benefits" name="benefits" rows="3"
+                            placeholder="List the core benefits and outcomes this product delivers."></textarea>
+                    </div>
                 </div>
-
-                <div class="form-group">
-                    <label for="product-offer">Offer</label>
-                    <textarea id="product-offer" name="offer" rows="3"
-                        placeholder="What is the current offer, bundle, discount, or CTA?"></textarea>
-                </div>
-
-                <div class="form-group">
-                    <label for="product-benefits">Benefits</label>
-                    <textarea id="product-benefits" name="benefits" rows="4"
-                        placeholder="List the core benefits and outcomes this product delivers."></textarea>
-                </div>
-
                 <div class="form-group">
                     <label for="product-images">Context images</label>
                     <input id="product-images" type="file" name="images" accept="image/*" multiple>
                     <span class="field-hint">Optional. Upload up to 4 images.</span>
                 </div>
-
-                <button type="submit" class="btn btn-primary">Save product</button>
+                <div class="product-form-actions">
+                    <button type="submit" class="btn btn-primary">Save product</button>
+                    <button type="button" class="btn btn-ghost" onclick="toggleAddProductPanel()">Cancel</button>
+                </div>
             </form>
         </section>
-
-        <section class="products-list-section">
-            <div class="section-heading">
-                <h2>Your products</h2>
-                <p>{{ products|length }} saved product{% if products|length != 1 %}s{% endif %}</p>
-            </div>
-
-            {% if products %}
-            <div class="products-grid">
-                {% for product in products %}
-                <article class="product-card">
-                    <div class="product-card-header">
-                        <div>
-                            <h3>{{ product.name }}</h3>
-                            <span class="product-date">
-                                {% if product.created_at %}
-                                {{ product.created_at.strftime('%Y-%m-%d %H:%M') }}
-                                {% endif %}
-                            </span>
-                        </div>
-                        <span class="product-image-count">{{ product.images|length }}/4 images</span>
-                    </div>
-
-                    <p class="product-context">{{ product.context }}</p>
-
-                    {% if product.price or product.offer or product.benefits %}
-                    <div class="product-info-block">
-                        {% if product.price %}
-                        <p><strong>Price:</strong> {{ product.price }}</p>
-                        {% endif %}
-                        {% if product.offer %}
-                        <p><strong>Offer:</strong> {{ product.offer }}</p>
-                        {% endif %}
-                        {% if product.benefits %}
-                        <p><strong>Benefits:</strong> {{ product.benefits }}</p>
-                        {% endif %}
-                    </div>
-                    {% endif %}
-
-                    {% if product.images %}
-                    <div class="product-images-grid">
-                        {% for image in product.images %}
-                        <div class="product-image-thumb">
-                            <img src="{{ url_for('media.product_image', image_id=image.id) }}"
-                                alt="{{ product.name }} context image {{ loop.index }}">
-                        </div>
-                        {% endfor %}
-                    </div>
-                    {% else %}
-                    <div class="product-empty-images">No context images uploaded.</div>
-                    {% endif %}
-                </article>
-                {% endfor %}
-            </div>
-            {% else %}
-            <div class="empty-state product-empty-state">
-                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"
-                    stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="3" y="4" width="18" height="16" rx="2" />
-                    <path d="M8 2v4" />
-                    <path d="M16 2v4" />
-                    <path d="M3 10h18" />
-                </svg>
-                <p>No products yet. Create your first one to start building reusable context.</p>
-            </div>
-            {% endif %}
-        </section>
     </div>
+
+    <!-- Products table -->
+    <section class="products-table-section">
+        <div class="products-table-header">
+            <span class="products-count">{{ products|length }} product{% if products|length != 1 %}s{% endif %}</span>
+        </div>
+
+        {% if products %}
+        <div class="products-rows">
+            <div class="products-list-head" aria-hidden="true">
+                <span class="products-head-product">Product</span>
+                <span>Price</span>
+                <span>Added</span>
+                <span>Images</span>
+                <span></span><!-- chevron -->
+            </div>
+            {% for product in products %}
+            <details class="product-row" data-id="{{ product.id }}" {% if loop.first %}open{% endif %}>
+                <summary class="product-row-summary">
+                    <div class="product-row-thumb" id="pthumb-{{ product.id }}">
+                        {% if product.images %}
+                        <img src="{{ url_for('media.product_image', image_id=product.images[0].id) }}"
+                            alt="{{ product.name }}" loading="lazy">
+                        {% else %}
+                        <div class="product-thumb-placeholder" aria-hidden="true">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="3" y="3" width="18" height="18" rx="2" />
+                                <circle cx="8.5" cy="8.5" r="1.5" />
+                                <polyline points="21 15 16 10 5 21" />
+                            </svg>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="product-row-main">
+                        <span class="product-row-name" id="pname-{{ product.id }}">{{ product.name }}</span>
+                        <span class="product-row-preview">{{ (product.context or '')|truncate(100, True, '…') }}</span>
+                    </div>
+                    <span class="product-row-price">{{ product.price or '—' }}</span>
+                    <span class="product-row-date">
+                        {% if product.created_at %}{{ product.created_at.strftime('%b %d, %Y') }}{% else %}—{% endif %}
+                    </span>
+                    <span class="product-image-count" id="pimgcount-{{ product.id }}">{{ product.images|length }}/4</span>
+                    <span class="product-row-chevron" aria-hidden="true"></span>
+                </summary>
+
+                <div class="product-row-details">
+
+                    <!-- VIEW MODE -->
+                    <div id="pview-{{ product.id }}">
+                        {% if product.images %}
+                        <div class="product-images-grid">
+                            {% for image in product.images %}
+                            <div class="product-image-thumb">
+                                <img src="{{ url_for('media.product_image', image_id=image.id) }}"
+                                    alt="{{ product.name }} image {{ loop.index }}" loading="lazy">
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+
+                        <p class="product-context">{{ product.context or '' }}</p>
+
+                        {% if product.price or product.offer or product.benefits %}
+                        <div class="product-info-block">
+                            {% if product.price %}<p><strong>Price:</strong> {{ product.price }}</p>{% endif %}
+                            {% if product.offer %}<p><strong>Offer:</strong> {{ product.offer }}</p>{% endif %}
+                            {% if product.benefits %}<p><strong>Benefits:</strong> {{ product.benefits }}</p>{% endif %}
+                        </div>
+                        {% endif %}
+
+                        <div class="product-row-btns">
+                            <button type="button" class="btn btn-ghost btn-sm"
+                                onclick="openPEdit({{ product.id }})">Edit</button>
+                            <form method="POST"
+                                action="{{ url_for('products.delete_product', product_id=product.id) }}"
+                                class="inline-form">
+                                <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                                <button type="submit" class="btn btn-ghost btn-sm btn-danger-ghost"
+                                    onclick="return confirm('Delete \'{{ product.name|replace("'", "\\'") }}\'?')">Delete</button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- EDIT MODE -->
+                    <div id="pedit-{{ product.id }}" style="display:none;">
+                        <form method="POST"
+                            action="{{ url_for('products.edit_product', product_id=product.id) }}"
+                            enctype="multipart/form-data" class="product-form">
+                            <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+
+                            <div class="product-form-grid">
+                                <div class="form-group">
+                                    <label>Product name</label>
+                                    <input type="text" name="name" value="{{ product.name }}" maxlength="160" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Price</label>
+                                    <input type="text" name="price" value="{{ product.price or '' }}" maxlength="200"
+                                        placeholder="$49.90 or 3x of $16.63">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Product context</label>
+                                <textarea name="context" rows="5" required>{{ product.context or '' }}</textarea>
+                            </div>
+                            <div class="product-form-grid">
+                                <div class="form-group">
+                                    <label>Offer</label>
+                                    <textarea name="offer" rows="3">{{ product.offer or '' }}</textarea>
+                                </div>
+                                <div class="form-group">
+                                    <label>Benefits</label>
+                                    <textarea name="benefits" rows="3">{{ product.benefits or '' }}</textarea>
+                                </div>
+                            </div>
+
+                            {% if product.images %}
+                            <div class="form-group">
+                                <label>Current images</label>
+                                <div class="product-edit-imgs" id="pedit-imgs-{{ product.id }}">
+                                    {% for img in product.images %}
+                                    <div class="product-edit-img-item" id="pedit-img-{{ img.id }}">
+                                        <img src="{{ url_for('media.product_image', image_id=img.id) }}"
+                                            alt="Image {{ loop.index }}">
+                                        <button type="button" class="product-edit-img-del"
+                                            onclick="deletePImage({{ product.id }}, {{ img.id }})"
+                                            title="Remove image">×</button>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            <div class="form-group">
+                                <label>Add images</label>
+                                <input type="file" name="images" accept="image/*" multiple>
+                                <span class="field-hint">Up to 4 total across all images.</span>
+                            </div>
+
+                            <div class="product-form-actions">
+                                <button type="submit" class="btn btn-primary">Save changes</button>
+                                <button type="button" class="btn btn-ghost"
+                                    onclick="closePEdit({{ product.id }})">Cancel</button>
+                            </div>
+                        </form>
+                    </div>
+
+                </div>
+            </details>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state product-empty-state">
+            <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"
+                stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="4" width="18" height="16" rx="2" />
+                <path d="M8 2v4" />
+                <path d="M16 2v4" />
+                <path d="M3 10h18" />
+            </svg>
+            <p>No products yet. Click <strong>Add product</strong> to create your first one.</p>
+            <button type="button" class="btn btn-primary" onclick="toggleAddProductPanel()">Add product</button>
+        </div>
+        {% endif %}
+    </section>
+
+    <!-- Tools section -->
+    <section class="products-tools-section">
+        <div class="section-heading">
+            <h2>Tools</h2>
+            <p>Utilities to help prepare your product assets.</p>
+        </div>
+        <div class="tools-cards-row">
+            <div class="tool-card product-form-card remove-bg-card">
+                <div class="tool-card-header">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M12 22C6.5 22 2 17.5 2 12S6.5 2 12 2s10 4.5 10 10" />
+                        <path d="M22 22 12 12" />
+                        <path d="M17 17h5v5" />
+                    </svg>
+                    <h3>Remove background</h3>
+                </div>
+                <p class="field-hint" style="margin-bottom:14px;">Upload one image to remove the background at high quality. Runs locally by default — your upload is not stored.</p>
+                <form id="remove-bg-form" class="remove-bg-form" enctype="multipart/form-data">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label for="remove-bg-image">Product image</label>
+                        <input id="remove-bg-image" type="file" name="image" accept="image/*" required>
+                        <span class="field-hint">Max 10 MB. Output is downloaded as transparent PNG.</span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+                        <button type="submit" class="btn btn-accent" id="remove-bg-submit">Remove background</button>
+                        <p class="remove-bg-status" id="remove-bg-status"></p>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </section>
+
 </div>
+
+<script>
+    (function () {
+        const panel = document.getElementById('add-product-panel');
+        const btn = document.getElementById('add-product-btn');
+
+        window.toggleAddProductPanel = function (forceOpen) {
+            const isOpen = panel.style.display !== 'none';
+            const open = (forceOpen !== undefined) ? forceOpen : !isOpen;
+            panel.style.display = open ? '' : 'none';
+            if (open) {
+                panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                const firstInput = panel.querySelector('input[type="text"]');
+                if (firstInput) firstInput.focus();
+            }
+        };
+
+        // Auto-open form if there was a flash error (server validation failed)
+        const hasFlashError = document.querySelector('.flash.error, .flash-error, [class*="flash"][class*="error"]');
+        if (hasFlashError) toggleAddProductPanel(true);
+    })();
+
+    (function () {
+        const productRows = document.querySelectorAll('.product-row');
+        if (!productRows.length) return;
+        productRows.forEach((row) => {
+            row.addEventListener('toggle', () => {
+                if (!row.open) return;
+                productRows.forEach((other) => { if (other !== row) other.open = false; });
+            });
+        });
+
+        // Auto-open product from ?open=ID after edit/delete redirect
+        const params = new URLSearchParams(window.location.search);
+        const openId = params.get('open');
+        if (openId) {
+            const target = document.querySelector(`.product-row[data-id="${openId}"]`);
+            if (target) {
+                productRows.forEach(r => { if (r !== target) r.open = false; });
+                target.open = true;
+                setTimeout(() => target.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 100);
+            }
+        }
+    })();
+
+    window.openPEdit = function (id) {
+        document.getElementById('pview-' + id).style.display = 'none';
+        document.getElementById('pedit-' + id).style.display = '';
+    };
+
+    window.closePEdit = function (id) {
+        document.getElementById('pview-' + id).style.display = '';
+        document.getElementById('pedit-' + id).style.display = 'none';
+    };
+
+    window.deletePImage = async function (productId, imageId) {
+        const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
+        const el = document.getElementById('pedit-img-' + imageId);
+        try {
+            const resp = await fetch(`/products/${productId}/delete-image/${imageId}`, {
+                method: 'POST',
+                headers: { 'X-CSRF-Token': csrf },
+            });
+            if (!resp.ok) throw new Error();
+            if (el) el.remove();
+        } catch {
+            alert('Failed to delete image. Please try again.');
+        }
+    };
+
+    (function () {
+        const form = document.getElementById('remove-bg-form');
+        if (!form) return;
+        const fileInput = document.getElementById('remove-bg-image');
+        const submitBtn = document.getElementById('remove-bg-submit');
+        const statusEl = document.getElementById('remove-bg-status');
+
+        function setStatus(message, type) {
+            if (!statusEl) return;
+            statusEl.textContent = message || '';
+            statusEl.classList.remove('is-success', 'is-error');
+            if (type === 'success') statusEl.classList.add('is-success');
+            if (type === 'error') statusEl.classList.add('is-error');
+        }
+
+        function resolveFilename(disposition) {
+            if (!disposition) return 'image_no_bg.png';
+            const utfMatch = disposition.match(/filename\*=UTF-8''([^;]+)/i);
+            if (utfMatch && utfMatch[1]) return decodeURIComponent(utfMatch[1].trim());
+            const simpleMatch = disposition.match(/filename=\"?([^\";]+)\"?/i);
+            if (simpleMatch && simpleMatch[1]) return simpleMatch[1].trim();
+            return 'image_no_bg.png';
+        }
+
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            if (!fileInput || !fileInput.files || !fileInput.files.length) {
+                setStatus('Select an image first.', 'error');
+                return;
+            }
+            setStatus('Removing background…', null);
+            if (submitBtn) submitBtn.disabled = true;
+            const data = new FormData(form);
+            try {
+                const response = await fetch('/products/remove-background', { method: 'POST', body: data });
+                if (!response.ok) {
+                    let message = 'Could not remove the image background.';
+                    const ct = response.headers.get('content-type') || '';
+                    if (ct.includes('application/json')) {
+                        const payload = await response.json();
+                        message = payload.error || message;
+                    } else {
+                        const raw = await response.text();
+                        if (raw) message = raw;
+                    }
+                    throw new Error(message);
+                }
+                const blob = await response.blob();
+                const downloadUrl = URL.createObjectURL(blob);
+                const anchor = document.createElement('a');
+                anchor.href = downloadUrl;
+                anchor.download = resolveFilename(response.headers.get('content-disposition') || '');
+                document.body.appendChild(anchor);
+                anchor.click();
+                document.body.removeChild(anchor);
+                URL.revokeObjectURL(downloadUrl);
+                setStatus('Done. Download started — no file stored on server.', 'success');
+                fileInput.value = '';
+            } catch (error) {
+                setStatus(error.message || 'Background removal failed.', 'error');
+            } finally {
+                if (submitBtn) submitBtn.disabled = false;
+            }
+        });
+    })();
+</script>
 {% endblock %}

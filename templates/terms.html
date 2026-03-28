@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Terms of Service — EcomFans</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}" />
+  <style>
+    .legal-page { max-width: 760px; margin: 120px auto 80px; padding: 0 24px; }
+    .legal-page h1 { font-size: 2rem; font-weight: 700; margin-bottom: 8px; }
+    .legal-page .legal-meta { color: var(--muted, #888); font-size: 0.875rem; margin-bottom: 40px; }
+    .legal-page h2 { font-size: 1.125rem; font-weight: 600; margin: 32px 0 8px; }
+    .legal-page p, .legal-page li { line-height: 1.75; color: var(--body, #ccc); font-size: 0.9375rem; }
+    .legal-page ul { padding-left: 20px; margin: 8px 0; }
+    .legal-page a { color: var(--accent, #7c6fff); }
+  </style>
+</head>
+<body>
+
+  <nav class="lp-nav" id="lpNav">
+    <div class="lp-nav__inner">
+      <a href="{{ url_for('landing.landing_page') }}" class="lp-nav__logo">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="2"/>
+          <circle cx="8.5" cy="8.5" r="1.5"/>
+          <polyline points="21 15 16 10 5 21"/>
+        </svg>
+        <span>EcomFans</span>
+      </a>
+      <div class="lp-nav__ctas">
+        <a href="{{ url_for('auth.login') }}" class="btn-ghost">Log in</a>
+        <a href="{{ url_for('auth.register') }}" class="btn-primary btn-sm">Get started free</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="legal-page">
+    <h1>Terms of Service</h1>
+    <p class="legal-meta">Last updated: March 2026</p>
+
+    <p>By creating an account or using EcomFans ("Service"), you agree to these Terms of Service ("Terms"). Please read them carefully.</p>
+
+    <h2>1. Eligibility</h2>
+    <p>You must be at least 18 years old and have the legal authority to enter into these Terms. By using the Service you represent that you meet these requirements.</p>
+
+    <h2>2. Account Responsibilities</h2>
+    <ul>
+      <li>You are responsible for maintaining the confidentiality of your account credentials.</li>
+      <li>You are responsible for all activity that occurs under your account.</li>
+      <li>Notify us immediately of any unauthorized use.</li>
+    </ul>
+
+    <h2>3. Acceptable Use</h2>
+    <p>You agree not to use the Service to:</p>
+    <ul>
+      <li>Generate content that is illegal, deceptive, defamatory, or infringes intellectual property rights.</li>
+      <li>Upload content you do not have the rights to use.</li>
+      <li>Attempt to reverse-engineer, scrape, or overload the Service.</li>
+      <li>Resell or redistribute AI-generated outputs as a standalone AI service without transforming them.</li>
+    </ul>
+
+    <h2>4. Credits and Billing</h2>
+    <ul>
+      <li>The Service operates on a credit system. Credits are consumed per AI generation.</li>
+      <li>Monthly plan credits reset at the start of each billing cycle and do not roll over.</li>
+      <li>Top-up credit packs do not expire and are consumed after monthly credits.</li>
+      <li>All payments are processed by Stripe and are subject to Stripe's terms.</li>
+      <li>Subscriptions renew automatically unless cancelled before the renewal date.</li>
+      <li>Refunds are handled on a case-by-case basis; contact support within 14 days of a charge.</li>
+    </ul>
+
+    <h2>5. AI-Generated Content</h2>
+    <p>You retain ownership of content you upload. You are granted a non-exclusive licence to use the AI-generated outputs for your business purposes. You are solely responsible for ensuring generated content complies with applicable laws and platform policies (Meta, TikTok, etc.).</p>
+
+    <h2>6. Intellectual Property</h2>
+    <p>EcomFans and its underlying technology are the intellectual property of the operator. Nothing in these Terms grants you rights to our trademarks, software, or infrastructure.</p>
+
+    <h2>7. Service Availability</h2>
+    <p>We aim for high availability but do not guarantee uninterrupted access. We may modify or discontinue features with reasonable notice.</p>
+
+    <h2>8. Limitation of Liability</h2>
+    <p>To the fullest extent permitted by law, EcomFans shall not be liable for indirect, incidental, special, or consequential damages arising from your use of the Service. Our aggregate liability to you shall not exceed the amount you paid in the 3 months preceding the claim.</p>
+
+    <h2>9. Termination</h2>
+    <p>We may suspend or terminate accounts that violate these Terms. You may close your account at any time from your account settings. Closing your account cancels any active subscription from the next billing cycle.</p>
+
+    <h2>10. Changes to These Terms</h2>
+    <p>We may update these Terms from time to time. We will notify you via email or an in-app notice. Continued use after the effective date constitutes acceptance.</p>
+
+    <h2>11. Governing Law</h2>
+    <p>These Terms are governed by the laws of Portugal, without regard to conflict of law provisions.</p>
+
+    <h2>12. Contact</h2>
+    <p>For questions about these Terms, email us at <a href="mailto:legal@ecomfans.com">legal@ecomfans.com</a>.</p>
+  </main>
+
+  <footer class="lp-footer">
+    <div class="lp-footer__inner">
+      <div class="footer-bottom">
+        <span>© 2026 EcomFans. All rights reserved.</span>
+        <div>
+          <a href="/privacy" style="margin-right:16px">Privacy Policy</a>
+          <a href="/terms">Terms of Service</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+</body>
+</html>

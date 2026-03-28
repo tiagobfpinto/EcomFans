@@ -41,7 +41,7 @@
                 <span id="script-upload-label">Click to select video file</span>
             </label>
             <p class="field-hint" style="margin-top: 10px;">
-                Max file size: {{ max_upload_mb }}MB. File is deleted from server immediately after transcription.
+                Max file size: {{ max_upload_mb }}MB. Processing runs in background workers and file is deleted after job completion.
             </p>
             <div class="prompt-controls">
                 <button id="script-transcribe-btn" class="btn btn-accent" onclick="transcribeVideo()" {% if not has_openai_key %}disabled{% endif %}>
@@ -57,7 +57,7 @@
 
     <div id="script-loading" class="loading-state" style="display:none;">
         <div class="spinner"></div>
-        <p>Transcribing video speech...</p>
+        <p id="script-loading-text">Transcribing video speech...</p>
     </div>
 
     <div class="prompt-section">
@@ -89,6 +89,13 @@
 <script>
     let selectedVideoFile = null;
     const MAX_UPLOAD_BYTES = {{ max_upload_mb|int }} * 1024 * 1024;
+    const JOB_POLL_INTERVAL_MS = 1800;
+    const JOB_POLL_TIMEOUT_MS = 20 * 60 * 1000;
+
+    function getScriptCsrfToken() {
+        const meta = document.querySelector('meta[name="csrf-token"]');
+        return meta ? (meta.getAttribute('content') || '').trim() : '';
+    }
 
     function setSelectedVideo(input) {
         const label = document.getElementById('script-upload-label');
@@ -112,19 +119,27 @@
 
         const transcribeBtn = document.getElementById('script-transcribe-btn');
         const loading = document.getElementById('script-loading');
+        const loadingText = document.getElementById('script-loading-text');
         const output = document.getElementById('script-transcript-output');
         const copyBtn = document.getElementById('script-copy-btn');
 
         transcribeBtn.disabled = true;
         loading.style.display = 'flex';
+        loadingText.textContent = 'Uploading and queuing transcription...';
+        output.value = '';
         copyBtn.disabled = true;
 
         try {
             const form = new FormData();
             form.append('video', selectedVideoFile);
+            const csrfToken = getScriptCsrfToken();
+            if (csrfToken) {
+                form.append('_csrf_token', csrfToken);
+            }
 
             const resp = await fetch('/script-optimizer/transcribe', {
                 method: 'POST',
+                headers: csrfToken ? { 'X-CSRF-Token': csrfToken } : {},
                 body: form,
             });
             const data = await resp.json();
@@ -136,15 +151,56 @@
                 return;
             }
 
-            output.value = data.text || '';
+            const jobId = Number(data.job_id || 0);
+            if (!jobId) {
+                showScriptFlash('Transcription job was not created.', 'error');
+                return;
+            }
+
+            const result = await pollTranscriptionJob(jobId, loadingText);
+            output.value = result.text || '';
             copyBtn.disabled = !(output.value && output.value.trim());
             showScriptFlash('Transcript ready.', 'success');
         } catch (err) {
-            showScriptFlash('Network error while transcribing.', 'error');
+            showScriptFlash(err?.message || 'Network error while transcribing.', 'error');
         } finally {
             transcribeBtn.disabled = false;
             loading.style.display = 'none';
         }
+    }
+
+    async function pollTranscriptionJob(jobId, loadingTextEl) {
+        const startedAt = Date.now();
+        while ((Date.now() - startedAt) < JOB_POLL_TIMEOUT_MS) {
+            const resp = await fetch(`/script-optimizer/transcribe/jobs/${jobId}`);
+            const data = await resp.json();
+            if (!resp.ok) {
+                throw new Error(data.error || 'Could not fetch transcription job status.');
+            }
+
+            if (data.status === 'completed') {
+                return data;
+            }
+            if (data.status === 'failed') {
+                throw new Error(data.error || 'Transcription failed.');
+            }
+
+            if (loadingTextEl) {
+                if (data.status === 'queued') {
+                    loadingTextEl.textContent = 'Queued... waiting for an available worker.';
+                } else if (data.status === 'running') {
+                    loadingTextEl.textContent = 'Worker is transcribing speech...';
+                } else {
+                    loadingTextEl.textContent = 'Processing transcription...';
+                }
+            }
+            await sleep(JOB_POLL_INTERVAL_MS);
+        }
+        throw new Error('Transcription timed out. Please try again.');
+    }
+
+    function sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
     }
 
     async function copyTranscript() {

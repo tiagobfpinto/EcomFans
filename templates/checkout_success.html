@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Payment Successful - EcomFans{% endblock %}
+{% block content %}
+<div class="auth-container">
+    <div class="auth-card" style="text-align:center;">
+        <div class="auth-header">
+            <div class="auth-logo" style="background:#10b981;color:#fff;border-radius:50%;width:56px;height:56px;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="20 6 9 17 4 12"/>
+                </svg>
+            </div>
+            <h1>Payment successful!</h1>
+            <p>Your account has been updated. It may take a few seconds for changes to appear.</p>
+        </div>
+        <div style="margin-top:24px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+            <a href="{{ url_for('main.dashboard') }}" class="btn btn-primary">Go to Dashboard</a>
+            <a href="{{ url_for('billing.billing_account') }}" class="btn btn-ghost">View Billing</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

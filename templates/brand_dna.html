@@ -1,0 +1,793 @@
+{% extends "base.html" %}
+
+{% block title %}Brand DNA – EcomFans{% endblock %}
+
+{% block content %}
+<style>
+/* ── Brand DNA page ──────────────────────────────────────────── */
+.bdna-page {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+}
+
+.bdna-page-header {
+    margin-bottom: 36px;
+}
+
+.bdna-page-header h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0 0 6px;
+}
+
+.bdna-page-header p {
+    color: var(--text-secondary);
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+/* ── URL input card ────────────────────────────────────────── */
+.bdna-input-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 32px;
+}
+
+.bdna-input-label {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    margin-bottom: 10px;
+}
+
+.bdna-input-row {
+    display: flex;
+    gap: 10px;
+}
+
+.bdna-url-input {
+    flex: 1;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    color: var(--text-primary);
+    font-size: 0.95rem;
+    outline: none;
+    transition: border-color var(--transition);
+}
+
+.bdna-url-input:focus {
+    border-color: var(--accent);
+}
+
+.bdna-url-input::placeholder {
+    color: var(--text-muted);
+}
+
+.bdna-credit-hint {
+    margin-top: 10px;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+/* ── Loading card (matches screenshot design) ──────────────── */
+.bdna-loading-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 48px 40px 44px;
+    text-align: center;
+    display: none;
+}
+
+.bdna-loading-title {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-style: italic;
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.2;
+    margin: 0 0 14px;
+}
+
+.bdna-loading-subtitle {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    line-height: 1.6;
+    margin: 0 0 28px;
+    max-width: 400px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.bdna-step-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(32, 212, 160, 0.12);
+    color: var(--success);
+    border: 1px solid rgba(32, 212, 160, 0.28);
+    border-radius: var(--radius-full);
+    padding: 9px 20px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    margin-bottom: 28px;
+    animation: bdna-pill-pulse 2.4s ease-in-out infinite;
+}
+
+.bdna-step-sparkle {
+    font-size: 0.85rem;
+    animation: bdna-sparkle-spin 3s linear infinite;
+}
+
+@keyframes bdna-pill-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(32, 212, 160, 0); }
+    50%       { box-shadow: 0 0 0 6px rgba(32, 212, 160, 0.08); }
+}
+
+@keyframes bdna-sparkle-spin {
+    0%   { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* ── Website preview card ──────────────────────────────────── */
+.bdna-preview-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 22px;
+}
+
+.bdna-preview-frame {
+    width: 100%;
+    max-width: 440px;
+    height: 220px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    overflow: hidden;
+    position: relative;
+    background: var(--bg-secondary);
+}
+
+.bdna-preview-shimmer {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        90deg,
+        var(--bg-secondary) 20%,
+        rgba(255,255,255,0.04) 50%,
+        var(--bg-secondary) 80%
+    );
+    background-size: 300% 100%;
+    animation: bdna-shimmer 1.8s linear infinite;
+}
+
+/* Fake browser chrome inside the preview */
+.bdna-preview-chrome {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 32px;
+    background: var(--bg-tertiary);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    gap: 6px;
+}
+
+.bdna-chrome-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--text-muted);
+    opacity: .4;
+}
+
+.bdna-chrome-bar {
+    flex: 1;
+    height: 14px;
+    border-radius: 4px;
+    background: var(--bg-secondary);
+    margin: 0 10px;
+}
+
+@keyframes bdna-shimmer {
+    0%   { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+.bdna-url-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-full);
+    padding: 7px 16px;
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+    max-width: 380px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.bdna-url-badge svg {
+    flex-shrink: 0;
+    color: var(--accent);
+}
+
+.bdna-countdown {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.bdna-countdown-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--text-muted);
+    animation: bdna-dot-blink 1.2s ease-in-out infinite;
+}
+
+@keyframes bdna-dot-blink {
+    0%, 100% { opacity: .3; }
+    50%       { opacity: 1; }
+}
+
+/* ── Results card ──────────────────────────────────────────── */
+.bdna-results-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 32px;
+    display: none;
+}
+
+.bdna-brand-header {
+    margin-bottom: 28px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--border);
+}
+
+.bdna-brand-header h2 {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0 0 8px;
+}
+
+.bdna-brand-header p {
+    color: var(--text-secondary);
+    margin: 0;
+    font-size: 0.9rem;
+    line-height: 1.6;
+}
+
+.bdna-section-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    margin-bottom: 16px;
+}
+
+/* ── Color palette ─────────────────────────────────────────── */
+.bdna-palette-section {
+    margin-bottom: 28px;
+    padding-bottom: 28px;
+    border-bottom: 1px solid var(--border);
+}
+
+.bdna-palette {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 18px;
+}
+
+.bdna-swatch {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 7px;
+    cursor: pointer;
+}
+
+.bdna-swatch-circle {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.12);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+    transition: transform var(--transition), box-shadow var(--transition);
+}
+
+.bdna-swatch:hover .bdna-swatch-circle {
+    transform: scale(1.1);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+}
+
+.bdna-swatch-hex {
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+    font-family: monospace;
+    letter-spacing: .02em;
+}
+
+.bdna-copied-tip {
+    font-size: 0.7rem;
+    color: var(--success);
+    display: none;
+}
+
+/* ── Products section ──────────────────────────────────────── */
+.bdna-products-section {
+    margin-bottom: 28px;
+}
+
+.bdna-products-count {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.bdna-products-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(124, 109, 232, 0.12);
+    color: var(--accent-light);
+    border: 1px solid rgba(124, 109, 232, 0.2);
+    border-radius: var(--radius-full);
+    padding: 4px 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.bdna-results-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+/* ── Error state ───────────────────────────────────────────── */
+.bdna-error-card {
+    background: rgba(248, 113, 113, 0.06);
+    border: 1px solid rgba(248, 113, 113, 0.25);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    color: var(--error);
+    font-size: 0.9rem;
+    display: none;
+    margin-bottom: 16px;
+}
+
+/* ── History section ───────────────────────────────────────── */
+.bdna-history {
+    margin-top: 48px;
+}
+
+.bdna-history h3 {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    margin: 0 0 16px;
+}
+
+.bdna-history-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 16px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    margin-bottom: 8px;
+}
+
+.bdna-history-minipalette {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.bdna-history-miniswatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 1px solid rgba(255,255,255,0.1);
+}
+
+.bdna-history-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.bdna-history-brand {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.bdna-history-url {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.bdna-history-status {
+    font-size: 0.72rem;
+    font-weight: 600;
+    flex-shrink: 0;
+    padding: 3px 9px;
+    border-radius: var(--radius-full);
+}
+
+.bdna-status-completed {
+    background: rgba(32, 212, 160, 0.12);
+    color: var(--success);
+}
+
+.bdna-status-failed {
+    background: rgba(248, 113, 113, 0.12);
+    color: var(--error);
+}
+
+.bdna-status-queued,
+.bdna-status-running {
+    background: rgba(251, 191, 36, 0.12);
+    color: var(--warning);
+}
+</style>
+
+<div class="bdna-page">
+
+    <div class="bdna-page-header">
+        <h1>Brand DNA</h1>
+        <p>Enter any brand URL. We'll analyze the site, extract your color palette, and auto-draft products.</p>
+    </div>
+
+    {% if not has_openai_key %}
+    <div class="bdna-error-card" style="display:block;">
+        OpenAI API key is not configured on this platform. Please contact the administrator.
+    </div>
+    {% endif %}
+
+    <!-- Error banner (shown by JS) -->
+    <div class="bdna-error-card" id="bdna-error"></div>
+
+    <!-- ── State 1: URL input ─────────────────────────────────── -->
+    <div class="bdna-input-card" id="bdna-input-state">
+        <label class="bdna-input-label" for="bdna-url-input">Brand Website URL</label>
+        <div class="bdna-input-row">
+            <input
+                type="url"
+                id="bdna-url-input"
+                class="bdna-url-input"
+                placeholder="https://yourbrand.com"
+                autocomplete="off"
+                spellcheck="false"
+            >
+            <button
+                class="btn btn-accent"
+                id="bdna-submit-btn"
+                onclick="bdnaSubmit()"
+                {% if not has_openai_key %}disabled{% endif %}
+            >
+                Analyze Brand
+            </button>
+        </div>
+        <p class="bdna-credit-hint">Uses {{ credit_cost }} credits per analysis</p>
+    </div>
+
+    <!-- ── State 2: Loading ───────────────────────────────────── -->
+    <div class="bdna-loading-card" id="bdna-loading-state">
+        <h2 class="bdna-loading-title">Generating your<br>Business DNA</h2>
+        <p class="bdna-loading-subtitle">
+            We're researching and analyzing your business.<br>
+            It will take several minutes. Feel free to come back later.
+        </p>
+
+        <div class="bdna-step-pill" id="bdna-step-pill">
+            <span class="bdna-step-sparkle">✦</span>
+            <span id="bdna-step-text">Fetching website...</span>
+        </div>
+
+        <div class="bdna-preview-wrap">
+            <div class="bdna-preview-frame">
+                <div class="bdna-preview-chrome">
+                    <div class="bdna-chrome-dot"></div>
+                    <div class="bdna-chrome-dot"></div>
+                    <div class="bdna-chrome-dot"></div>
+                    <div class="bdna-chrome-bar"></div>
+                </div>
+                <div class="bdna-preview-shimmer"></div>
+            </div>
+
+            <div class="bdna-url-badge" id="bdna-url-badge">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+                </svg>
+                <span id="bdna-url-badge-text"></span>
+            </div>
+        </div>
+
+        <div class="bdna-countdown" id="bdna-countdown">
+            <div class="bdna-countdown-dot"></div>
+            <span id="bdna-countdown-text">About 2 minutes left</span>
+        </div>
+    </div>
+
+    <!-- ── State 3: Results ───────────────────────────────────── -->
+    <div class="bdna-results-card" id="bdna-results-state">
+        <div class="bdna-brand-header">
+            <h2 id="bdna-brand-name">Brand Name</h2>
+            <p id="bdna-brand-desc"></p>
+        </div>
+
+        <div class="bdna-palette-section">
+            <div class="bdna-section-label">Brand Color Palette</div>
+            <div class="bdna-palette" id="bdna-palette"></div>
+        </div>
+
+        <div class="bdna-products-section">
+            <div class="bdna-section-label">Products Created</div>
+            <div class="bdna-products-count">
+                <div class="bdna-products-badge">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                    <span id="bdna-product-count">0</span> products auto-drafted
+                </div>
+            </div>
+            <p style="color:var(--text-secondary);font-size:0.88rem;margin:0 0 20px;">
+                These products have been added as drafts to your catalog. Review and edit them before using for AI generation.
+            </p>
+        </div>
+
+        <div class="bdna-results-actions">
+            <a href="{{ url_for('products.products_page') }}" class="btn btn-accent" id="bdna-view-products-btn">
+                View Products →
+            </a>
+            <button class="btn btn-ghost" onclick="bdnaReset()">
+                Analyze Another Brand
+            </button>
+        </div>
+    </div>
+
+    <!-- ── Recent analyses ───────────────────────────────────── -->
+    {% if recent_analyses %}
+    <div class="bdna-history">
+        <h3>Recent Analyses</h3>
+        {% for a in recent_analyses %}
+        <div class="bdna-history-item">
+            <div class="bdna-history-minipalette">
+                {% for hex in (palette_data.get(a.id) or [])[:5] %}
+                <div class="bdna-history-miniswatch" style="background:{{ hex }};"></div>
+                {% endfor %}
+                {% if not (palette_data.get(a.id) or []) %}
+                {% for _ in range(4) %}
+                <div class="bdna-history-miniswatch" style="background:var(--bg-tertiary);"></div>
+                {% endfor %}
+                {% endif %}
+            </div>
+            <div class="bdna-history-info">
+                <div class="bdna-history-brand">{{ a.brand_name or 'Unknown brand' }}</div>
+                <div class="bdna-history-url">{{ a.url }}</div>
+            </div>
+            <span class="bdna-history-status bdna-status-{{ a.status }}">{{ a.status }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const BDNA_STEPS = [
+    "Fetching website...",
+    "Studying your brand values...",
+    "Extracting color palette...",
+    "Identifying products...",
+    "Drafting product catalog...",
+    "Finalizing Brand DNA...",
+];
+const BDNA_POLL_INTERVAL_MS  = 1800;
+const BDNA_POLL_TIMEOUT_MS   = 10 * 60 * 1000;
+const BDNA_ESTIMATED_SECS    = 120;
+
+let _bdnaStepIdx      = 0;
+let _bdnaStepTimer    = null;
+let _bdnaCountdownVal = BDNA_ESTIMATED_SECS;
+let _bdnaCountTimer   = null;
+
+function bdnaShowState(state) {
+    document.getElementById('bdna-input-state').style.display   = state === 'input'   ? '' : 'none';
+    document.getElementById('bdna-loading-state').style.display = state === 'loading' ? '' : 'none';
+    document.getElementById('bdna-results-state').style.display = state === 'results' ? '' : 'none';
+}
+
+function bdnaShowError(msg) {
+    const el = document.getElementById('bdna-error');
+    el.textContent = msg;
+    el.style.display = 'block';
+    bdnaShowState('input');
+}
+
+function bdnaHideError() {
+    const el = document.getElementById('bdna-error');
+    el.textContent = '';
+    el.style.display = 'none';
+}
+
+function bdnaStartStepCycler() {
+    _bdnaStepIdx = 0;
+    document.getElementById('bdna-step-text').textContent = BDNA_STEPS[0];
+    _bdnaStepTimer = setInterval(() => {
+        _bdnaStepIdx = (_bdnaStepIdx + 1) % BDNA_STEPS.length;
+        document.getElementById('bdna-step-text').textContent = BDNA_STEPS[_bdnaStepIdx];
+    }, 4000);
+}
+
+function bdnaStopStepCycler() {
+    if (_bdnaStepTimer) { clearInterval(_bdnaStepTimer); _bdnaStepTimer = null; }
+}
+
+function bdnaStartCountdown(secs) {
+    _bdnaCountdownVal = secs;
+    _bdnaUpdateCountdown();
+    _bdnaCountTimer = setInterval(() => {
+        _bdnaCountdownVal = Math.max(0, _bdnaCountdownVal - 1);
+        _bdnaUpdateCountdown();
+    }, 1000);
+}
+
+function bdnaStopCountdown() {
+    if (_bdnaCountTimer) { clearInterval(_bdnaCountTimer); _bdnaCountTimer = null; }
+}
+
+function _bdnaUpdateCountdown() {
+    const el = document.getElementById('bdna-countdown-text');
+    if (!el) return;
+    if (_bdnaCountdownVal <= 0) {
+        el.textContent = 'Almost done...';
+        return;
+    }
+    const m = Math.floor(_bdnaCountdownVal / 60);
+    const s = _bdnaCountdownVal % 60;
+    if (m > 0) {
+        el.textContent = `About ${m} minute${m > 1 ? 's' : ''} left`;
+    } else {
+        el.textContent = `About ${s} second${s !== 1 ? 's' : ''} left`;
+    }
+}
+
+async function bdnaSubmit() {
+    bdnaHideError();
+    const urlInput = document.getElementById('bdna-url-input');
+    let url = (urlInput.value || '').trim();
+    if (!url) {
+        bdnaShowError('Please enter a brand URL.');
+        return;
+    }
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        url = 'https://' + url;
+        urlInput.value = url;
+    }
+
+    document.getElementById('bdna-url-badge-text').textContent = url;
+    bdnaShowState('loading');
+    bdnaStartStepCycler();
+    bdnaStartCountdown(BDNA_ESTIMATED_SECS);
+
+    try {
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+        const resp = await fetch('/brand-dna/analyze', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken},
+            body: JSON.stringify({ url }),
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+            throw new Error(data.error || 'Analysis failed. Please try again.');
+        }
+
+        const result = await bdnaPollJob(data.job_id);
+        bdnaRenderResults(result.analysis || {});
+        bdnaShowState('results');
+    } catch (err) {
+        bdnaShowError(err.message || 'An unexpected error occurred.');
+    } finally {
+        bdnaStopStepCycler();
+        bdnaStopCountdown();
+    }
+}
+
+async function bdnaPollJob(jobId) {
+    const startedAt = Date.now();
+    while ((Date.now() - startedAt) < BDNA_POLL_TIMEOUT_MS) {
+        const resp = await fetch(`/brand-dna/jobs/${jobId}`);
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data.error || 'Status check failed.');
+        if (data.status === 'completed') return data;
+        if (data.status === 'failed')    throw new Error(data.error || 'Brand DNA analysis failed. Please try again.');
+        await new Promise(r => setTimeout(r, BDNA_POLL_INTERVAL_MS));
+    }
+    throw new Error('Analysis timed out. Please try again.');
+}
+
+function bdnaRenderResults(analysis) {
+    document.getElementById('bdna-brand-name').textContent    = analysis.brand_name || 'Unknown Brand';
+    document.getElementById('bdna-brand-desc').textContent    = analysis.brand_description || '';
+    document.getElementById('bdna-product-count').textContent = analysis.products_created || 0;
+
+    const palette = document.getElementById('bdna-palette');
+    palette.innerHTML = '';
+    const colors = analysis.color_palette || [];
+    if (colors.length === 0) {
+        palette.innerHTML = '<p style="color:var(--text-muted);font-size:0.85rem;">No colors extracted.</p>';
+    } else {
+        colors.forEach(hex => {
+            const swatch = document.createElement('div');
+            swatch.className = 'bdna-swatch';
+            swatch.title = 'Click to copy';
+            swatch.innerHTML = `
+                <div class="bdna-swatch-circle" style="background:${hex};"></div>
+                <span class="bdna-swatch-hex">${hex}</span>
+                <span class="bdna-copied-tip" id="tip-${hex.replace('#','')}">Copied!</span>
+            `;
+            swatch.addEventListener('click', () => bdnaCopyHex(hex));
+            palette.appendChild(swatch);
+        });
+    }
+}
+
+function bdnaCopyHex(hex) {
+    navigator.clipboard.writeText(hex).then(() => {
+        const tip = document.getElementById('tip-' + hex.replace('#',''));
+        if (tip) {
+            tip.style.display = 'block';
+            setTimeout(() => { tip.style.display = 'none'; }, 1500);
+        }
+    }).catch(() => {});
+}
+
+function bdnaReset() {
+    bdnaShowState('input');
+    document.getElementById('bdna-url-input').value = '';
+    bdnaHideError();
+}
+
+// Enter key submits
+document.addEventListener('DOMContentLoaded', () => {
+    const input = document.getElementById('bdna-url-input');
+    if (input) {
+        input.addEventListener('keydown', e => {
+            if (e.key === 'Enter') bdnaSubmit();
+        });
+    }
+});
+</script>
+{% endblock %}

@@ -2,13 +2,11 @@ import json
 
 from flask import Blueprint, jsonify, redirect, render_template, request, session, url_for
 
+from ai_service import GEMINI_IMAGE_MODEL
 from auth import login_required
-from billing_config import CREDIT_COSTS, ESTIMATED_USAGE_COST_USD
 from billing_service import (
     build_plan_required_payload,
-    consume_credits,
     ensure_credits_or_error,
-    get_available_credits,
     get_billing_summary,
     get_effective_api_key,
     has_required_plan,
@@ -16,10 +14,15 @@ from billing_service import (
     refresh_cycle_if_needed,
 )
 from db import AvatarBatch, AvatarResult, Product, User, db
-from ai_service import gemini_generate_image
-from media_storage import get_image_payload
+from media_storage import delete_storage_file
+from usage_pricing import normalize_model_name
+from worker_queue import enqueue_worker_job, get_worker_job_for_user, job_payload, serialize_worker_job
+from worker_tasks import JOB_TYPE_AVATARS_GENERATE
 
 avatars_bp = Blueprint("avatars", __name__)
+MAX_PERSONAS_PER_REQUEST = 24
+MAX_PERSONA_LENGTH = 120
+MAX_CHARACTERISTIC_LENGTH = 200
 
 PRESET_PERSONAS = [
     "White American mom",
@@ -77,10 +80,12 @@ def avatars_page():
         products=products,
         batches=batches,
         preset_personas=PRESET_PERSONAS,
+        default_gemini_image_model=user.default_gemini_image_model or GEMINI_IMAGE_MODEL,
+        batch_api_for_queued_jobs=bool(user.batch_api_for_queued_jobs),
     )
 
 
-# ── Generate avatars ───────────────────────────────────────────────
+# ── Generate avatars (async) ────────────────────────────────────────
 @avatars_bp.route("/avatars/generate", methods=["POST"])
 @login_required
 def generate_avatars():
@@ -94,15 +99,34 @@ def generate_avatars():
     product_id = data.get("product_id")
     characteristic = data.get("characteristic", "").strip()
     personas = data.get("personas", [])
+    if isinstance(personas, list):
+        personas = [persona.strip() for persona in personas if isinstance(persona, str) and persona.strip()]
+    else:
+        personas = []
     count_per_persona = int(data.get("count_per_persona", 1))
     count_per_persona = max(1, min(3, count_per_persona))
+    requested_model = normalize_model_name(data.get("gemini_model"))
+    use_batch_api = bool(data.get("use_batch_api", user.batch_api_for_queued_jobs))
+    traffic_type = "batch" if use_batch_api else "standard"
+    gemini_model = requested_model or normalize_model_name(user.default_gemini_image_model)
 
     if not product_id:
         return jsonify({"error": "Please select a product."}), 400
     if not characteristic:
         return jsonify({"error": "Physical characteristic is required."}), 400
+    if len(characteristic) > MAX_CHARACTERISTIC_LENGTH:
+        return jsonify({"error": f"Characteristic must be <= {MAX_CHARACTERISTIC_LENGTH} characters."}), 400
     if not personas or len(personas) == 0:
         return jsonify({"error": "Select at least one persona."}), 400
+    if len(personas) > MAX_PERSONAS_PER_REQUEST:
+        return jsonify({"error": f"Select at most {MAX_PERSONAS_PER_REQUEST} personas per run."}), 400
+    if any(
+        (not isinstance(persona, str) or not persona.strip() or len(persona.strip()) > MAX_PERSONA_LENGTH)
+        for persona in personas
+    ):
+        return jsonify({"error": f"Each persona must be a non-empty string <= {MAX_PERSONA_LENGTH} chars."}), 400
+    if gemini_model and "image" not in gemini_model.lower():
+        return jsonify({"error": "Invalid Gemini image model."}), 400
 
     # Validate product belongs to user
     product = Product.query.filter_by(id=product_id, user_id=user.id).first()
@@ -114,19 +138,12 @@ def generate_avatars():
         return jsonify({"error": "no_api_key"}), 400
 
     total_pairs = len(personas) * count_per_persona
-    credit_quote = quote_avatars(total_pairs)
+    credit_quote = quote_avatars(total_pairs, traffic_type=traffic_type)
     credit_error = ensure_credits_or_error(user, credit_quote["credits"], feature="avatars")
     if credit_error:
         status_code, payload = credit_error
         db.session.commit()
         return jsonify(payload), status_code
-
-    # Prepare product images for context
-    product_images = []
-    for img in product.images[:3]:  # max 3 product images as context
-        payload = get_image_payload(img.storage_path, img.mime_type, img.image_data)
-        if payload:
-            product_images.append(payload)
 
     # Create batch
     batch = AvatarBatch(
@@ -135,115 +152,90 @@ def generate_avatars():
         characteristic=characteristic,
         personas=json.dumps(personas),
         count_per_persona=count_per_persona,
-        status="processing",
+        status="queued",
     )
     db.session.add(batch)
     db.session.flush()
 
-    results = []
-    latest_user = user
+    charge_per_pair = max(1, int(credit_quote["credits"] // max(1, total_pairs)))
+    estimated_per_pair = float(
+        credit_quote["estimated_cost_usd"] / total_pairs if total_pairs else 0
+    )
 
+    result_records = []
     for persona in personas:
-        for i in range(count_per_persona):
+        for _ in range(count_per_persona):
             result = AvatarResult(
                 batch_id=batch.id,
                 persona=persona,
                 status="pending",
             )
             db.session.add(result)
-            db.session.flush()
+            result_records.append(result)
+    db.session.flush()
 
-            try:
-                # Generate BEFORE image
-                before_prompt = (
-                    f"A realistic full body photo portrait of a {persona} "
-                    f"who is {characteristic}. Standing pose, neutral "
-                    f"background, casual everyday clothing. Natural lighting, "
-                    f"photorealistic style. No text in image."
-                )
-                before_b64 = gemini_generate_image(gemini_key, before_prompt)
-
-                # Generate AFTER image – feed the before image + product images
-                # so Gemini keeps the same person identity
-                after_context = [
-                    {"mime_type": "image/png", "data": before_b64},
-                ] + product_images
-
-                after_prompt = (
-                    f"This is a photo of a {persona}. Generate a new "
-                    f"realistic photo of this EXACT SAME person from the "
-                    f"first reference photo, but now they look fit, confident, "
-                    f"and transformed after using the product "
-                    f"'{product.name}'. {product.context}. "
-                    f"The other reference photos are of the product itself. "
-                    f"Please feature this exact product naturally in the new photo. "
-                    f"Same person, same face, same identity. "
-                    f"Bright, positive lighting, photorealistic style. "
-                    f"No text in image."
-                )
-                after_b64 = gemini_generate_image(
-                    gemini_key, after_prompt, after_context
-                )
-
-                charged, charged_user, payload = consume_credits(
-                    user.id,
-                    CREDIT_COSTS["avatars_pair"],
-                    feature="avatars",
-                    provider="gemini",
-                    units=1,
-                    estimated_cost_usd=ESTIMATED_USAGE_COST_USD["avatars_pair"],
-                    metadata={"persona": persona, "product_id": product.id},
-                )
-                if not charged:
-                    result.status = "failed"
-                    result.error_message = payload["error"]
-                    results.append({
-                        "id": result.id,
-                        "persona": persona,
-                        "before_image": None,
-                        "after_image": None,
-                        "status": "failed",
-                        "error": payload["error"],
-                        "reason": payload.get("reason"),
-                        "redirect_url": payload.get("redirect_url"),
-                    })
-                    continue
-
-                latest_user = charged_user
-                result.before_image = before_b64
-                result.after_image = after_b64
-                result.status = "completed"
-
-                results.append({
-                    "id": result.id,
-                    "persona": persona,
-                    "before_image": before_b64,
-                    "after_image": after_b64,
-                    "status": "completed",
-                })
-            except Exception as e:
-                result.status = "failed"
-                result.error_message = str(e)
-                results.append({
-                    "id": result.id,
-                    "persona": persona,
-                    "before_image": None,
-                    "after_image": None,
-                    "status": "failed",
-                    "error": str(e),
-                })
-
-    batch.status = "completed"
+    job = enqueue_worker_job(
+        user_id=user.id,
+        job_type=JOB_TYPE_AVATARS_GENERATE,
+        queue_name="default",
+        max_attempts=2,
+        payload={
+            "batch_id": batch.id,
+            "product_id": product.id,
+            "result_ids_with_personas": [
+                {"result_id": r.id, "persona": r.persona}
+                for r in result_records
+            ],
+            "gemini_model": gemini_model,
+            "traffic_type": traffic_type,
+            "charge_per_pair": charge_per_pair,
+            "estimated_per_pair": estimated_per_pair,
+        },
+    )
     db.session.commit()
-    billing_summary = get_billing_summary(latest_user)
 
     return jsonify({
+        "job_id": job.id,
         "batch_id": batch.id,
-        "results": results,
-        "credits_remaining": get_available_credits(latest_user),
-        "monthly_credits": billing_summary["monthly_credits"],
-        "extra_credits": billing_summary["extra_credits"],
-    })
+        "status": "queued",
+        "status_url": f"/avatars/jobs/{job.id}",
+    }), 202
+
+
+# ── Job status ──────────────────────────────────────────────────────
+@avatars_bp.route("/avatars/jobs/<int:job_id>", methods=["GET"])
+@login_required
+def avatar_job_status(job_id):
+    job = get_worker_job_for_user(job_id, session["user_id"])
+    if not job or job.job_type != JOB_TYPE_AVATARS_GENERATE:
+        return jsonify({"error": "Job not found."}), 404
+
+    serialized = serialize_worker_job(job)
+    payload = job_payload(job)
+    batch_id = payload.get("batch_id")
+
+    response = {
+        "job_id": job.id,
+        "status": job.status,
+        "batch_id": batch_id,
+        "error": serialized["error"],
+    }
+
+    if job.status == "completed":
+        results = AvatarResult.query.filter_by(batch_id=batch_id).order_by(AvatarResult.id).all()
+        response["results"] = [
+            {
+                "id": r.id,
+                "persona": r.persona,
+                "status": r.status,
+                "before_image_url": url_for("media.avatar_result_before_image", result_id=r.id) if r.status == "completed" else None,
+                "after_image_url": url_for("media.avatar_result_after_image", result_id=r.id) if r.status == "completed" else None,
+                "error": r.error_message,
+            }
+            for r in results
+        ]
+
+    return jsonify(response)
 
 
 # ── Delete batch ───────────────────────────────────────────────────
@@ -256,6 +248,9 @@ def delete_batch(batch_id):
     if not batch:
         return jsonify({"error": "Batch not found."}), 404
 
+    for result in batch.results:
+        delete_storage_file(result.before_storage_path)
+        delete_storage_file(result.after_storage_path)
     db.session.delete(batch)
     db.session.commit()
     return jsonify({"success": True})
