@@ -327,12 +327,6 @@
         `).join('');
 
         svg.innerHTML = `
-            <defs>
-                <linearGradient id="metrics-area-gradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stop-color="#7c6de8" stop-opacity="0.28"/>
-                    <stop offset="100%" stop-color="#7c6de8" stop-opacity="0.01"/>
-                </linearGradient>
-            </defs>
             ${grid}
             <polygon points="${areaPoints}" class="metrics-chart-area"/>
             <polyline points="${linePoints}" class="metrics-chart-line"/>

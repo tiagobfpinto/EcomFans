@@ -3,7 +3,7 @@
 {% block title %}{{ board.name }} - Notes - EcomFans{% endblock %}
 
 {% block head %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/notes.css', v='1') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/notes.css', v='2') }}">
 {% endblock %}
 
 {% block content %}
@@ -109,16 +109,16 @@
                     </button>
                 </div>
                 <section class="notes-inspector-section" id="notes-fill-section">
-                    <label class="notes-control"><span>Fill</span><input id="notes-fill" type="color" value="#7c6de8"></label>
+                    <label class="notes-control"><span>Fill</span><input id="notes-fill" type="color" value="#895A3A"></label>
                     <label class="notes-check"><input id="notes-no-fill" type="checkbox"><span>No fill</span></label>
                 </section>
                 <section class="notes-inspector-section">
-                    <label class="notes-control"><span>Border</span><input id="notes-stroke" type="color" value="#b5adf5"></label>
+                    <label class="notes-control"><span>Border</span><input id="notes-stroke" type="color" value="#6F452E"></label>
                     <label class="notes-control"><span>Width</span><input id="notes-stroke-width" type="range" min="0" max="12" step="1" value="2"><output id="notes-stroke-width-value">2</output></label>
                     <label class="notes-control"><span>Opacity</span><input id="notes-opacity" type="range" min="5" max="100" step="5" value="100"><output id="notes-opacity-value">100%</output></label>
                 </section>
                 <section class="notes-inspector-section" id="notes-text-section" hidden>
-                    <label class="notes-control"><span>Text</span><input id="notes-text-color" type="color" value="#1d1b2d"></label>
+                    <label class="notes-control"><span>Text</span><input id="notes-text-color" type="color" value="#292622"></label>
                     <label class="notes-control notes-control-input"><span>Size</span><input id="notes-font-size" type="number" min="8" max="240" value="24"></label>
                     <label class="notes-control notes-control-input"><span>Weight</span>
                         <select id="notes-font-weight"><option value="400">Regular</option><option value="500">Medium</option><option value="600">Semibold</option><option value="700">Bold</option></select>

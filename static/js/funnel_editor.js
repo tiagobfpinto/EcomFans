@@ -162,10 +162,11 @@
         const style = documentNode.createElement("style");
         style.id = "fn-visual-editor-style";
         style.textContent = [
-            "[data-editable]{outline:1px dashed rgba(124,109,232,.72)!important;outline-offset:3px;cursor:text!important;transition:outline-color .15s,background .15s}",
-            "[data-editable]:hover,[data-editable]:focus{outline:2px solid #7c6de8!important;background:rgba(124,109,232,.07)!important}",
+            ":root{--ec-editor-accent:#895A3A;--ec-editor-accent-subtle:rgba(137,90,58,.08)}",
+            "[data-editable]{outline:1px dashed var(--ec-editor-accent)!important;outline-offset:3px;cursor:text!important;transition:outline-color .15s,background .15s}",
+            "[data-editable]:hover,[data-editable]:focus{outline:2px solid var(--ec-editor-accent)!important;background:var(--ec-editor-accent-subtle)!important}",
             "img{cursor:pointer!important;transition:box-shadow .15s,opacity .15s}",
-            "img:hover{box-shadow:0 0 0 4px #7c6de8!important;opacity:.88!important}",
+            "img:hover{box-shadow:0 0 0 4px var(--ec-editor-accent)!important;opacity:.88!important}",
         ].join("");
         (documentNode.head || documentNode.documentElement).appendChild(style);
 

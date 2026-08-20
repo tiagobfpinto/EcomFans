@@ -2,40 +2,48 @@
    CSS Variables & Reset
    ============================================ */
 :root {
-    --bg-primary: #07070f;
-    --bg-secondary: #0d0d1a;
-    --bg-tertiary: #141425;
-    --bg-card: rgba(255, 255, 255, 0.03);
-    --bg-card-hover: rgba(255, 255, 255, 0.055);
-    --border: rgba(255, 255, 255, 0.07);
-    --border-hover: rgba(255, 255, 255, 0.13);
-    --border-strong: rgba(255, 255, 255, 0.2);
-    --text-primary: #eeeef8;
-    --text-contrast: #000000;
-    --text-secondary: #7878a0;
-    --text-muted: #484870;
-    --accent: #7c6de8;
-    --accent-hover: #9185ee;
-    --accent-light: #b5adf5;
-    --accent-glow: rgba(124, 109, 232, 0.2);
-    --accent-glow-strong: rgba(124, 109, 232, 0.32);
-    --accent-subtle: rgba(124, 109, 232, 0.08);
-    --gradient-accent: linear-gradient(135deg, #7c6de8, #a78bfa);
-    --success: #20d4a0;
-    --success-subtle: rgba(32, 212, 160, 0.08);
-    --error: #f87171;
-    --error-subtle: rgba(248, 113, 113, 0.08);
-    --warning: #fbbf24;
-    --warning-subtle: rgba(251, 191, 36, 0.08);
+    --bg-primary: #F3F1ED;
+    --bg-secondary: #E8E3DC;
+    --bg-tertiary: #FCFBF8;
+    --bg-card: #FCFBF8;
+    --bg-card-hover: #F7F3EE;
+    --surface: #FCFBF8;
+    --surface-soft: #E8E3DC;
+    --surface-strong: #DED7CE;
+    --border: #D8D0C6;
+    --border-hover: #C8BCAE;
+    --border-strong: #BBAE9F;
+    --text-primary: #292622;
+    --text-contrast: #FFFFFF;
+    --text-secondary: #635C54;
+    --text-muted: #746C64;
+    --accent: #895A3A;
+    --accent-hover: #70452C;
+    --accent-strong: #6F452E;
+    --accent-subtle: #E9DDD3;
+    --focus-ring: rgba(137, 90, 58, 0.24);
+    --focus-ring-strong: rgba(137, 90, 58, 0.38);
+    --success: #2F7253;
+    --success-subtle: #E0EEE7;
+    --error: #A8443B;
+    --error-subtle: #F6E3E0;
+    --warning: #8A5A17;
+    --warning-subtle: #F3E8D2;
+    --info: #4D6870;
+    --info-subtle: #E2EAEC;
+    --earth-olive: #6E7350;
+    --earth-clay: #A15F4A;
+    --earth-slate: #5D6B6D;
+    --earth-ochre: #9A6B2E;
+    --overlay: rgba(41, 38, 34, 0.52);
     --sidebar-width: 252px;
     --radius: 12px;
     --radius-sm: 8px;
     --radius-xs: 6px;
     --radius-full: 9999px;
-    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.25);
-    --shadow-md: 0 8px 28px rgba(0, 0, 0, 0.4);
-    --shadow-lg: 0 24px 64px rgba(0, 0, 0, 0.55);
-    --shadow-accent: 0 4px 20px rgba(124, 109, 232, 0.28);
+    --shadow-sm: 0 2px 8px rgba(56, 44, 35, 0.08);
+    --shadow-md: 0 10px 28px rgba(56, 44, 35, 0.11);
+    --shadow-lg: 0 24px 56px rgba(56, 44, 35, 0.15);
     --transition: 0.18s cubic-bezier(0.4, 0, 0.2, 1);
     --transition-slow: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -61,9 +69,7 @@ body {
     color: var(--text-primary);
     min-height: 100vh;
     display: flex;
-    background-image:
-        radial-gradient(ellipse 70% 50% at 15% -5%, rgba(124, 109, 232, 0.07) 0%, transparent 60%),
-        radial-gradient(ellipse 55% 45% at 85% 105%, rgba(124, 109, 232, 0.05) 0%, transparent 55%);
+    background-image: none;
 }
 
 a {
@@ -93,12 +99,12 @@ select {
 }
 
 ::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.1);
+    background: #C8BCAE;
     border-radius: var(--radius-full);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.18);
+    background: #AA9B8B;
 }
 
 /* ============================================
@@ -135,15 +141,12 @@ select {
 
 .logo svg {
     color: var(--accent);
-    filter: drop-shadow(0 0 6px var(--accent-glow));
+    filter: none;
     flex-shrink: 0;
 }
 
 .logo span {
-    background: var(--gradient-accent);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    color: var(--accent-strong);
 }
 
 .sidebar-nav {
@@ -185,21 +188,21 @@ select {
 }
 
 .nav-item:hover {
-    background: rgba(255, 255, 255, 0.04);
+    background: rgba(255, 255, 255, 0.52);
     color: var(--text-primary);
     border-left-color: var(--border-hover);
 }
 
 .nav-item.active {
     background: var(--accent-subtle);
-    color: var(--accent-light);
+    color: var(--accent-strong);
     border-left-color: var(--accent);
     font-weight: 600;
 }
 
 .nav-item.active svg {
     color: var(--accent);
-    filter: drop-shadow(0 0 5px var(--accent-glow));
+    filter: none;
 }
 
 .sidebar-footer {
@@ -217,7 +220,7 @@ select {
     gap: 9px;
     padding: 8px 10px;
     border-radius: var(--radius-sm);
-    background: rgba(255, 255, 255, 0.03);
+    background: rgba(255, 255, 255, 0.52);
     border: 1px solid var(--border);
 }
 
@@ -225,7 +228,7 @@ select {
     width: 30px;
     height: 30px;
     border-radius: 50%;
-    background: var(--gradient-accent);
+    background: var(--accent);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -233,7 +236,7 @@ select {
     font-size: 0.75rem;
     color: white;
     flex-shrink: 0;
-    box-shadow: 0 0 0 2px var(--accent-glow);
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.72);
 }
 
 .user-name {
@@ -367,7 +370,7 @@ select {
     border: 1px solid var(--border);
     border-radius: 18px;
     padding: 40px 36px;
-    box-shadow: var(--shadow-lg), 0 0 0 1px rgba(124, 109, 232, 0.06) inset;
+    box-shadow: var(--shadow-md);
     position: relative;
     overflow: hidden;
 }
@@ -379,20 +382,12 @@ select {
     left: 10%;
     right: 10%;
     height: 1px;
-    background: var(--gradient-accent);
+    background: var(--accent);
     opacity: 0.6;
 }
 
 .auth-card::after {
-    content: '';
-    position: absolute;
-    top: -80px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 200px;
-    height: 200px;
-    background: radial-gradient(circle, rgba(124, 109, 232, 0.08) 0%, transparent 70%);
-    pointer-events: none;
+    display: none;
 }
 
 .auth-header {
@@ -412,8 +407,8 @@ select {
     border-radius: 16px;
     color: var(--accent);
     margin-bottom: 18px;
-    border: 1px solid rgba(124, 109, 232, 0.2);
-    box-shadow: 0 0 24px var(--accent-glow);
+    border: 1px solid rgba(137, 90, 58, 0.2);
+    box-shadow: none;
 }
 
 .auth-header h1 {
@@ -467,7 +462,7 @@ select {
 
 .form-group input:focus {
     border-color: var(--accent);
-    box-shadow: 0 0 0 3px var(--accent-glow);
+    box-shadow: 0 0 0 3px var(--focus-ring);
     background: var(--bg-tertiary);
 }
 
@@ -481,7 +476,7 @@ select {
 }
 
 .auth-footer a {
-    color: var(--accent-light);
+    color: var(--accent-strong);
     font-weight: 600;
     transition: color var(--transition);
 }
@@ -515,7 +510,7 @@ select {
 .btn-primary {
     background: var(--accent);
     color: white;
-    box-shadow: 0 2px 8px var(--accent-glow);
+    box-shadow: 0 2px 8px var(--focus-ring);
 }
 
 .btn-outline {
@@ -532,7 +527,7 @@ select {
 
 .btn-primary:hover {
     background: var(--accent-hover);
-    box-shadow: var(--shadow-accent);
+    box-shadow: var(--shadow-sm);
     transform: translateY(-1px);
 }
 
@@ -544,13 +539,13 @@ select {
 }
 
 .btn-accent {
-    background: var(--gradient-accent);
+    background: var(--accent);
     color: white;
-    box-shadow: 0 2px 12px var(--accent-glow);
+    box-shadow: 0 2px 12px var(--focus-ring);
 }
 
 .btn-accent:hover {
-    box-shadow: var(--shadow-accent);
+    box-shadow: var(--shadow-sm);
     transform: translateY(-1px);
     filter: brightness(1.08);
 }
@@ -609,10 +604,7 @@ select {
     font-weight: 700;
     letter-spacing: -0.03em;
     margin-bottom: 6px;
-    background: linear-gradient(135deg, var(--text-primary) 30%, rgba(150, 150, 200, 0.7) 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    color: var(--text-primary);
 }
 
 .dashboard-header p {
@@ -640,8 +632,8 @@ select {
 }
 
 .input-group:focus-within {
-    border-color: rgba(124, 109, 232, 0.5);
-    box-shadow: 0 0 0 3px var(--accent-glow), var(--shadow-sm);
+    border-color: rgba(137, 90, 58, 0.5);
+    box-shadow: 0 0 0 3px var(--focus-ring), var(--shadow-sm);
 }
 
 .input-icon {
@@ -810,7 +802,7 @@ select {
 
 .image-card.selected {
     border-color: var(--accent);
-    box-shadow: 0 0 0 2px var(--accent-glow-strong);
+    box-shadow: 0 0 0 2px var(--focus-ring-strong);
 }
 
 .image-card .card-image {
@@ -894,15 +886,15 @@ select {
     align-items: center;
     gap: 7px;
     padding: 7px 14px;
-    background: rgba(124, 109, 232, 0.07);
-    border: 1px solid rgba(124, 109, 232, 0.18);
+    background: rgba(137, 90, 58, 0.07);
+    border: 1px solid rgba(137, 90, 58, 0.18);
     border-radius: var(--radius-full);
     font-size: 0.85rem;
     color: var(--text-secondary);
 }
 
 .credits-badge strong {
-    color: var(--accent-light);
+    color: var(--accent-strong);
     font-weight: 700;
     font-size: 0.95rem;
 }
@@ -914,7 +906,7 @@ select {
 /* API Key Banner */
 .api-key-banner {
     background: var(--bg-secondary);
-    border: 1px solid rgba(124, 109, 232, 0.22);
+    border: 1px solid rgba(137, 90, 58, 0.22);
     border-radius: var(--radius);
     padding: 22px;
     margin-bottom: 24px;
@@ -937,7 +929,7 @@ select {
     align-items: center;
     justify-content: center;
     color: var(--accent);
-    border: 1px solid rgba(124, 109, 232, 0.18);
+    border: 1px solid rgba(137, 90, 58, 0.18);
 }
 
 .api-key-text h3 {
@@ -962,7 +954,7 @@ select {
 }
 
 .api-key-text a {
-    color: var(--accent-light);
+    color: var(--accent-strong);
     font-weight: 600;
     text-decoration: underline;
     text-underline-offset: 2px;
@@ -990,7 +982,7 @@ select {
 
 .api-key-input-row input:focus {
     border-color: var(--accent);
-    box-shadow: 0 0 0 3px var(--accent-glow);
+    box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
 .api-key-input-row input::placeholder {
@@ -1041,7 +1033,7 @@ select {
 
 .api-key-update input:focus {
     border-color: var(--accent);
-    box-shadow: 0 0 0 3px var(--accent-glow);
+    box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
 .btn-sm {
@@ -1111,7 +1103,7 @@ select {
 .billing-pack-card .pack-credits {
     font-size: 2.2rem;
     font-weight: 800;
-    color: var(--accent-light);
+    color: var(--accent-strong);
     letter-spacing: -0.03em;
     line-height: 1;
 }
@@ -1132,7 +1124,7 @@ select {
     font-weight: 700;
     letter-spacing: 0.04em;
     text-transform: uppercase;
-    background: var(--gradient-accent);
+    background: var(--accent);
     color: white;
     margin-bottom: 4px;
 }
@@ -1179,8 +1171,8 @@ select {
 }
 
 .prompt-card:focus-within {
-    border-color: rgba(124, 109, 232, 0.38);
-    box-shadow: 0 0 0 3px var(--accent-glow), var(--shadow-sm);
+    border-color: rgba(137, 90, 58, 0.38);
+    box-shadow: 0 0 0 3px var(--focus-ring), var(--shadow-sm);
 }
 
 .prompt-card textarea {
@@ -1256,7 +1248,7 @@ select {
 .var-btn.active {
     background: var(--accent);
     color: white;
-    box-shadow: 0 1px 4px var(--accent-glow);
+    box-shadow: 0 1px 4px var(--focus-ring);
 }
 
 .cost-label {
@@ -1323,12 +1315,12 @@ select {
 
 .gen-result-label .var-badge {
     background: var(--accent-subtle);
-    color: var(--accent-light);
+    color: var(--accent-strong);
     padding: 3px 9px;
     border-radius: var(--radius-full);
     font-weight: 600;
     font-size: 0.74rem;
-    border: 1px solid rgba(124, 109, 232, 0.15);
+    border: 1px solid rgba(137, 90, 58, 0.15);
 }
 
 .gen-result-error {
@@ -1489,7 +1481,7 @@ select {
 
 .upload-drop-zone:hover {
     border-color: var(--accent);
-    color: var(--accent-light);
+    color: var(--accent-strong);
     background: var(--accent-subtle);
 }
 
@@ -1783,7 +1775,7 @@ select {
 
 .form-group textarea:focus {
     border-color: var(--accent);
-    box-shadow: 0 0 0 3px var(--accent-glow);
+    box-shadow: 0 0 0 3px var(--focus-ring);
     outline: none;
 }
 
@@ -1944,8 +1936,8 @@ select {
 
 .product-image-count {
     background: var(--accent-subtle);
-    color: var(--accent-light);
-    border: 1px solid rgba(124, 109, 232, 0.15);
+    color: var(--accent-strong);
+    border: 1px solid rgba(137, 90, 58, 0.15);
 }
 
 .product-row-chevron {
@@ -2226,7 +2218,7 @@ select {
    ============================================ */
 .api-key-banner-openai {
     border-color: rgba(16, 163, 127, 0.22);
-    background: linear-gradient(135deg, rgba(16, 163, 127, 0.04), transparent);
+    background: var(--success-subtle);
 }
 
 .optional-badge {
@@ -2236,7 +2228,7 @@ select {
     padding: 2px 7px;
     border-radius: var(--radius-full);
     background: rgba(16, 163, 127, 0.12);
-    color: #22c49a;
+    color: #2F7253;
     vertical-align: middle;
     margin-left: 7px;
 }
@@ -2313,7 +2305,7 @@ select {
 .toggle-switch input:checked+.toggle-slider {
     background: var(--accent);
     border-color: var(--accent);
-    box-shadow: 0 0 8px var(--accent-glow);
+    box-shadow: 0 0 8px var(--focus-ring);
 }
 
 .toggle-switch input:checked+.toggle-slider::before {
@@ -2350,7 +2342,7 @@ select {
 
 .remix-options textarea:focus {
     border-color: var(--accent);
-    box-shadow: 0 0 0 3px var(--accent-glow);
+    box-shadow: 0 0 0 3px var(--focus-ring);
     outline: none;
 }
 
@@ -2401,7 +2393,7 @@ select {
 .avatar-select:focus,
 .avatar-text-input:focus {
     border-color: var(--accent);
-    box-shadow: 0 0 0 3px var(--accent-glow);
+    box-shadow: 0 0 0 3px var(--focus-ring);
     outline: none;
 }
 
@@ -2432,7 +2424,7 @@ select {
 }
 
 .persona-chip:hover {
-    border-color: rgba(124, 109, 232, 0.35);
+    border-color: rgba(137, 90, 58, 0.35);
     color: var(--text-primary);
     background: var(--accent-subtle);
 }
@@ -2442,7 +2434,7 @@ select {
     border-color: var(--accent);
     color: white;
     font-weight: 600;
-    box-shadow: 0 2px 8px var(--accent-glow);
+    box-shadow: 0 2px 8px var(--focus-ring);
 }
 
 .persona-chip.custom::after {
@@ -2495,7 +2487,7 @@ select {
     width: 3px;
     height: 14px;
     border-radius: 2px;
-    background: var(--gradient-accent);
+    background: var(--accent);
     flex-shrink: 0;
     display: inline-block;
 }
@@ -2700,7 +2692,7 @@ select {
 .inspiration-overlay {
     position: absolute;
     inset: 0;
-    background: rgba(124, 109, 232, 0.4);
+    background: rgba(137, 90, 58, 0.4);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -2897,22 +2889,22 @@ select {
     margin-bottom: 8px;
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
-    background: rgba(124, 109, 232, 0.06);
+    background: rgba(137, 90, 58, 0.06);
     cursor: pointer;
     transition: background var(--transition), border-color var(--transition);
     text-decoration: none;
 }
 
 .sidebar-billing-pill:hover {
-    background: rgba(124, 109, 232, 0.12);
-    border-color: rgba(124, 109, 232, 0.3);
+    background: rgba(137, 90, 58, 0.12);
+    border-color: rgba(137, 90, 58, 0.3);
 }
 
 .sidebar-billing-pill .billing-plan {
     font-size: 0.72rem;
     text-transform: uppercase;
     letter-spacing: 0.07em;
-    color: var(--accent-light);
+    color: var(--accent-strong);
     font-weight: 700;
 }
 
@@ -2967,7 +2959,7 @@ select {
 
 .billing-plan-card.is-current {
     border-color: var(--accent);
-    box-shadow: 0 0 0 1px rgba(124, 109, 232, 0.35), var(--shadow-sm);
+    box-shadow: 0 0 0 1px rgba(137, 90, 58, 0.35), var(--shadow-sm);
 }
 
 .billing-plan-card.is-current::before {
@@ -2975,7 +2967,7 @@ select {
     position: absolute;
     top: 0; left: 0; right: 0;
     height: 2px;
-    background: var(--gradient-accent);
+    background: var(--accent);
 }
 
 .plan-price {
@@ -3090,7 +3082,7 @@ select {
 
 .product-agent-card.is-active {
     border-color: var(--accent);
-    box-shadow: 0 0 0 3px var(--accent-glow);
+    box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
 .product-agent-badge,
@@ -3101,7 +3093,7 @@ select {
     border-radius: 999px;
     padding: 3px 8px;
     background: var(--accent-subtle);
-    color: var(--accent-light);
+    color: var(--accent-strong);
     font-size: 0.68rem;
     font-weight: 700;
     letter-spacing: 0.06em;
@@ -3146,7 +3138,7 @@ select {
 
 .product-images-page .avatar-textarea:focus {
     border-color: var(--accent);
-    box-shadow: 0 0 0 3px var(--accent-glow);
+    box-shadow: 0 0 0 3px var(--focus-ring);
     outline: none;
 }
 
@@ -3159,7 +3151,7 @@ select {
 
 .lacy-upload-zone.drag-over {
     border-color: var(--accent);
-    color: var(--accent-light);
+    color: var(--accent-strong);
     background: var(--accent-subtle);
 }
 
@@ -3277,12 +3269,12 @@ select {
 
 .lacy-result-footer .var-badge {
     background: var(--accent-subtle);
-    color: var(--accent-light);
+    color: var(--accent-strong);
     padding: 3px 9px;
     border-radius: var(--radius-full);
     font-weight: 600;
     font-size: 0.74rem;
-    border: 1px solid rgba(124, 109, 232, 0.15);
+    border: 1px solid rgba(137, 90, 58, 0.15);
 }
 
 .lacy-prompt-preview {
@@ -3343,7 +3335,7 @@ select {
     font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    color: var(--accent-light);
+    color: var(--accent-strong);
     background: var(--accent-subtle);
     border-radius: 999px;
     padding: 3px 10px;
@@ -3389,12 +3381,12 @@ select {
 .pi-agent-card:hover,
 .pi-agent-card.is-active {
     border-color: var(--accent);
-    box-shadow: 0 0 0 3px var(--accent-glow), var(--shadow-sm);
+    box-shadow: 0 0 0 3px var(--focus-ring), var(--shadow-sm);
     transform: translateY(-1px);
 }
 
 .pi-agent-card:hover .pi-agent-arrow {
-    color: var(--accent-light);
+    color: var(--accent-strong);
     transform: translateX(3px);
 }
 
@@ -3404,11 +3396,11 @@ select {
     height: 52px;
     border-radius: 14px;
     background: var(--accent-subtle);
-    border: 1px solid rgba(124, 109, 232, 0.2);
+    border: 1px solid rgba(137, 90, 58, 0.2);
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--accent-light);
+    color: var(--accent-strong);
 }
 
 .pi-agent-body {
@@ -3422,7 +3414,7 @@ select {
     border-radius: 999px;
     padding: 2px 8px;
     background: rgba(34, 197, 94, 0.12);
-    color: #4ade80;
+    color: #2F7253;
     font-size: 0.65rem;
     font-weight: 700;
     letter-spacing: 0.07em;
@@ -3553,11 +3545,11 @@ select {
     height: 40px;
     border-radius: 10px;
     background: var(--accent-subtle);
-    border: 1px solid rgba(124, 109, 232, 0.2);
+    border: 1px solid rgba(137, 90, 58, 0.2);
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--accent-light);
+    color: var(--accent-strong);
     margin-top: 2px;
 }
 
@@ -3579,7 +3571,7 @@ select {
     border-radius: 999px;
     padding: 4px 10px;
     background: var(--accent-subtle);
-    color: var(--accent-light);
+    color: var(--accent-strong);
     font-size: 0.68rem;
     font-weight: 700;
     letter-spacing: 0.06em;
@@ -3610,8 +3602,8 @@ select {
     height: 22px;
     border-radius: 50%;
     background: var(--accent-subtle);
-    border: 1px solid rgba(124, 109, 232, 0.25);
-    color: var(--accent-light);
+    border: 1px solid rgba(137, 90, 58, 0.25);
+    color: var(--accent-strong);
     font-size: 0.72rem;
     font-weight: 700;
     display: flex;
@@ -3733,7 +3725,7 @@ select {
 
 .prompt-library-select:focus {
     border-color: var(--accent);
-    box-shadow: 0 0 0 3px var(--accent-glow);
+    box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
 .prompt-upload-preview-grid {
@@ -3755,7 +3747,7 @@ select {
     width: 100%;
     aspect-ratio: 16 / 10;
     object-fit: cover;
-    background: #0b0b16;
+    background: #F3F1ED;
 }
 
 .prompt-upload-preview span {
@@ -3771,9 +3763,7 @@ select {
 .prompt-guide-panel {
     position: relative;
     border-color: rgba(32, 212, 160, 0.18);
-    background:
-        linear-gradient(135deg, rgba(32, 212, 160, 0.065), transparent 58%),
-        var(--bg-secondary);
+    background: var(--success-subtle);
 }
 
 .prompt-guide-dismiss {
@@ -3864,12 +3854,12 @@ select {
 .prompt-filter-pill:hover,
 .prompt-filter-pill.active {
     color: var(--text-primary);
-    border-color: rgba(124, 109, 232, 0.35);
+    border-color: rgba(137, 90, 58, 0.35);
     background: var(--accent-subtle);
 }
 
 .prompt-filter-pill.active span {
-    color: var(--accent-light);
+    color: var(--accent-strong);
 }
 
 .prompt-library-search {
@@ -3903,7 +3893,7 @@ select {
 .prompt-target-type {
     display: block;
     margin-bottom: 4px;
-    color: var(--accent-light);
+    color: var(--accent-strong);
     font-size: 0.7rem;
     font-weight: 800;
     letter-spacing: 0.08em;
@@ -3992,7 +3982,7 @@ select {
     min-height: 0;
     overflow: hidden;
     border-radius: 6px;
-    background: #0b0b16;
+    background: #F3F1ED;
 }
 
 .prompt-library-thumb img {
@@ -4009,9 +3999,7 @@ select {
     justify-content: center;
     color: var(--text-muted);
     border-bottom: 1px solid var(--border);
-    background:
-        linear-gradient(135deg, rgba(255, 255, 255, 0.035), transparent),
-        var(--bg-tertiary);
+    background: var(--bg-tertiary);
 }
 
 .prompt-library-card-body {
@@ -4174,12 +4162,12 @@ select {
     border-radius: 50%;
     object-fit: cover;
     flex-shrink: 0;
-    background: #0b0b16;
+    background: #F3F1ED;
 }
 
 .prompt-menu-chip strong {
     margin-left: auto;
-    color: var(--accent-light);
+    color: var(--accent-strong);
     font-size: 0.72rem;
     font-weight: 800;
 }
@@ -4201,7 +4189,7 @@ select {
     background: var(--accent);
     color: white;
     border: 1px solid rgba(255, 255, 255, 0.13);
-    box-shadow: 0 6px 20px rgba(124, 109, 232, 0.28);
+    box-shadow: 0 6px 20px rgba(137, 90, 58, 0.28);
 }
 
 .prompt-row-add:hover,
@@ -4289,7 +4277,7 @@ select {
     min-height: 0;
     overflow: hidden;
     border-radius: 6px;
-    background: #0b0b16;
+    background: #F3F1ED;
 }
 
 .prompt-preview-image img {
@@ -4305,9 +4293,7 @@ select {
     align-items: center;
     justify-content: center;
     color: var(--text-muted);
-    background:
-        linear-gradient(135deg, rgba(255, 255, 255, 0.035), transparent),
-        var(--bg-tertiary);
+    background: var(--bg-tertiary);
     border-bottom: 1px solid var(--border);
 }
 
@@ -4324,7 +4310,7 @@ select {
     padding: 3px 8px;
     border-radius: var(--radius-full);
     background: var(--accent-subtle);
-    color: var(--accent-light);
+    color: var(--accent-strong);
     font-size: 0.68rem;
     font-weight: 800;
     letter-spacing: 0.04em;
@@ -4362,7 +4348,7 @@ select {
     gap: 8px;
     padding: 10px 13px;
     border-top: 1px solid var(--border);
-    background: rgba(124, 109, 232, 0.035);
+    background: rgba(137, 90, 58, 0.035);
 }
 
 .prompt-card-link-form .prompt-menu-select {
@@ -4419,7 +4405,7 @@ select {
     border: 1px solid rgba(255, 255, 255, 0.16);
     background: var(--accent);
     color: white;
-    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.38), 0 8px 28px rgba(124, 109, 232, 0.32);
+    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.38), 0 8px 28px rgba(137, 90, 58, 0.32);
 }
 
 .prompt-overlay {
@@ -4500,7 +4486,7 @@ select {
 
 .prompt-menu-select:focus {
     border-color: var(--accent);
-    box-shadow: 0 0 0 3px var(--accent-glow);
+    box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
 .prompt-link-box,

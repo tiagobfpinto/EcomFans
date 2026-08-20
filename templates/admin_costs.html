@@ -19,15 +19,15 @@
 .data-table tr:last-child td { border-bottom: none; }
 .data-table tr:hover td { background: rgba(255,255,255,0.02); }
 .table-wrap { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
-.cost-high { color: #f87171; font-weight: 600; }
-.cost-med { color: #fb923c; font-weight: 600; }
+.cost-high { color: #A8443B; font-weight: 600; }
+.cost-med { color: #9A6B2E; font-weight: 600; }
 .cost-low { color: var(--text-secondary); }
 .badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 0.72rem; font-weight: 600; }
-.badge-gemini { background: rgba(66, 133, 244, 0.15); color: #60a5fa; }
-.badge-openai { background: rgba(16, 163, 127, 0.15); color: #34d399; }
+.badge-gemini { background: rgba(66, 133, 244, 0.15); color: #4D6870; }
+.badge-openai { background: rgba(16, 163, 127, 0.15); color: #2F7253; }
 .badge-free { background: rgba(148,163,184,0.12); color: var(--text-muted); }
-.badge-pro { background: rgba(124,109,232,0.15); color: #a78bfa; }
-.badge-ultra { background: rgba(245,158,11,0.15); color: #fbbf24; }
+.badge-pro { background: rgba(137,90,58,0.15); color: #6F452E; }
+.badge-ultra { background: rgba(245,158,11,0.15); color: #8A5A17; }
 .trend-bar-wrap { display: flex; align-items: center; gap: 10px; }
 .trend-bar-bg { flex: 1; background: var(--bg-primary); border-radius: 4px; height: 6px; overflow: hidden; }
 .trend-bar { height: 6px; border-radius: 4px; background: var(--accent); }
@@ -192,7 +192,7 @@
                         {% if row.mode == 'prompt_only' %}
                         <span class="badge" style="background:rgba(148,163,184,0.12);color:var(--text-muted)">prompt only</span>
                         {% else %}
-                        <span class="badge" style="background:rgba(124,109,232,0.15);color:#a78bfa">+ image gen</span>
+                        <span class="badge" style="background:rgba(137,90,58,0.15);color:#6F452E">+ image gen</span>
                         {% endif %}
                     </td>
                     <td><span class="badge badge-{{ row.provider }}">{{ row.provider }}</span></td>

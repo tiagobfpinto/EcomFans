@@ -1,0 +1,799 @@
+/* ============================================================
+   EcomFans — warm editorial application theme
+   Loaded after every page stylesheet so local tools share one
+   calm, light visual language without changing their layout.
+   ============================================================ */
+
+html {
+    color-scheme: light;
+}
+
+body {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+}
+
+::selection {
+    background: var(--accent-subtle);
+    color: var(--text-primary);
+}
+
+:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+.content-with-sidebar,
+.content-full {
+    background: var(--bg-primary);
+}
+
+.sidebar {
+    background: var(--bg-secondary);
+    border-right-color: var(--border);
+}
+
+.sidebar-header,
+.sidebar-footer {
+    border-color: var(--border);
+}
+
+.logo svg,
+.nav-item.active svg {
+    filter: none;
+}
+
+.logo span {
+    background: none;
+    color: var(--accent-strong);
+    -webkit-text-fill-color: currentColor;
+}
+
+.nav-item:hover {
+    background: rgba(255, 255, 255, .58);
+}
+
+.nav-item.active {
+    background: var(--accent-subtle);
+    color: var(--accent-strong);
+}
+
+.user-info {
+    background: rgba(255, 255, 255, .58);
+}
+
+.user-avatar {
+    background: var(--accent);
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, .72);
+}
+
+/* Global controls */
+.btn-primary,
+.btn-accent,
+.comp-btn-primary,
+.fn-btn-primary,
+.sb-btn-primary,
+.notes-btn-primary,
+.metrics-import-button,
+.login-submit {
+    border-color: var(--accent);
+    background: var(--accent);
+    color: #fff;
+    box-shadow: none;
+    filter: none;
+}
+
+.btn-primary:hover,
+.btn-accent:hover,
+.comp-btn-primary:hover:not(:disabled),
+.fn-btn-primary:hover:not(:disabled),
+.sb-btn-primary:hover:not(:disabled),
+.notes-btn-primary:hover,
+.metrics-import-button:hover:not(:disabled),
+.login-submit:hover {
+    background: var(--accent-hover);
+    border-color: var(--accent-hover);
+    box-shadow: var(--shadow-sm);
+    filter: none;
+}
+
+.btn-outline:hover,
+.btn-ghost:hover,
+.logout-btn:hover,
+.comp-btn-ghost:hover:not(:disabled) {
+    box-shadow: none;
+}
+
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+textarea,
+select {
+    color: var(--text-primary);
+    background-color: var(--surface);
+    border-color: var(--border);
+}
+
+input::placeholder,
+textarea::placeholder {
+    color: var(--text-muted);
+    opacity: .82;
+}
+
+input:focus,
+textarea:focus,
+select:focus,
+.login-input:focus-within,
+.metrics-search:focus-within {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+input[type="checkbox"],
+input[type="radio"],
+input[type="range"] {
+    accent-color: var(--accent);
+}
+
+.flash,
+.comp-flash,
+.fn-flash,
+.notes-flash,
+.metrics-import-status {
+    background-color: var(--surface);
+    backdrop-filter: none;
+}
+
+.flash-success {
+    background: var(--success-subtle);
+    border-color: color-mix(in srgb, var(--success) 28%, transparent);
+}
+
+.flash-error {
+    background: var(--error-subtle);
+    border-color: color-mix(in srgb, var(--error) 28%, transparent);
+}
+
+/* Auth cards shared by register/reset/password screens */
+.auth-card {
+    background: var(--surface);
+    border-color: var(--border);
+    box-shadow: var(--shadow-md);
+}
+
+.auth-card::before {
+    background: var(--accent);
+    opacity: .7;
+}
+
+.auth-card::after {
+    display: none;
+}
+
+.auth-logo {
+    color: var(--accent-strong);
+    background: var(--accent-subtle);
+    border-color: color-mix(in srgb, var(--accent) 28%, var(--border));
+    box-shadow: none;
+}
+
+.auth-footer a,
+.page-eyebrow,
+a:not(.btn):hover {
+    color: var(--accent-strong);
+}
+
+/* Dedicated sign-in screen */
+.login-page {
+    --login-panel: #FCFBF8;
+    --login-field: #FFFFFF;
+    background: var(--bg-primary);
+}
+
+.login-showcase {
+    border-right-color: var(--border);
+    background: var(--bg-secondary);
+}
+
+.login-showcase::before,
+.login-showcase::after,
+.login-form-side::before {
+    display: none;
+}
+
+.login-brand-mark {
+    color: var(--accent-strong);
+    background: var(--accent-subtle);
+    border-color: var(--border-strong);
+    box-shadow: none;
+}
+
+.login-showcase-copy h1,
+.login-heading h2,
+.login-feature-grid strong,
+.login-brand,
+.login-mobile-brand {
+    color: var(--text-primary);
+}
+
+.login-showcase-copy h1 em,
+.login-eyebrow,
+.login-heading-kicker,
+.login-label-row a,
+.login-create-account a {
+    color: var(--accent-strong);
+}
+
+.login-showcase-copy > p,
+.login-heading p,
+.login-feature-grid small,
+.login-showcase-footer,
+.login-label-row,
+.login-field > span:first-child,
+.login-create-account,
+.login-legal,
+.login-legal a {
+    color: var(--text-secondary);
+}
+
+.login-feature-grid article {
+    border-color: var(--border);
+    background: rgba(255, 255, 255, .55);
+    backdrop-filter: none;
+}
+
+.login-feature-icon {
+    color: var(--accent-strong);
+    background: var(--accent-subtle);
+}
+
+.login-status i {
+    background: var(--success);
+    box-shadow: none;
+}
+
+.login-form-side {
+    background: var(--surface);
+}
+
+.login-input {
+    color: var(--text-muted);
+    border-color: var(--border);
+    background: #fff;
+}
+
+.login-input:focus-within {
+    color: var(--accent-strong);
+    background: #fff;
+}
+
+.login-input input,
+.login-input input::placeholder {
+    color: var(--text-primary);
+}
+
+.login-input input::placeholder {
+    color: var(--text-muted);
+}
+
+.login-password-toggle {
+    color: var(--text-muted);
+}
+
+.login-password-toggle:hover {
+    color: var(--accent-strong);
+    background: var(--accent-subtle);
+}
+
+.login-create-account {
+    border-top-color: var(--border);
+}
+
+@media (max-width: 760px) {
+    .login-form-side {
+        background: var(--surface);
+    }
+}
+
+/* Cards, panels and dialogs */
+.scraper-input-section,
+.results-toolbar,
+.api-key-banner,
+.prompt-section,
+.history-item,
+.product-row,
+.product-card,
+.billing-card,
+.pack-card,
+.plan-card,
+.lacy-card,
+.prompt-card,
+.comp-add-card,
+.comp-card,
+.comp-upload-card,
+.comp-ad-card,
+.comp-modal-dialog,
+.comp-modal-panel,
+.comp-tool-card,
+.harvest-card,
+.fn-card,
+.fn-page-card,
+.fn-modal-dialog,
+.metrics-kpi-card,
+.metrics-panel,
+.metrics-upload-card,
+.metrics-confirm-dialog,
+.notes-board-card,
+.notes-modal-dialog,
+.sb-card,
+.sb-frame-node,
+.sb-node-inspector,
+.social-composer-card,
+.social-queue-section,
+.social-stats article,
+.social-lock-card {
+    background-color: var(--surface);
+    border-color: var(--border);
+}
+
+.comp-card:hover,
+.comp-tool-card:hover,
+.harvest-card:hover,
+.notes-board-card:hover,
+.sb-frame-node:hover {
+    border-color: var(--border-strong);
+    box-shadow: var(--shadow-md);
+}
+
+.comp-modal-backdrop,
+.fn-modal-backdrop,
+.notes-modal-backdrop,
+.metrics-confirm-overlay,
+.modal-backdrop,
+.modal-overlay {
+    background: var(--overlay);
+}
+
+/* Metrics */
+.metrics-date-range button,
+.metrics-upload-toggle,
+.metrics-import-button {
+    background: var(--accent);
+    color: #fff;
+    box-shadow: none;
+}
+
+.metrics-kpi-card,
+.metrics-panel {
+    background-image: none;
+    box-shadow: var(--shadow-sm);
+}
+
+.metrics-kpi-primary {
+    background: var(--accent-subtle);
+    border-color: color-mix(in srgb, var(--accent) 30%, var(--border));
+}
+
+.metrics-chart-grid {
+    stroke: var(--border);
+}
+
+.metrics-chart-line,
+.metrics-chart-point,
+.metrics-chart-bar {
+    color: var(--accent);
+    stroke: var(--accent);
+    fill: var(--accent);
+    filter: none;
+}
+
+.metrics-table tbody tr:hover td {
+    background: var(--accent-subtle);
+}
+
+/* Notes */
+.notes-editor-header,
+.notes-toolrail,
+.notes-inspector {
+    background: rgba(252, 251, 248, .98);
+    border-color: var(--border);
+}
+
+.notes-stage {
+    background-color: var(--bg-primary);
+    background-image: radial-gradient(circle, rgba(137, 90, 58, .18) .8px, transparent .9px);
+}
+
+.notes-tool:hover,
+.notes-editor-back:hover,
+.notes-editor-header .notes-icon-btn:hover,
+.notes-zoom-controls button:hover {
+    color: var(--text-primary);
+    background: var(--bg-secondary);
+}
+
+.notes-tool.is-active,
+.notes-segmented button.is-active {
+    color: var(--accent-strong);
+    background: var(--accent-subtle);
+    border-color: var(--border-strong);
+}
+
+.notes-selection-box,
+.notes-selection-line,
+.notes-handle,
+.notes-text-editor {
+    stroke: var(--accent);
+    border-color: var(--accent);
+}
+
+.notes-handle[data-handle="rotate"] {
+    fill: var(--accent);
+}
+
+/* Competitors and media extraction */
+.comp-btn-primary,
+.comp-avatar,
+.comp-rating-bar span,
+.harvest-badge {
+    background: var(--accent);
+    box-shadow: none;
+}
+
+.comp-chip-product,
+.comp-ad-status.is-processing,
+.harvest-filter-btn.is-active {
+    color: var(--accent-strong);
+    background: var(--accent-subtle);
+    border-color: color-mix(in srgb, var(--accent) 30%, var(--border));
+}
+
+.comp-ad-media,
+.comp-modal-media,
+.harvest-thumb,
+.harvest-modal-media {
+    background-color: #000;
+}
+
+/* Funnels */
+.fn-editor-header,
+.fn-settings-panel,
+.fn-builder-toolbar {
+    background: rgba(252, 251, 248, .96);
+    border-color: var(--border);
+    backdrop-filter: none;
+}
+
+.fn-builder-panel,
+.fn-html-workspace,
+.fn-visual-workspace {
+    background-color: var(--bg-primary);
+}
+
+.fn-visual-workspace {
+    background-image: radial-gradient(rgba(137, 90, 58, .18) .7px, transparent .8px);
+}
+
+.fn-html-workspace textarea {
+    color: var(--text-primary);
+    background: var(--surface);
+    border-color: var(--border);
+}
+
+.fn-view-tabs,
+.fn-device-switcher {
+    background: var(--bg-secondary);
+}
+
+.fn-view-tabs button.active,
+.fn-device-switcher button.active {
+    background: var(--surface);
+    box-shadow: var(--shadow-sm);
+}
+
+.fn-browser-frame {
+    border-color: var(--border-strong);
+    box-shadow: var(--shadow-lg);
+}
+
+/* Storyboarder */
+.sb-canvas-shell,
+.sb-canvas-viewport {
+    background-color: var(--bg-primary);
+}
+
+.sb-canvas-viewport {
+    background-image: radial-gradient(circle, rgba(137, 90, 58, .18) 1px, transparent 1.2px);
+}
+
+.sb-canvas-toolbar,
+.sb-node-inspector,
+.sb-inspector-header {
+    color: var(--text-primary);
+    background: rgba(252, 251, 248, .96);
+    border-color: var(--border);
+    backdrop-filter: none;
+}
+
+.sb-canvas-connection-shadow {
+    stroke: rgba(99, 92, 84, .22);
+}
+
+.sb-canvas-connection {
+    stroke: var(--accent);
+}
+
+.sb-frame-node,
+.sb-frame-node:hover,
+.sb-frame-node:focus-visible,
+.sb-frame-node.is-selected {
+    box-shadow: var(--shadow-md);
+}
+
+.sb-frame-node.is-selected {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--focus-ring), var(--shadow-md);
+}
+
+.sb-node-meta span,
+.sb-node-content-tags span {
+    border-color: var(--border);
+    background: var(--bg-secondary);
+}
+
+.sb-node-content-tags span {
+    color: var(--accent-strong);
+    background: var(--accent-subtle);
+}
+
+/* Social downloader */
+.social-downloader {
+    --sd-panel: var(--surface);
+    --sd-panel-soft: var(--bg-secondary);
+    --sd-border: var(--border);
+    --sd-border-soft: var(--border);
+    --sd-text: var(--text-primary);
+    --sd-muted: var(--text-secondary);
+    --sd-accent: var(--accent);
+    --sd-danger: var(--error);
+    --sd-success: var(--success);
+}
+
+.social-composer-card,
+.social-queue-section,
+.social-stats article,
+.social-lock-card,
+.social-url-row,
+.social-queue-item {
+    color: var(--text-primary);
+    background: var(--surface);
+    border-color: var(--border);
+}
+
+.social-primary-button,
+.social-download-button {
+    color: #fff;
+    background: var(--accent);
+    border-color: var(--accent);
+    box-shadow: none;
+}
+
+.social-primary-button:hover,
+.social-download-button:hover {
+    background: var(--accent-hover);
+}
+
+/* Inline-styled workspaces: Landing Builder and AI Creatives */
+.lb-page,
+.builder-page,
+.landing-builder,
+.ai-creatives-page,
+.creatives-page {
+    color: var(--text-primary);
+}
+
+.agent-card,
+.agent-option,
+.creative-agent-card,
+.creatives-agent-card {
+    background-image: none !important;
+    box-shadow: none !important;
+}
+
+.agent-card.is-selected,
+.agent-option.is-selected,
+.creative-agent-card.is-selected,
+.creatives-agent-card.is-selected {
+    color: var(--accent-strong) !important;
+    background: var(--accent-subtle) !important;
+    border-color: var(--accent) !important;
+    box-shadow: 0 0 0 3px var(--focus-ring) !important;
+}
+
+/* AI Creatives flow editor (its styles live in the page template). */
+.creative-flow-stage-wrap,
+.creative-flow-stage-scroll {
+    color: var(--text-primary) !important;
+    background: var(--surface) !important;
+    border-color: var(--border) !important;
+}
+
+.creative-flow-stage {
+    background-color: var(--bg-primary) !important;
+    background-image: radial-gradient(circle, rgba(137, 90, 58, .18) .8px, transparent .9px) !important;
+    background-size: 22px 22px !important;
+}
+
+.flow-node {
+    color: var(--text-primary) !important;
+    background: var(--surface) !important;
+    border-color: var(--border) !important;
+    box-shadow: var(--shadow-sm) !important;
+    backdrop-filter: none !important;
+}
+
+.flow-node:hover,
+.flow-node.is-selected,
+.flow-node.is-running,
+.flow-node.is-ready {
+    color: var(--text-primary) !important;
+    background: var(--surface) !important;
+    border-color: var(--accent) !important;
+    box-shadow: 0 0 0 3px var(--focus-ring), var(--shadow-md) !important;
+}
+
+.flow-node-agent {
+    --agent: var(--earth-clay) !important;
+    --agent-dim: var(--accent-subtle) !important;
+    background: var(--accent-subtle) !important;
+    border-color: var(--accent) !important;
+    box-shadow: var(--shadow-sm) !important;
+}
+
+.flow-node-agent::before {
+    display: none !important;
+}
+
+.flow-node-agent .flow-node-title,
+.flow-node-agent .flow-node-meta,
+.flow-node-badge-agent {
+    color: var(--accent-strong) !important;
+}
+
+.flow-node-agent-icon {
+    color: var(--accent-strong) !important;
+    background: rgba(255, 255, 255, .55) !important;
+    border-color: var(--border-strong) !important;
+    box-shadow: none !important;
+}
+
+.flow-node-agent-icon svg,
+.flow-node-model-gemini svg,
+.flow-node-model-openai svg,
+.flow-node-model-custom svg {
+    filter: none !important;
+}
+
+.flow-node-model-gemini {
+    background: color-mix(in srgb, var(--earth-slate) 9%, var(--surface)) !important;
+    border-color: var(--earth-slate) !important;
+}
+
+.flow-node-model-openai {
+    background: color-mix(in srgb, var(--earth-olive) 9%, var(--surface)) !important;
+    border-color: var(--earth-olive) !important;
+}
+
+.flow-node-model-custom {
+    background: color-mix(in srgb, var(--earth-ochre) 9%, var(--surface)) !important;
+    border-color: var(--earth-ochre) !important;
+}
+
+/* Landing Builder flow editor (also authored inline in its template). */
+.lb-toolbar,
+.lb-palette,
+.lb-overlay-dialog {
+    color: var(--text-primary) !important;
+    background: var(--surface) !important;
+    border-color: var(--border) !important;
+    box-shadow: var(--shadow-md) !important;
+}
+
+.lb-stage-wrap {
+    background-color: var(--bg-primary) !important;
+    background-image: radial-gradient(circle, rgba(137, 90, 58, .18) .8px, transparent .9px) !important;
+    background-size: 28px 28px !important;
+    border-color: var(--border) !important;
+}
+
+.lb-shell .flow-node,
+.lb-shell .flow-node:hover,
+.lb-shell .flow-node.is-selected {
+    color: var(--text-primary) !important;
+    background: var(--surface) !important;
+    border-color: var(--border-strong) !important;
+    box-shadow: var(--shadow-md) !important;
+}
+
+.lb-shell .flow-node.is-selected {
+    border-color: var(--accent) !important;
+    box-shadow: 0 0 0 3px var(--focus-ring), var(--shadow-md) !important;
+}
+
+.lb-func-node--researcher::after {
+    display: none !important;
+}
+
+.lb-agent-avatar,
+.lb-avatar--researcher,
+.lb-avatar--custom {
+    background-image: none !important;
+    box-shadow: none !important;
+}
+
+.lb-avatar--researcher {
+    color: var(--earth-slate) !important;
+    background: color-mix(in srgb, var(--earth-slate) 12%, var(--surface)) !important;
+    border-color: var(--earth-slate) !important;
+}
+
+.lb-avatar--custom {
+    color: var(--earth-ochre) !important;
+    background: color-mix(in srgb, var(--earth-ochre) 12%, var(--surface)) !important;
+    border-color: var(--earth-ochre) !important;
+}
+
+.lb-agent-name,
+.lb-panel-agent-name,
+.lb-title,
+.lb-palette-label,
+.lb-output-text {
+    color: var(--text-primary) !important;
+}
+
+.lb-hint,
+.lb-palette-desc,
+.lb-node-footer,
+.lb-output-meta,
+.lb-incoming-preview {
+    color: var(--text-secondary) !important;
+}
+
+.lb-textarea,
+.lb-select,
+.lb-provider-btn,
+.lb-output-text,
+.lb-copy-btn,
+.lb-close-btn {
+    color: var(--text-primary) !important;
+    background: var(--surface) !important;
+    border-color: var(--border) !important;
+}
+
+.lb-provider-btn.is-active,
+.lb-back-btn,
+.lb-add-btn {
+    color: var(--accent-strong) !important;
+    background: var(--accent-subtle) !important;
+    border-color: var(--accent) !important;
+}
+
+.lb-run-btn {
+    color: #fff !important;
+    background: var(--accent) !important;
+    box-shadow: none !important;
+}
+
+/* Keep actual visual content dark where letterboxing is intentional. */
+video,
+.image-preview,
+.video-preview,
+.media-preview {
+    background-color: #000;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        scroll-behavior: auto !important;
+    }
+}
