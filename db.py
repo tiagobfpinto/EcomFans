@@ -108,6 +108,12 @@ class User(db.Model):
         lazy=True,
         cascade="all, delete-orphan",
     )
+    funnels = db.relationship(
+        "Funnel",
+        backref="user",
+        lazy=True,
+        cascade="all, delete-orphan",
+    )
 
 
 class ApiKey(db.Model):
@@ -922,4 +928,67 @@ class NoteBoard(db.Model):
 
     __table_args__ = (
         db.Index("ix_note_boards_user_updated", "user_id", "updated_at"),
+    )
+
+
+class Funnel(db.Model):
+    __tablename__ = "funnels"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    name = db.Column(db.String(160), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    created_at = db.Column(
+        db.DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at = db.Column(
+        db.DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+    pages = db.relationship(
+        "FunnelPage",
+        backref="funnel",
+        lazy=True,
+        cascade="all, delete-orphan",
+        order_by="FunnelPage.sort_order",
+    )
+
+    __table_args__ = (
+        db.Index("ix_funnels_user_updated", "user_id", "updated_at"),
+    )
+
+
+class FunnelPage(db.Model):
+    __tablename__ = "funnel_pages"
+
+    id = db.Column(db.Integer, primary_key=True)
+    funnel_id = db.Column(
+        db.Integer,
+        db.ForeignKey("funnels.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    title = db.Column(db.String(200), nullable=False)
+    page_type = db.Column(db.String(30), nullable=False, default="advertorial")
+    slug = db.Column(db.String(180), nullable=False)
+    html_content = db.Column(db.Text, nullable=False)
+    status = db.Column(db.String(20), nullable=False, default="draft")
+    sort_order = db.Column(db.Integer, nullable=False, default=1)
+    revision = db.Column(db.Integer, nullable=False, default=1)
+    created_at = db.Column(
+        db.DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at = db.Column(
+        db.DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+    __table_args__ = (
+        db.UniqueConstraint("slug", name="uq_funnel_pages_slug"),
+        db.Index("ix_funnel_pages_funnel_order", "funnel_id", "sort_order"),
+        db.Index("ix_funnel_pages_status_slug", "status", "slug"),
     )

@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page.title }} - Funnel editor - EcomFans{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/funnels.css', v='1') }}">
+{% endblock %}
+
+{% block content %}
+<div class="fn-editor-page" id="funnel-editor" data-funnel-id="{{ funnel.id }}" data-page-id="{{ page.id }}">
+    <header class="fn-editor-header">
+        <div class="fn-editor-heading">
+            <a class="fn-icon-btn" href="{{ url_for('funnels.funnel_detail_page', funnel_id=funnel.id) }}" aria-label="Back to funnel" title="Back to funnel">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
+            </a>
+            <div><span>{{ funnel.name }}</span><h1 data-editor-page-name>{{ page.title }}</h1></div>
+            <span class="fn-unsaved" id="fn-unsaved" hidden><i></i>Unsaved</span>
+        </div>
+        <div class="fn-editor-actions">
+            <span class="fn-save-state" id="fn-save-state" role="status" aria-live="polite">All changes saved</span>
+            <button class="fn-btn fn-btn-ghost" id="fn-preview-page" type="button">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="2.5"/></svg>
+                Preview
+            </button>
+            <button class="fn-btn fn-btn-primary" id="fn-save-page" type="button">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 3h12l2 2v16H5zM8 3v6h8V3M8 21v-7h8v7"/></svg>
+                Save changes
+            </button>
+        </div>
+    </header>
+
+    <div class="fn-editor-flash" id="fn-editor-flash" role="alert" hidden></div>
+
+    <div class="fn-editor-layout">
+        <aside class="fn-settings-panel">
+            <div class="fn-panel-heading">
+                <span class="fn-eyebrow">Page settings</span>
+                <h2>Details & publishing</h2>
+            </div>
+            <label class="fn-field">
+                <span>Page title</span>
+                <input id="fn-editor-title" type="text" maxlength="200" value="{{ page.title }}">
+            </label>
+            <label class="fn-field">
+                <span>Page type</span>
+                <select id="fn-editor-type">
+                    {% for value, label in page_types.items() %}<option value="{{ value }}" {% if page.page_type == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+                </select>
+            </label>
+            <label class="fn-field">
+                <span>URL slug</span>
+                <div class="fn-slug-field"><b>/</b><input id="fn-editor-slug" type="text" maxlength="180" value="{{ page.slug }}"></div>
+            </label>
+            <div class="fn-public-url">
+                <div><span>Public URL</span><a id="fn-public-link" href="/{{ page.slug }}" target="_blank" rel="noopener">{{ request.host_url }}{{ page.slug }}</a></div>
+                <button class="fn-icon-btn" id="fn-copy-url" type="button" title="Copy public URL" aria-label="Copy public URL">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                </button>
+            </div>
+            <label class="fn-field">
+                <span>Status</span>
+                <select id="fn-editor-status" class="fn-status-select {{ page.status }}">
+                    <option value="draft" {% if page.status == 'draft' %}selected{% endif %}>Draft — private</option>
+                    <option value="published" {% if page.status == 'published' %}selected{% endif %}>Published — live</option>
+                </select>
+            </label>
+            <div class="fn-publish-note" id="fn-publish-note">
+                <i></i>
+                <p><strong>{{ 'Live page' if page.status == 'published' else 'Draft page' }}</strong><span>{{ 'Anyone with the URL can view it.' if page.status == 'published' else 'Only you can open the preview.' }}</span></p>
+            </div>
+            <div class="fn-template-card">
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 2h9l5 5v15H6z"/><path d="M14 2v6h6M9 13h8M9 17h6"/></svg>
+                <div><span>Base template</span><strong>ex.html</strong></div>
+                <button id="fn-reset-template" type="button">Reset</button>
+            </div>
+        </aside>
+
+        <section class="fn-builder-panel">
+            <div class="fn-builder-toolbar">
+                <div class="fn-view-tabs" role="tablist" aria-label="Editor view">
+                    <button class="active" type="button" role="tab" aria-selected="true" data-editor-view="visual">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>Visual
+                    </button>
+                    <button type="button" role="tab" aria-selected="false" data-editor-view="html">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m8 9-4 3 4 3M16 9l4 3-4 3M14 5l-4 14"/></svg>HTML
+                    </button>
+                </div>
+                <div class="fn-device-switcher" aria-label="Preview width">
+                    <button class="active" type="button" data-device="desktop" title="Desktop preview"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="13" rx="1"/><path d="M8 21h8M12 17v4"/></svg></button>
+                    <button type="button" data-device="tablet" title="Tablet preview"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M11 18h2"/></svg></button>
+                    <button type="button" data-device="mobile" title="Mobile preview"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg></button>
+                </div>
+                <span class="fn-visual-hint" id="fn-visual-hint">Click highlighted text or an image to edit it</span>
+            </div>
+
+            <div class="fn-visual-workspace" id="fn-visual-workspace">
+                <div class="fn-browser-frame desktop" id="fn-browser-frame">
+                    <div class="fn-browser-bar"><span></span><span></span><span></span><div id="fn-browser-url">/{{ page.slug }}</div></div>
+                    <iframe id="fn-visual-frame" title="Editable page preview" sandbox="allow-same-origin"></iframe>
+                </div>
+            </div>
+            <div class="fn-html-workspace" id="fn-html-workspace" hidden>
+                <div class="fn-code-heading"><span>HTML source</span><small id="fn-code-size"></small></div>
+                <textarea id="fn-html-source" spellcheck="false" aria-label="Page HTML source"></textarea>
+            </div>
+        </section>
+    </div>
+</div>
+
+<script type="application/json" id="fn-editor-bootstrap">{{ {"page": page, "default_template": default_template}|tojson }}</script>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/funnel_editor.js', v='1') }}"></script>
+{% endblock %}

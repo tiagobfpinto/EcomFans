@@ -43,6 +43,7 @@ from product_images import product_images_bp
 from prompts import prompts_bp
 from landing_builder import landing_builder_bp
 from competitors import competitors_bp
+from funnels import funnels_bp
 from script_optimizer import script_optimizer_bp
 from scraper import scraper_bp
 from social_downloader import social_downloader_bp
@@ -162,6 +163,7 @@ def _prefers_json_response() -> bool:
             "/social-downloader/",
             "/storyboarder/",
             "/brand-dna/",
+            "/funnels",
         )
     ):
         return True
@@ -308,6 +310,7 @@ app.register_blueprint(metrics_bp)
 app.register_blueprint(notes_bp)
 app.register_blueprint(social_downloader_bp)
 app.register_blueprint(storyboarder_bp)
+app.register_blueprint(funnels_bp)
 
 
 @app.before_request

@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+
+{% block title %}Funnels - EcomFans{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/funnels.css', v='1') }}">
+{% endblock %}
+
+{% block content %}
+<div class="fn-page" id="funnels-list">
+    <header class="fn-page-header">
+        <div>
+            <span class="fn-eyebrow">Conversion workspace</span>
+            <h1>Funnels</h1>
+            <p>Create conversion flows, organize their pages, and publish each page on its own URL.</p>
+        </div>
+        <button class="fn-btn fn-btn-primary" id="fn-new-funnel" type="button">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path d="M12 5v14M5 12h14"/>
+            </svg>
+            New funnel
+        </button>
+    </header>
+
+    <div class="fn-flash" id="fn-flash" role="status" aria-live="polite" hidden></div>
+
+    <section class="fn-summary" aria-label="Funnels summary">
+        <article>
+            <span class="fn-summary-icon violet">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="5" cy="5" r="2"/><circle cx="19" cy="5" r="2"/><circle cx="12" cy="19" r="2"/><path d="M7 5h10M6.5 6.5l4.2 10.6M17.5 6.5l-4.2 10.6"/></svg>
+            </span>
+            <div><strong>{{ funnels|length }}</strong><span>Total funnels</span></div>
+        </article>
+        <article>
+            <span class="fn-summary-icon blue">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 2h9l5 5v15H6z"/><path d="M14 2v6h6M9 13h8M9 17h6"/></svg>
+            </span>
+            <div><strong>{{ total_pages }}</strong><span>Total pages</span></div>
+        </article>
+        <article>
+            <span class="fn-summary-icon green">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="m8 12 2.5 2.5L16 9"/></svg>
+            </span>
+            <div><strong>{{ total_published }}</strong><span>Published pages</span></div>
+        </article>
+    </section>
+
+    <section class="fn-section">
+        <div class="fn-section-heading">
+            <div>
+                <span class="fn-eyebrow">Workspace</span>
+                <h2>Your funnels</h2>
+            </div>
+            {% if funnels %}<span>{{ funnels|length }} funnel{{ '' if funnels|length == 1 else 's' }}</span>{% endif %}
+        </div>
+
+        <div class="fn-funnel-grid">
+            {% for funnel in funnels %}
+            <a class="fn-funnel-card" href="{{ url_for('funnels.funnel_detail_page', funnel_id=funnel.id) }}">
+                <div class="fn-funnel-visual" aria-hidden="true">
+                    <div class="fn-mini-flow">
+                        <span><i></i></span><b></b><span><i></i></span><b></b><span><i></i></span>
+                    </div>
+                    <span class="fn-page-count">{{ funnel.page_count }} page{{ '' if funnel.page_count == 1 else 's' }}</span>
+                </div>
+                <div class="fn-funnel-body">
+                    <div>
+                        <h3>{{ funnel.name }}</h3>
+                        <p>{{ funnel.description or 'No description yet.' }}</p>
+                    </div>
+                    <div class="fn-funnel-meta">
+                        <span class="fn-live-dot"><i></i>{{ funnel.published_count }} live</span>
+                        <span class="fn-open-label">Open
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                        </span>
+                    </div>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+
+        <div class="fn-empty" {% if funnels %}hidden{% endif %}>
+            <div class="fn-empty-visual" aria-hidden="true">
+                <span></span><i></i><span></span><i></i><span></span>
+            </div>
+            <h2>Build your first conversion flow</h2>
+            <p>Group advertorials, listicles, landing pages, and other campaign pages into one funnel.</p>
+            <button class="fn-btn fn-btn-primary" type="button" data-open-funnel-modal>Create your first funnel</button>
+        </div>
+    </section>
+</div>
+
+<div class="fn-modal" id="fn-funnel-modal" hidden>
+    <div class="fn-modal-backdrop" data-close-modal></div>
+    <section class="fn-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="fn-funnel-modal-title">
+        <button class="fn-icon-btn fn-modal-close" type="button" data-close-modal aria-label="Close">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 6 12 12M18 6 6 18"/></svg>
+        </button>
+        <span class="fn-eyebrow">New workspace</span>
+        <h2 id="fn-funnel-modal-title">Create a funnel</h2>
+        <p>Give this flow a clear name. You can add and reorder its pages next.</p>
+        <form id="fn-funnel-form" autocomplete="off">
+            <label class="fn-field">
+                <span>Funnel name</span>
+                <input id="fn-funnel-name" type="text" maxlength="160" placeholder="e.g. Hair care campaign" required>
+            </label>
+            <label class="fn-field">
+                <span>Description <small>Optional</small></span>
+                <textarea id="fn-funnel-description" maxlength="2000" rows="3" placeholder="What is this funnel for?"></textarea>
+            </label>
+            <p class="fn-form-error" id="fn-funnel-error" role="alert" hidden></p>
+            <div class="fn-modal-actions">
+                <button class="fn-btn fn-btn-ghost" type="button" data-close-modal>Cancel</button>
+                <button class="fn-btn fn-btn-primary" id="fn-create-funnel" type="submit">Create funnel</button>
+            </div>
+        </form>
+    </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/funnels.js', v='1') }}"></script>
+{% endblock %}

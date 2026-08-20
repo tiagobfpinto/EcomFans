@@ -110,6 +110,15 @@
                 </svg>
                 <span>Landing Builder</span>
             </a>
+            <a href="{{ url_for('funnels.funnels_page') }}"
+                class="nav-item {% if request.path.startswith('/funnels') %}active{% endif %}">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="5" cy="5" r="2"/><circle cx="19" cy="5" r="2"/><circle cx="12" cy="19" r="2"/>
+                    <path d="M7 5h10M6.5 6.5l4.2 10.6M17.5 6.5l-4.2 10.6"/>
+                </svg>
+                <span>Funnels</span>
+            </a>
             <span class="nav-label" style="margin-top:6px;">AI Generation</span>
             <a href="{{ url_for('storyboarder.storyboarder_page') }}"
                 class="nav-item {% if request.path.startswith('/storyboarder') %}active{% endif %}">
