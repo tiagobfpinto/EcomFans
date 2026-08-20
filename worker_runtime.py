@@ -3,12 +3,18 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
+import mimetypes
 import os
+import shutil
 import socket
+import subprocess
+import tempfile
 import threading
 import time
 from datetime import datetime, timedelta, timezone
 from typing import Any
+
+from dlqueue import download as dlqueue_download
 
 from ai_service import (
     gemini_generate_image_with_meta,
@@ -27,6 +33,8 @@ from db import (
     AvatarBatch,
     AvatarResult,
     BrandDNAAnalysis,
+    Competitor,
+    CompetitorAd,
     CreativeBatch,
     CreativeInspiration,
     CreativeInspirationAnalysis,
@@ -34,16 +42,21 @@ from db import (
     ImageGeneration,
     Product,
     ProductImage,
+    SocialDownload,
     User,
     WorkerJob,
     db,
 )
 from media_storage import (
+    get_media_root,
     get_image_payload,
+    prepare_social_download_directory,
+    resolve_storage_path,
     save_ai_generation_image,
     save_avatar_result_after_image,
     save_avatar_result_before_image,
     save_creative_result_image,
+    save_lacy_result_image,
     save_product_image,
 )
 from worker_queue import (
@@ -58,9 +71,30 @@ from worker_tasks import (
     JOB_TYPE_AI_IMAGE_GENERATE,
     JOB_TYPE_AVATARS_GENERATE,
     JOB_TYPE_BRAND_DNA_ANALYZE,
+    JOB_TYPE_COMPETITOR_AD_ANALYZE,
+    JOB_TYPE_COMPETITOR_AD_TRANSCRIBE,
     JOB_TYPE_CREATIVES_GENERATE,
+    JOB_TYPE_LACY_GENERATE,
+    JOB_TYPE_SOCIAL_DOWNLOAD,
     JOB_TYPE_SCRIPT_TRANSCRIBE,
 )
+
+
+# OpenAI accepts transcription uploads up to 25 MB. Keep a little headroom for
+# provider-side size accounting and turn larger/unsupported media into compact,
+# speech-optimised MP3 chunks before uploading them one at a time.
+_OPENAI_TRANSCRIPTION_DIRECT_MAX_BYTES = 24_000_000
+_TRANSCRIPTION_CHUNK_SECONDS = 20 * 60
+_TRANSCRIPTION_AUDIO_BITRATE = "64k"
+_DIRECT_TRANSCRIPTION_EXTENSIONS = {
+    ".m4a",
+    ".mp3",
+    ".mp4",
+    ".mpeg",
+    ".mpga",
+    ".wav",
+    ".webm",
+}
 
 # Internal system prompt used for inspiration analysis in ai_creatives worker
 _CREATIVES_ANALYSIS_SYSTEM_PROMPT = (
@@ -111,6 +145,183 @@ def _cleanup_job_artifacts(app, job_type: str, payload: dict[str, Any]) -> None:
         pass
 
 
+def _positive_int_env(name: str, default: int) -> int:
+    try:
+        return max(1, int(os.getenv(name, str(default))))
+    except (TypeError, ValueError):
+        return default
+
+
+def _resolve_ffmpeg_executable() -> str:
+    configured = (os.getenv("FFMPEG_BINARY") or "").strip()
+    if configured:
+        if os.path.isfile(configured):
+            return os.path.abspath(configured)
+        discovered = shutil.which(configured)
+        if discovered:
+            return discovered
+        raise RuntimeError("FFMPEG_BINARY does not point to an available executable.")
+
+    try:
+        import imageio_ffmpeg
+
+        return imageio_ffmpeg.get_ffmpeg_exe()
+    except (ImportError, RuntimeError, OSError) as exc:
+        discovered = shutil.which("ffmpeg")
+        if discovered:
+            return discovered
+        raise RuntimeError(
+            "Large-file transcription requires FFmpeg. Install the application "
+            "requirements or configure FFMPEG_BINARY."
+        ) from exc
+
+
+def _split_media_for_transcription(file_path: str, output_dir: str) -> list[str]:
+    """Extract mono speech audio into provider-safe, fixed-duration MP3 files."""
+    chunk_seconds = _positive_int_env(
+        "OPENAI_TRANSCRIPTION_CHUNK_SECONDS", _TRANSCRIPTION_CHUNK_SECONDS
+    )
+    output_pattern = os.path.join(output_dir, "chunk_%04d.mp3")
+    command = [
+        _resolve_ffmpeg_executable(),
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        "-y",
+        "-i",
+        file_path,
+        "-map",
+        "0:a:0",
+        "-vn",
+        "-ac",
+        "1",
+        "-ar",
+        "16000",
+        "-c:a",
+        "libmp3lame",
+        "-b:a",
+        _TRANSCRIPTION_AUDIO_BITRATE,
+        "-f",
+        "segment",
+        "-segment_time",
+        str(chunk_seconds),
+        "-reset_timestamps",
+        "1",
+        output_pattern,
+    ]
+    try:
+        completed = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=_positive_int_env("TRANSCRIPTION_FFMPEG_TIMEOUT_SECONDS", 3600),
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise RuntimeError("Preparing the audio for transcription timed out.") from exc
+    except OSError as exc:
+        raise RuntimeError("FFmpeg could not be started for large-file transcription.") from exc
+
+    if completed.returncode != 0:
+        detail = (completed.stderr or "").strip().splitlines()
+        message = detail[-1] if detail else "The media file may not contain a readable audio track."
+        raise RuntimeError(f"Could not prepare audio for transcription: {message[:500]}")
+
+    chunks = sorted(
+        os.path.join(output_dir, name)
+        for name in os.listdir(output_dir)
+        if name.startswith("chunk_") and name.endswith(".mp3")
+    )
+    if not chunks:
+        raise RuntimeError("The uploaded media does not contain a readable audio track.")
+
+    for chunk_path in chunks:
+        chunk_size = os.path.getsize(chunk_path)
+        if chunk_size <= 0:
+            raise RuntimeError("Audio preparation produced an empty transcription chunk.")
+        if chunk_size > _OPENAI_TRANSCRIPTION_DIRECT_MAX_BYTES:
+            raise RuntimeError(
+                "An audio chunk is still too large for transcription. Reduce "
+                "OPENAI_TRANSCRIPTION_CHUNK_SECONDS and try again."
+            )
+    return chunks
+
+
+def _sum_meta_values(items: list[dict], key: str) -> int | float | None:
+    values = [item.get(key) for item in items if item.get(key) is not None]
+    if not values:
+        return None
+    return sum(values)
+
+
+def _aggregate_transcription_meta(items: list[dict], *, transcoded: bool) -> dict:
+    base = dict(items[0]) if items else {}
+    for key in (
+        "latency_ms",
+        "input_tokens",
+        "cached_tokens",
+        "output_tokens",
+        "total_tokens",
+        "estimated_cost_usd",
+        "estimated_cost_eur",
+    ):
+        base[key] = _sum_meta_values(items, key)
+    base["transcription_chunk_count"] = len(items)
+    base["source_transcoded"] = transcoded
+    return base
+
+
+def _transcribe_media_file_with_meta(
+    *, api_key: str, file_path: str, mime_type: str | None = None
+) -> tuple[str, dict]:
+    """Transcribe directly when safe, otherwise transcode and send chunks serially."""
+    extension = os.path.splitext(file_path)[1].lower()
+    file_size = os.path.getsize(file_path)
+    can_send_directly = (
+        file_size <= _OPENAI_TRANSCRIPTION_DIRECT_MAX_BYTES
+        and extension in _DIRECT_TRANSCRIPTION_EXTENSIONS
+    )
+    if can_send_directly:
+        text, meta = openai_transcribe_file_with_meta(
+            api_key=api_key,
+            file_path=file_path,
+            mime_type=mime_type,
+        )
+        return text, _aggregate_transcription_meta([meta], transcoded=False)
+
+    source_dir = os.path.dirname(os.path.abspath(file_path))
+    with tempfile.TemporaryDirectory(prefix="transcription_chunks_", dir=source_dir) as chunk_dir:
+        chunk_paths = _split_media_for_transcription(file_path, chunk_dir)
+        transcripts: list[str] = []
+        metadata_items: list[dict] = []
+        for index, chunk_path in enumerate(chunk_paths, start=1):
+            try:
+                text, meta = openai_transcribe_file_with_meta(
+                    api_key=api_key,
+                    file_path=chunk_path,
+                    mime_type="audio/mpeg",
+                )
+            except Exception as exc:
+                raise RuntimeError(
+                    f"Transcription failed on audio chunk {index} of {len(chunk_paths)}: {exc}"
+                ) from exc
+            transcripts.append(text.strip())
+            metadata_items.append(meta)
+
+    transcript = "\n\n".join(text for text in transcripts if text)
+    if not transcript:
+        raise RuntimeError("OpenAI transcription returned no text.")
+    return transcript, _aggregate_transcription_meta(metadata_items, transcoded=True)
+
+
+def _sha256_file(file_path: str) -> str:
+    digest = hashlib.sha256()
+    with open(file_path, "rb") as media_file:
+        for block in iter(lambda: media_file.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
 def _run_script_transcription(job_id: int, user_id: int | None, payload: dict[str, Any]) -> dict[str, Any]:
     file_path = (payload.get("file_path") or "").strip()
     mime_type = (payload.get("mime_type") or "").strip() or "application/octet-stream"
@@ -132,8 +343,7 @@ def _run_script_transcription(job_id: int, user_id: int | None, payload: dict[st
         raise RuntimeError("OpenAI API key is not configured on the platform.")
 
     # Compute file hash for deduplication — avoid re-transcribing the same file.
-    with open(file_path, "rb") as _f:
-        file_sha256 = hashlib.sha256(_f.read()).hexdigest()
+    file_sha256 = _sha256_file(file_path)
 
     dedup_cutoff = datetime.now(timezone.utc) - timedelta(days=7)
     recent_events = ApiRequestEvent.query.filter(
@@ -154,7 +364,7 @@ def _run_script_transcription(job_id: int, user_id: int | None, payload: dict[st
                         return cached_result
 
     try:
-        transcript, meta = openai_transcribe_file_with_meta(
+        transcript, meta = _transcribe_media_file_with_meta(
             api_key=openai_key,
             file_path=file_path,
             mime_type=mime_type,
@@ -171,6 +381,8 @@ def _run_script_transcription(job_id: int, user_id: int | None, payload: dict[st
                 "mime_type": mime_type,
                 "original_name": original_name,
                 "file_sha256": file_sha256,
+                "transcription_chunk_count": meta.get("transcription_chunk_count", 1),
+                "source_transcoded": bool(meta.get("source_transcoded")),
             },
         )
         return {"text": transcript}
@@ -1214,6 +1426,388 @@ def _run_brand_dna_analyze(
         raise
 
 
+def _run_lacy_generate(job_id: int, user_id: int | None, payload: dict[str, Any]) -> dict[str, Any]:
+    if not user_id:
+        raise RuntimeError("Job has no user association.")
+
+    user = db.session.get(User, user_id)
+    if not user:
+        raise RuntimeError("User not found for lacy job.")
+
+    gemini_key = get_effective_api_key(user.id, "gemini")
+    if not gemini_key:
+        raise RuntimeError("Gemini API key is not configured on the platform.")
+
+    base_image_id = payload.get("base_image_id")
+    source_ids = payload.get("source_ids", [])
+    prompt = payload.get("prompt", "")
+    gemini_model = payload.get("gemini_model")
+    credits_per_source = int(payload.get("credits_per_source", 2))
+
+    base_insp = db.session.get(CreativeInspiration, base_image_id)
+    if not base_insp:
+        raise RuntimeError(f"Base image inspiration {base_image_id} not found.")
+
+    base_payload = get_image_payload(base_insp.storage_path, base_insp.mime_type, base_insp.image_data)
+    if not base_payload:
+        raise RuntimeError("Base image data is missing from storage.")
+
+    results = []
+    for index, source_id in enumerate(source_ids):
+        source_insp = db.session.get(CreativeInspiration, source_id)
+        if not source_insp:
+            results.append({"index": index, "source_id": source_id, "storage_path": None, "error": "Source image not found."})
+            continue
+        try:
+            source_payload = get_image_payload(source_insp.storage_path, source_insp.mime_type, source_insp.image_data)
+            if not source_payload:
+                raise RuntimeError("Source image data is missing.")
+
+            image_b64, gemini_meta = gemini_generate_image_with_meta(
+                gemini_key,
+                prompt,
+                [source_payload, base_payload],
+                model=gemini_model,
+            )
+            record_api_request_event(
+                user_id=user_id,
+                feature="ai_creatives",
+                provider="gemini",
+                operation="image_generation",
+                meta=gemini_meta,
+                metadata={"lacy_job_id": job_id, "source_id": source_id, "index": index},
+            )
+
+            image_bytes = base64.b64decode(image_b64)
+            storage_path = save_lacy_result_image(user_id, job_id, index, "image/png", image_bytes)
+
+            consume_credits(user_id, credits_per_source, feature="ai_creatives")
+
+            results.append({"index": index, "source_id": source_id, "storage_path": storage_path, "error": None})
+        except Exception as exc:
+            results.append({"index": index, "source_id": source_id, "storage_path": None, "error": str(exc)})
+
+    return {"results": results}
+
+
+def _run_social_download(
+    job_id: int,
+    user_id: int | None,
+    payload: dict[str, Any],
+) -> dict[str, Any]:
+    if not user_id:
+        raise RuntimeError("Download job has no user association.")
+
+    download_id = int(payload.get("download_id") or 0)
+    item = SocialDownload.query.filter_by(
+        id=download_id, user_id=user_id
+    ).first()
+    if not item:
+        raise RuntimeError("Social download record was not found.")
+    if item.worker_job_id != job_id:
+        raise RuntimeError("Social download job is no longer current.")
+
+    source_url = (payload.get("source_url") or item.source_url or "").strip()
+    if not source_url:
+        raise RuntimeError("Download URL is missing.")
+
+    item.status = "downloading"
+    item.error = None
+    item.updated_at = datetime.now(timezone.utc)
+    db.session.commit()
+
+    download_dir = prepare_social_download_directory(user_id, item.id)
+    for existing_file in download_dir.iterdir():
+        if existing_file.is_file():
+            try:
+                existing_file.unlink()
+            except OSError:
+                pass
+
+    extra_opts = {}
+    cookie_file = (os.getenv("SOCIAL_DOWNLOAD_COOKIE_FILE") or "").strip()
+    if cookie_file:
+        cookie_path = os.path.abspath(cookie_file)
+        if os.path.isfile(cookie_path):
+            extra_opts["cookiefile"] = cookie_path
+
+    try:
+        filename, title = dlqueue_download(
+            source_url,
+            str(download_dir),
+            out_id="video",
+            extra_opts=extra_opts or None,
+        )
+        file_path = os.path.abspath(filename)
+        if not os.path.isfile(file_path):
+            candidates = [
+                path for path in download_dir.glob("video.*")
+                if path.is_file() and not path.name.endswith(".part")
+            ]
+            if not candidates:
+                raise RuntimeError("The downloader did not produce a media file.")
+            file_path = str(max(candidates, key=lambda path: path.stat().st_mtime))
+
+        resolved_file = os.path.realpath(file_path)
+        resolved_dir = os.path.realpath(str(download_dir))
+        if os.path.commonpath([resolved_file, resolved_dir]) != resolved_dir:
+            raise RuntimeError("Downloaded file escaped the configured storage directory.")
+
+        media_root = get_media_root().resolve()
+        storage_path = (
+            os.path.relpath(resolved_file, str(media_root))
+            .replace(os.sep, "/")
+        )
+        mime_type = mimetypes.guess_type(resolved_file)[0] or "video/mp4"
+        file_size = os.path.getsize(resolved_file)
+
+        item = db.session.get(SocialDownload, download_id)
+        if not item:
+            raise RuntimeError("Social download record disappeared.")
+        item.status = "success"
+        item.title = (title or os.path.basename(resolved_file))[:500]
+        item.storage_path = storage_path
+        item.mime_type = mime_type
+        item.file_size_bytes = file_size
+        item.error = None
+        item.finished_at = datetime.now(timezone.utc)
+        item.updated_at = item.finished_at
+        db.session.commit()
+        return {
+            "download_id": item.id,
+            "storage_path": storage_path,
+            "file_size_bytes": file_size,
+            "mime_type": mime_type,
+        }
+    except Exception as exc:
+        db.session.rollback()
+        try:
+            shutil.rmtree(download_dir)
+        except OSError:
+            pass
+        item = db.session.get(SocialDownload, download_id)
+        if item:
+            item.status = "failed"
+            item.error = (str(exc).strip() or "Download failed.")[:2000]
+            item.finished_at = datetime.now(timezone.utc)
+            item.updated_at = item.finished_at
+            db.session.commit()
+        raise
+
+
+_COMPETITOR_AD_ANALYSIS_SYSTEM_PROMPT = (
+    "You are a senior direct-response advertising strategist who evaluates "
+    "competitor video ad scripts for e-commerce brands. "
+    "Respond ONLY with a single valid JSON object. No markdown fences, no commentary."
+)
+
+
+def _get_competitor_ad_for_user(ad_id: int, user_id: int) -> CompetitorAd | None:
+    return (
+        CompetitorAd.query
+        .join(Competitor, Competitor.id == CompetitorAd.competitor_id)
+        .filter(CompetitorAd.id == ad_id, Competitor.user_id == user_id)
+        .first()
+    )
+
+
+def _run_competitor_ad_transcribe(
+    job_id: int, user_id: int | None, payload: dict[str, Any]
+) -> dict[str, Any]:
+    ad_id = int(payload.get("ad_id") or 0)
+    if not user_id:
+        raise RuntimeError("Job has no user association.")
+
+    ad = _get_competitor_ad_for_user(ad_id, user_id)
+    if not ad:
+        raise RuntimeError("Competitor ad not found.")
+
+    try:
+        openai_key = get_effective_api_key(user_id, "openai")
+        if not openai_key:
+            raise RuntimeError("OpenAI API key is not configured on the platform.")
+        if not ad.storage_path:
+            raise RuntimeError("Competitor ad has no stored video file.")
+        file_path = resolve_storage_path(ad.storage_path)
+        if not file_path.is_file():
+            raise RuntimeError("Competitor ad video file is no longer available.")
+
+        ad.transcript_status = "processing"
+        ad.transcript_error = None
+        db.session.commit()
+
+        transcript, meta = _transcribe_media_file_with_meta(
+            api_key=openai_key,
+            file_path=str(file_path),
+            mime_type=ad.mime_type,
+        )
+
+        ad = _get_competitor_ad_for_user(ad_id, user_id)
+        if not ad:
+            raise RuntimeError("Competitor ad was removed during transcription.")
+        ad.transcript = transcript
+        ad.transcript_status = "completed"
+        ad.transcript_error = None
+        db.session.commit()
+
+        record_api_request_event(
+            user_id=user_id,
+            feature="competitors",
+            provider="openai",
+            operation="transcription",
+            meta=meta,
+            metadata={
+                "job_id": job_id,
+                "ad_id": ad_id,
+                "file_size_bytes": ad.file_size_bytes,
+                "mime_type": ad.mime_type,
+                "original_name": ad.original_filename,
+                "transcription_chunk_count": meta.get("transcription_chunk_count", 1),
+                "source_transcoded": bool(meta.get("source_transcoded")),
+            },
+        )
+        return {"ad_id": ad_id, "text": transcript}
+    except Exception as exc:
+        db.session.rollback()
+        ad = _get_competitor_ad_for_user(ad_id, user_id)
+        if ad:
+            ad.transcript_status = "failed"
+            ad.transcript_error = (str(exc).strip() or "Transcription failed.")[:2000]
+            db.session.commit()
+        record_api_request_event(
+            user_id=user_id,
+            feature="competitors",
+            provider="openai",
+            operation="transcription",
+            status="failed",
+            error_message=str(exc),
+            metadata={"job_id": job_id, "ad_id": ad_id},
+        )
+        raise
+
+
+def _parse_competitor_analysis(raw_text: str) -> dict[str, Any]:
+    text = (raw_text or "").strip()
+    if text.startswith("```"):
+        text = text.strip("`")
+        if text.lower().startswith("json"):
+            text = text[4:]
+    start = text.find("{")
+    end = text.rfind("}")
+    if start == -1 or end == -1 or end <= start:
+        raise RuntimeError("AI analysis did not return valid JSON.")
+    parsed = json.loads(text[start : end + 1])
+    if not isinstance(parsed, dict):
+        raise RuntimeError("AI analysis did not return a JSON object.")
+
+    try:
+        rating = int(round(float(parsed.get("rating"))))
+    except (TypeError, ValueError):
+        rating = 0
+    rating = max(1, min(10, rating)) if rating else None
+
+    def _str_list(value) -> list[str]:
+        if not isinstance(value, list):
+            return []
+        return [str(item).strip() for item in value if str(item).strip()][:4]
+
+    return {
+        "rating": rating,
+        "overview": str(parsed.get("overview") or "").strip(),
+        "strengths": _str_list(parsed.get("strengths")),
+        "weaknesses": _str_list(parsed.get("weaknesses")),
+    }
+
+
+def _run_competitor_ad_analyze(
+    job_id: int, user_id: int | None, payload: dict[str, Any]
+) -> dict[str, Any]:
+    ad_id = int(payload.get("ad_id") or 0)
+    if not user_id:
+        raise RuntimeError("Job has no user association.")
+
+    ad = _get_competitor_ad_for_user(ad_id, user_id)
+    if not ad:
+        raise RuntimeError("Competitor ad not found.")
+
+    try:
+        openai_key = get_effective_api_key(user_id, "openai")
+        if not openai_key:
+            raise RuntimeError("OpenAI API key is not configured on the platform.")
+        transcript = (ad.transcript or "").strip()
+        if not transcript:
+            raise RuntimeError("This ad has no transcript yet. Wait for transcription to finish.")
+
+        ad.analysis_status = "processing"
+        ad.analysis_error = None
+        db.session.commit()
+
+        competitor = ad.competitor
+        product = competitor.product if competitor else None
+        context_lines = [f"Competitor name: {competitor.name}" if competitor else ""]
+        if product:
+            context_lines.append(f"This competitor competes with my product: {product.name}")
+            product_context = (product.context or "").strip()
+            if product_context:
+                context_lines.append(f"My product context: {product_context[:1500]}")
+        user_content = (
+            "Analyze this competitor's video ad script.\n"
+            + "\n".join(line for line in context_lines if line)
+            + "\n\nAd script (transcript):\n\"\"\"\n"
+            + transcript[:12000]
+            + "\n\"\"\"\n\n"
+            "Return a JSON object with exactly these keys:\n"
+            '{"rating": <integer 1-10 scoring how strong this ad is as a direct-response ad>, '
+            '"overview": "<3-4 sentence overview of the ad: its angle, hook, structure and why it works or not>", '
+            '"strengths": ["<up to 3 short bullet strengths>"], '
+            '"weaknesses": ["<up to 3 short bullet weaknesses>"]}'
+        )
+
+        raw_text, meta = openai_chat_with_meta(
+            api_key=openai_key,
+            system_prompt=_COMPETITOR_AD_ANALYSIS_SYSTEM_PROMPT,
+            user_content=user_content,
+            max_tokens=900,
+            temperature=0.4,
+        )
+        analysis = _parse_competitor_analysis(raw_text)
+
+        ad = _get_competitor_ad_for_user(ad_id, user_id)
+        if not ad:
+            raise RuntimeError("Competitor ad was removed during analysis.")
+        ad.analysis_json = json.dumps(analysis, ensure_ascii=False)
+        ad.analysis_status = "completed"
+        ad.analysis_error = None
+        db.session.commit()
+
+        record_api_request_event(
+            user_id=user_id,
+            feature="competitors",
+            provider="openai",
+            operation="competitor_ad_analysis",
+            meta=meta,
+            metadata={"job_id": job_id, "ad_id": ad_id},
+        )
+        return {"ad_id": ad_id, "analysis": analysis}
+    except Exception as exc:
+        db.session.rollback()
+        ad = _get_competitor_ad_for_user(ad_id, user_id)
+        if ad:
+            ad.analysis_status = "failed"
+            ad.analysis_error = (str(exc).strip() or "Analysis failed.")[:2000]
+            db.session.commit()
+        record_api_request_event(
+            user_id=user_id,
+            feature="competitors",
+            provider="openai",
+            operation="competitor_ad_analysis",
+            status="failed",
+            error_message=str(exc),
+            metadata={"job_id": job_id, "ad_id": ad_id},
+        )
+        raise
+
+
 def _run_job(job_id: int, user_id: int | None, job_type: str, payload: dict[str, Any]) -> dict[str, Any]:
     if job_type == JOB_TYPE_SCRIPT_TRANSCRIBE:
         return _run_script_transcription(job_id, user_id, payload)
@@ -1223,8 +1817,16 @@ def _run_job(job_id: int, user_id: int | None, job_type: str, payload: dict[str,
         return _run_avatars_generate(job_id, user_id, payload)
     if job_type == JOB_TYPE_CREATIVES_GENERATE:
         return _run_creatives_generate(job_id, user_id, payload)
+    if job_type == JOB_TYPE_LACY_GENERATE:
+        return _run_lacy_generate(job_id, user_id, payload)
+    if job_type == JOB_TYPE_SOCIAL_DOWNLOAD:
+        return _run_social_download(job_id, user_id, payload)
     if job_type == JOB_TYPE_BRAND_DNA_ANALYZE:
         return _run_brand_dna_analyze(job_id, user_id, payload)
+    if job_type == JOB_TYPE_COMPETITOR_AD_TRANSCRIBE:
+        return _run_competitor_ad_transcribe(job_id, user_id, payload)
+    if job_type == JOB_TYPE_COMPETITOR_AD_ANALYZE:
+        return _run_competitor_ad_analyze(job_id, user_id, payload)
     raise RuntimeError(f"Unsupported worker job type: {job_type}")
 
 
@@ -1256,6 +1858,10 @@ def _worker_loop(
                         JOB_TYPE_AVATARS_GENERATE,
                         JOB_TYPE_CREATIVES_GENERATE,
                         JOB_TYPE_BRAND_DNA_ANALYZE,
+                        JOB_TYPE_LACY_GENERATE,
+                        JOB_TYPE_SOCIAL_DOWNLOAD,
+                        JOB_TYPE_COMPETITOR_AD_TRANSCRIBE,
+                        JOB_TYPE_COMPETITOR_AD_ANALYZE,
                     },
                 )
                 if not claimed:

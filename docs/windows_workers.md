@@ -5,6 +5,7 @@ This project now supports a DB-backed worker queue for heavy AI tasks.
 ## What runs in background
 
 - `script_optimizer.transcribe` jobs (video/audio transcription)
+- `social_download.download` jobs (TikTok, Instagram, and Facebook downloads)
 
 The web app only uploads and queues the job. A separate worker process picks it up and processes it.
 
@@ -45,4 +46,4 @@ flask worker --queue default --concurrency 4 --poll-interval 1 --stale-timeout 7
 
 - `WORKER_UPLOAD_ROOT`: Optional path to temporary uploaded job files.
   - Default: `<instance_path>\\worker_uploads`
-
+- `SOCIAL_DOWNLOAD_COOKIE_FILE`: Optional cookies file for private or login-gated Instagram or Facebook links.

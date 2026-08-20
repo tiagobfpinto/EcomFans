@@ -1,0 +1,1062 @@
+{% extends "base.html" %}
+{% block title %}Landing Builder - EcomFans{% endblock %}
+{% block content %}
+<style>
+/* ── Shell ─────────────────────────────────────────────────── */
+.lb-shell { display:flex; flex-direction:column; min-height:calc(100vh - 40px); }
+
+/* ── Toolbar ───────────────────────────────────────────────── */
+.lb-toolbar {
+    position: relative;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:12px 20px;
+    border-bottom:1px solid rgba(255,255,255,0.06);
+    background:var(--bg-surface,#1a1a2e);
+    flex-shrink:0; gap:12px;
+}
+.lb-toolbar-left  { display:flex; align-items:center; gap:12px; }
+.lb-title  { font-size:.95rem; font-weight:600; color:var(--text-primary,#f0f0f0); }
+.lb-hint   { font-size:.74rem; color:var(--text-muted,#888); }
+.lb-toolbar-right { display:none; align-items:center; gap:8px; font-size:.78rem; color:var(--text-muted,#888); }
+.lb-toolbar-right.visible { display:flex; }
+.lb-run-dot { width:8px;height:8px;border-radius:50%;background:#6366f1;animation:lb-pulse 1s ease-in-out infinite; }
+@keyframes lb-pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.75)}}
+
+/* Add node button */
+.lb-add-btn {
+    padding:6px 14px; font-size:.82rem; font-weight:600;
+    background:rgba(99,102,241,.15); border:1px solid rgba(99,102,241,.4);
+    color:#a5b4fc; border-radius:7px; cursor:pointer; transition:all .15s;
+}
+.lb-add-btn:hover { background:rgba(99,102,241,.25); }
+
+/* Node palette */
+.lb-palette {
+    position:absolute; top:52px; left:20px; z-index:400;
+    background:#1e1e38; border:1px solid rgba(255,255,255,.12);
+    border-radius:10px; padding:6px; min-width:230px;
+    box-shadow:0 14px 40px rgba(0,0,0,.55);
+}
+.lb-palette-item {
+    display:flex; align-items:center; gap:12px;
+    padding:10px 12px; border-radius:7px; cursor:pointer;
+    transition:background .12s;
+}
+.lb-palette-item:hover { background:rgba(255,255,255,.07); }
+.lb-palette-icon {
+    width:32px; height:32px; border-radius:8px; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center; font-size:.75rem;
+}
+.lb-palette-icon--researcher { background:rgba(99,102,241,.2); color:#a5b4fc; border:1px solid rgba(99,102,241,.35); }
+.lb-palette-icon--custom     { background:rgba(245,158,11,.2); color:#fcd34d; border:1px solid rgba(245,158,11,.35); }
+.lb-palette-label { font-size:.85rem; font-weight:600; color:var(--text-primary,#f0f0f0); }
+.lb-palette-desc  { font-size:.72rem; color:var(--text-muted,#888); margin-top:1px; }
+
+/* ── Canvas ────────────────────────────────────────────────── */
+.lb-stage-wrap {
+    flex:1; overflow:auto;
+    border:1px solid rgba(255,255,255,.07); margin:14px; border-radius:10px;
+    background:
+        radial-gradient(circle at 20% 20%,rgba(99,102,241,.05) 0%,transparent 55%),
+        repeating-linear-gradient(0deg,  transparent,transparent 28px,rgba(255,255,255,.025) 28px,rgba(255,255,255,.025) 29px),
+        repeating-linear-gradient(90deg, transparent,transparent 28px,rgba(255,255,255,.025) 28px,rgba(255,255,255,.025) 29px),
+        var(--bg-page,#12121f);
+    min-height:480px;
+}
+.lb-stage { position:relative; min-width:900px; min-height:480px; }
+.lb-svg {
+    position:absolute; inset:0; width:100%; height:100%;
+    pointer-events:all; overflow:visible;
+}
+
+/* ── Flow nodes ────────────────────────────────────────────── */
+.flow-node {
+    position:absolute;
+    background:rgba(28,28,50,.94); backdrop-filter:blur(10px);
+    border:1px solid rgba(255,255,255,.1); border-radius:12px;
+    cursor:pointer; user-select:none;
+    box-shadow:0 8px 28px rgba(0,0,0,.4);
+    transition:border-color .15s,box-shadow .15s,transform .1s;
+    z-index:10;
+}
+.flow-node:hover {
+    border-color:rgba(99,102,241,.45);
+    box-shadow:0 12px 36px rgba(0,0,0,.5);
+    transform:translateY(-1px);
+}
+.flow-node.is-selected {
+    border-color:rgba(99,102,241,.85);
+    box-shadow:0 0 0 2px rgba(99,102,241,.28),0 12px 36px rgba(0,0,0,.5);
+}
+.flow-node.dragging { cursor:grabbing; transform:scale(1.03); z-index:30; }
+
+.lb-func-node { width:210px; padding:13px 14px 11px; }
+
+/* Ports */
+.lb-port {
+    position:absolute; top:50%; transform:translateY(-50%);
+    width:12px; height:12px; border-radius:50%;
+    background:rgba(99,102,241,.25); border:2px solid rgba(99,102,241,.5);
+    cursor:crosshair; z-index:20;
+    transition:background .15s,transform .15s,box-shadow .15s;
+}
+.lb-port:hover { background:rgba(99,102,241,.7); transform:translateY(-50%) scale(1.35); }
+.lb-port--in  { left:-7px; }
+.lb-port--out { right:-7px; }
+.lb-port--active {
+    background:rgba(99,102,241,.9) !important;
+    box-shadow:0 0 8px rgba(99,102,241,.7);
+}
+body.lb-connecting .lb-port--in {
+    animation:lb-port-pulse .8s ease-in-out infinite;
+}
+@keyframes lb-port-pulse{0%,100%{box-shadow:0 0 0 0 rgba(99,102,241,.5)}50%{box-shadow:0 0 0 5px rgba(99,102,241,0)}}
+
+/* Node inner layout */
+.lb-node-inner { display:flex; align-items:center; gap:11px; }
+.lb-agent-avatar {
+    width:40px; height:40px; flex-shrink:0; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+}
+.lb-avatar--researcher {
+    background:linear-gradient(135deg,rgba(99,102,241,.28),rgba(139,92,246,.28));
+    border:1.5px solid rgba(99,102,241,.45); color:#a5b4fc;
+}
+.lb-avatar--custom {
+    background:linear-gradient(135deg,rgba(245,158,11,.28),rgba(217,119,6,.28));
+    border:1.5px solid rgba(245,158,11,.45); color:#fcd34d;
+}
+.lb-node-text { flex:1; min-width:0; }
+.lb-agent-name {
+    font-size:.9rem; font-weight:700; color:#e0e7ff;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.lb-agent-role { font-size:.64rem; font-weight:600; letter-spacing:.08em; text-transform:uppercase; margin-top:1px; }
+.lb-func-node--researcher .lb-agent-role { color:#818cf8; }
+.lb-func-node--custom     .lb-agent-role { color:#f59e0b; }
+
+/* Result dot */
+.lb-result-dot {
+    width:8px; height:8px; border-radius:50%; background:#10b981;
+    display:none; flex-shrink:0; box-shadow:0 0 6px rgba(16,185,129,.6);
+}
+.lb-result-dot.visible { display:block; }
+
+/* Node footer */
+.lb-node-footer {
+    margin-top:9px; padding-top:7px;
+    border-top:1px solid rgba(255,255,255,.07);
+    font-size:.69rem; color:var(--text-muted,#888);
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+
+/* Delete button */
+.lb-node-delete {
+    position:absolute; top:5px; right:16px;
+    background:none; border:none; color:rgba(255,255,255,.25);
+    font-size:.82rem; cursor:pointer; padding:2px 4px;
+    border-radius:4px; line-height:1; display:none;
+    z-index:25;
+}
+.flow-node:hover .lb-node-delete { display:block; }
+.lb-node-delete:hover { color:#fca5a5; background:rgba(239,68,68,.15); }
+
+/* Scan shimmer on researcher */
+.lb-func-node--researcher::after {
+    content:''; position:absolute; inset:0; border-radius:12px;
+    background:linear-gradient(180deg,transparent 0%,rgba(99,102,241,.05) 50%,transparent 100%);
+    background-size:100% 200%; opacity:0; pointer-events:none;
+    animation:lb-scan 3.5s ease-in-out infinite;
+    transition:opacity .2s;
+}
+@keyframes lb-scan{0%{background-position:0 0}50%{background-position:0 100%}100%{background-position:0 0}}
+.lb-func-node--researcher:hover::after { opacity:1; }
+
+/* ── Overlay ───────────────────────────────────────────────── */
+.lb-overlay {
+    position:fixed; inset:0; z-index:300;
+    display:none; align-items:center; justify-content:center;
+    background:rgba(0,0,0,.6); backdrop-filter:blur(5px);
+    cursor:default;
+}
+.lb-overlay.open { display:flex; }
+.lb-overlay-dialog {
+    position:relative;
+    width:min(700px,calc(100vw - 32px));
+    max-height:calc(100vh - 64px); overflow-y:auto;
+    background:var(--bg-surface,#1a1a2e);
+    border:1px solid rgba(255,255,255,.1); border-radius:14px;
+    box-shadow:0 24px 80px rgba(0,0,0,.65);
+    cursor:auto;
+}
+
+/* ── Panel ─────────────────────────────────────────────────── */
+.lb-panel-header {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:18px 22px 0;
+}
+.lb-panel-agent-row { display:flex; align-items:center; gap:11px; }
+.lb-panel-avatar {
+    width:38px; height:38px; flex-shrink:0; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+}
+.lb-panel-agent-name { font-size:1rem; font-weight:700; color:var(--text-primary,#f0f0f0); }
+.lb-panel-agent-role { font-size:.72rem; margin-top:1px; }
+.lb-close-btn {
+    background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.1);
+    border-radius:6px; cursor:pointer;
+    color:var(--text-muted,#888); font-size:1.1rem; line-height:1;
+    padding:4px 8px; transition:all .15s;
+}
+.lb-close-btn:hover { background:rgba(255,255,255,.12); color:var(--text-primary,#f0f0f0); }
+.lb-panel-body { padding:16px 22px 24px; }
+
+/* ── Form ──────────────────────────────────────────────────── */
+.lb-label {
+    display:block; font-size:.78rem; font-weight:600;
+    color:var(--text-secondary,#ccc); margin-bottom:5px;
+}
+.lb-label-hint { font-weight:400; color:var(--text-muted,#888); }
+.lb-textarea {
+    width:100%; box-sizing:border-box;
+    background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.1);
+    border-radius:8px; color:var(--text-primary,#f0f0f0);
+    font-family:'Menlo','Consolas',monospace; font-size:.83rem; line-height:1.55;
+    padding:10px 12px; resize:vertical; display:block;
+    transition:border-color .15s,box-shadow .15s;
+}
+.lb-textarea:focus { outline:none; border-color:rgba(99,102,241,.55); box-shadow:0 0 0 3px rgba(99,102,241,.12); }
+.lb-textarea::placeholder { color:rgba(255,255,255,.22); }
+.lb-select {
+    width:100%; box-sizing:border-box;
+    background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.1);
+    border-radius:8px; color:var(--text-primary,#f0f0f0);
+    font-size:.85rem; padding:9px 10px; cursor:pointer;
+}
+.lb-select:focus { outline:none; border-color:rgba(99,102,241,.5); }
+.lb-select option { background:#1a1a2e; }
+.lb-provider-row { display:flex; gap:8px; }
+.lb-provider-btn {
+    flex:1; padding:9px 14px; border-radius:8px;
+    border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.04);
+    color:var(--text-muted,#888); font-size:.85rem; font-weight:500;
+    cursor:pointer; transition:all .15s;
+}
+.lb-provider-btn:hover { border-color:rgba(99,102,241,.4); color:var(--text-primary,#f0f0f0); }
+.lb-provider-btn.is-active { background:rgba(99,102,241,.18); border-color:rgba(99,102,241,.6); color:#a5b4fc; }
+.lb-run-btn {
+    display:block; width:100%; margin-top:18px; padding:13px;
+    background:linear-gradient(135deg,#6366f1,#4f46e5);
+    color:#fff; font-size:.9rem; font-weight:600;
+    border:none; border-radius:9px; cursor:pointer;
+    transition:opacity .15s,transform .1s; letter-spacing:.01em;
+}
+.lb-run-btn:hover { opacity:.9; }
+.lb-run-btn:active { transform:scale(.98); }
+.lb-run-btn:disabled { opacity:.5; cursor:not-allowed; transform:none; }
+.lb-error {
+    display:none; margin-top:9px; padding:10px 12px;
+    background:rgba(239,68,68,.12); border:1px solid rgba(239,68,68,.3);
+    border-radius:8px; color:#fca5a5; font-size:.83rem;
+}
+
+/* Incoming data box */
+.lb-incoming-box {
+    background:rgba(16,185,129,.07); border:1px solid rgba(16,185,129,.2);
+    border-radius:8px; padding:10px 12px; margin-bottom:4px;
+}
+.lb-incoming-label {
+    font-size:.7rem; font-weight:700; letter-spacing:.07em;
+    text-transform:uppercase; color:#34d399; margin-bottom:6px;
+}
+.lb-incoming-preview {
+    font-size:.78rem; color:rgba(255,255,255,.55); line-height:1.5;
+    font-family:'Menlo','Consolas',monospace;
+    white-space:pre-wrap; max-height:90px; overflow-y:auto;
+}
+
+/* Result panel */
+.lb-output-meta { font-size:.78rem; color:var(--text-muted,#888); margin-bottom:12px; }
+.lb-output-text {
+    background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08);
+    border-radius:9px; padding:14px 16px;
+    font-size:.875rem; line-height:1.75; color:var(--text-primary,#f0f0f0);
+    white-space:pre-wrap; word-break:break-word;
+    max-height:460px; overflow-y:auto;
+}
+.lb-result-actions { display:flex; gap:8px; margin-top:10px; }
+.lb-copy-btn, .lb-back-btn {
+    padding:8px 18px; border-radius:7px; font-size:.82rem; cursor:pointer;
+    transition:background .15s;
+}
+.lb-copy-btn { background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12); color:var(--text-secondary,#ccc); }
+.lb-copy-btn:hover { background:rgba(255,255,255,.1); }
+.lb-copy-btn.copied { color:#6ee7b7; border-color:rgba(110,231,183,.4); }
+.lb-back-btn { background:rgba(99,102,241,.12); border:1px solid rgba(99,102,241,.3); color:#a5b4fc; }
+.lb-back-btn:hover { background:rgba(99,102,241,.2); }
+
+/* Section spacing */
+.lb-mt { margin-top:1rem; }
+</style>
+
+<div class="lb-shell">
+    <!-- Toolbar -->
+    <div class="lb-toolbar">
+        <div class="lb-toolbar-left">
+            <span class="lb-title">Landing Builder</span>
+            <span class="lb-hint">Click a node to configure · drag output port to wire</span>
+            <button class="lb-add-btn" id="lb-add-btn" onclick="togglePalette(event)">+ Add Node</button>
+        </div>
+        <div class="lb-toolbar-right" id="lb-run-indicator">
+            <span class="lb-run-dot"></span>
+            <span>Running…</span>
+        </div>
+
+        <!-- Node palette -->
+        <div class="lb-palette" id="lb-palette" style="display:none">
+            <div class="lb-palette-item" onclick="addNode('researcher')">
+                <div class="lb-palette-icon lb-palette-icon--researcher">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                    </svg>
+                </div>
+                <div>
+                    <div class="lb-palette-label">Researcher</div>
+                    <div class="lb-palette-desc">AI research agent</div>
+                </div>
+            </div>
+            <div class="lb-palette-item" onclick="addNode('custom')">
+                <div class="lb-palette-icon lb-palette-icon--custom">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+                    </svg>
+                </div>
+                <div>
+                    <div class="lb-palette-label">Custom Agent</div>
+                    <div class="lb-palette-desc">Flexible node, custom system prompt</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Canvas -->
+    <div class="lb-stage-wrap">
+        <div class="lb-stage" id="lb-stage">
+            <svg class="lb-svg" id="lb-svg"></svg>
+            <!-- Nodes injected here by JS -->
+        </div>
+    </div>
+</div>
+
+<!-- Overlay — click the dark area outside the dialog to close -->
+<div class="lb-overlay" id="lb-overlay" onclick="if(event.target===this)closePanel()">
+    <div class="lb-overlay-dialog" onclick="event.stopPropagation()">
+
+        <!-- Node editor panel -->
+        <div id="lb-panel-node" style="display:none">
+            <div class="lb-panel-header">
+                <div class="lb-panel-agent-row">
+                    <div class="lb-panel-avatar" id="lb-panel-avatar"></div>
+                    <div>
+                        <div class="lb-panel-agent-name" id="lb-pname"></div>
+                        <div class="lb-panel-agent-role" id="lb-prole"></div>
+                    </div>
+                </div>
+                <button class="lb-close-btn" onclick="closePanel()">&#215;</button>
+            </div>
+            <div class="lb-panel-body">
+                <!-- Incoming data preview (hidden when no upstream results) -->
+                <div id="lb-incoming-section" style="display:none" class="lb-mt">
+                    <div class="lb-incoming-box">
+                        <div class="lb-incoming-label">&#x21B3; Incoming data from upstream nodes</div>
+                        <div class="lb-incoming-preview" id="lb-incoming-preview"></div>
+                    </div>
+                </div>
+
+                <!-- System prompt (custom nodes only) -->
+                <div id="lb-sysprompt-row" style="display:none" class="lb-mt">
+                    <label class="lb-label">System Prompt <span class="lb-label-hint">— role/persona for this agent</span></label>
+                    <textarea id="lb-sysprompt" class="lb-textarea" rows="2"
+                        placeholder="e.g. You are a direct-response copywriter specializing in health products."></textarea>
+                </div>
+
+                <div class="lb-mt">
+                    <label class="lb-label">Prompt</label>
+                    <textarea id="lb-node-prompt" class="lb-textarea" rows="5"
+                        placeholder="What should this agent do?"></textarea>
+                </div>
+
+                <div class="lb-mt">
+                    <label class="lb-label">Context <span class="lb-label-hint">— extra background added to the prompt</span></label>
+                    <textarea id="lb-node-context" class="lb-textarea" rows="3"
+                        placeholder="Product details, URLs, audience notes…"></textarea>
+                </div>
+
+                <div class="lb-mt">
+                    <label class="lb-label">AI Provider</label>
+                    <div class="lb-provider-row">
+                        <button class="lb-provider-btn" id="btn-openai" onclick="setPanelProvider('openai')">OpenAI</button>
+                        <button class="lb-provider-btn" id="btn-gemini" onclick="setPanelProvider('gemini')">Gemini</button>
+                    </div>
+                </div>
+
+                <div class="lb-mt">
+                    <label class="lb-label">Model</label>
+                    <select id="lb-node-model" class="lb-select" onchange="onPanelModelChange(this.value)"></select>
+                </div>
+
+                <button class="lb-run-btn" id="lb-run-btn" onclick="runNode()">Run</button>
+                <div class="lb-error" id="lb-error"></div>
+            </div>
+        </div>
+
+        <!-- Result view panel -->
+        <div id="lb-panel-result" style="display:none">
+            <div class="lb-panel-header">
+                <div class="lb-panel-agent-row">
+                    <div class="lb-panel-avatar lb-avatar--researcher"
+                         style="background:linear-gradient(135deg,rgba(16,185,129,.22),rgba(5,150,105,.22));border:1.5px solid rgba(52,211,153,.4);color:#6ee7b7">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <div class="lb-panel-agent-name" id="lb-result-title">Result</div>
+                        <div class="lb-panel-agent-role" style="color:#34d399" id="lb-result-meta"></div>
+                    </div>
+                </div>
+                <button class="lb-close-btn" onclick="closePanel()">&#215;</button>
+            </div>
+            <div class="lb-panel-body">
+                <div class="lb-output-text" id="lb-output-text"></div>
+                <div class="lb-result-actions">
+                    <button class="lb-copy-btn" id="lb-copy-btn" onclick="copyResult()">Copy</button>
+                    <button class="lb-back-btn" onclick="backToNode()">&#8592; Back to node</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────
+let nodes        = {};   // { [id]: NodeObject }
+let connections  = [];   // [ { id, fromNodeId, toNodeId } ]
+let nextNodeId   = 1;
+let nextResultId = 1;
+let connectMode  = null; // null | { fromNodeId }
+let dragState      = null;
+let lastDragMoved  = false; // persists past dragState=null so click handler can check it
+let currentPanel   = null; // null | { type:'node'|'result', nodeId, resultId? }
+let connCounter    = 0;
+
+const PROVIDER_MODELS = {
+    openai: [
+        { id:'gpt-4o',      label:'GPT-4o' },
+        { id:'gpt-4o-mini', label:'GPT-4o Mini' },
+    ],
+    gemini: [
+        { id:'gemini-2.5-flash-lite', label:'Gemini 2.5 Flash Lite' },
+        { id:'gemini-2.5-flash',      label:'Gemini 2.5 Flash' },
+        { id:'gemini-2.5-pro',        label:'Gemini 2.5 Pro' },
+    ],
+};
+
+const NODE_ICONS = {
+    researcher: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`,
+    custom:     `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>`,
+};
+
+// ── Init ───────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+    if (!loadState()) seedInitialNode();
+    renderAllNodes();
+    drawConnectors();
+    initDrag();
+
+    // Textarea → state sync
+    document.getElementById('lb-node-prompt').addEventListener('input', e => {
+        if (currentPanel?.type === 'node') nodes[currentPanel.nodeId].prompt = e.target.value;
+    });
+    document.getElementById('lb-node-context').addEventListener('input', e => {
+        if (currentPanel?.type === 'node') nodes[currentPanel.nodeId].context = e.target.value;
+    });
+    document.getElementById('lb-sysprompt').addEventListener('input', e => {
+        if (currentPanel?.type === 'node') nodes[currentPanel.nodeId].systemPrompt = e.target.value;
+    });
+
+    // ESC key
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') { cancelConnectMode(); closePalette(); closePanel(); }
+    });
+
+    // Close palette on outside click
+    document.addEventListener('click', e => {
+        const palette = document.getElementById('lb-palette');
+        if (palette.style.display !== 'none' &&
+            !e.target.closest('#lb-palette') && !e.target.closest('#lb-add-btn')) {
+            closePalette();
+        }
+    });
+
+    // Stage click while in connect mode cancels it
+    document.getElementById('lb-stage').addEventListener('click', e => {
+        if (connectMode && !e.target.closest('.lb-port')) cancelConnectMode();
+    });
+});
+
+// ── Seed / localStorage ────────────────────────────────────────
+const LS_KEY = 'lb_flow_v2';
+
+function seedInitialNode() {
+    const id = 'n' + nextNodeId++;
+    nodes[id] = makeNode(id, 'researcher', 'Scout', { x:60, y:80 });
+}
+
+function makeNode(id, type, name, position) {
+    return {
+        id, type, name,
+        provider: 'openai', model: 'gpt-4o',
+        prompt: '', context: '', systemPrompt: '',
+        results: [], position,
+        hasResult: false, running: false,
+    };
+}
+
+function saveState() {
+    try {
+        const data = { nodes, connections, nextNodeId, nextResultId };
+        localStorage.setItem(LS_KEY, JSON.stringify(data));
+    } catch(_) {}
+}
+
+function loadState() {
+    try {
+        const raw = localStorage.getItem(LS_KEY);
+        if (!raw) return false;
+        const data = JSON.parse(raw);
+        if (!data.nodes || !Object.keys(data.nodes).length) return false;
+        nodes        = data.nodes;
+        connections  = data.connections || [];
+        nextNodeId   = data.nextNodeId  || 1;
+        nextResultId = data.nextResultId || 1;
+        // Restore running=false (never persisted as true)
+        Object.values(nodes).forEach(n => { n.running = false; });
+        return true;
+    } catch(_) { return false; }
+}
+
+// ── Node rendering ─────────────────────────────────────────────
+function buildNodeHTML(node) {
+    const role = node.type === 'researcher' ? 'AI Researcher' : 'Custom Agent';
+    const provLabel = node.provider === 'openai' ? 'OpenAI' : 'Gemini';
+    const m = (PROVIDER_MODELS[node.provider]||[]).find(x=>x.id===node.model);
+    const modelLabel = m ? m.label : node.model;
+    return `
+        <div class="lb-port lb-port--in"  data-node-id="${node.id}" data-port="in"></div>
+        <div class="lb-node-inner">
+            <div class="lb-agent-avatar lb-avatar--${node.type}">${NODE_ICONS[node.type]||''}</div>
+            <div class="lb-node-text">
+                <div class="lb-agent-name">${escHtml(node.name)}</div>
+                <div class="lb-agent-role">${role}</div>
+            </div>
+            <div class="lb-result-dot${node.hasResult?' visible':''}" id="lb-dot-${node.id}"></div>
+        </div>
+        <div class="lb-node-footer" id="lb-meta-${node.id}">${escHtml(modelLabel)} · ${provLabel}</div>
+        <button class="lb-node-delete" data-node-id="${node.id}" title="Remove node">&#215;</button>
+        <div class="lb-port lb-port--out" data-node-id="${node.id}" data-port="out"></div>`;
+}
+
+function createNodeElement(node) {
+    const el = document.createElement('div');
+    el.className = `flow-node lb-func-node lb-func-node--${node.type}`;
+    el.id = `lb-node-${node.id}`;
+    el.style.cssText = `left:${node.position.x}px;top:${node.position.y}px`;
+    el.innerHTML = buildNodeHTML(node);
+    el.addEventListener('mousedown', startNodeDrag);
+    el.addEventListener('click', onNodeClick);
+    el.querySelector('.lb-port--in').addEventListener('click', onPortClick);
+    el.querySelector('.lb-port--out').addEventListener('click', onPortClick);
+    el.querySelector('.lb-node-delete').addEventListener('click', onDeleteNodeClick);
+    return el;
+}
+
+function renderAllNodes() {
+    document.querySelectorAll('.lb-func-node').forEach(el => el.remove());
+    const stage = document.getElementById('lb-stage');
+    Object.values(nodes).forEach(node => stage.appendChild(createNodeElement(node)));
+}
+
+function updateNodeMeta(id) {
+    const node = nodes[id]; if (!node) return;
+    const provLabel = node.provider === 'openai' ? 'OpenAI' : 'Gemini';
+    const m = (PROVIDER_MODELS[node.provider]||[]).find(x=>x.id===node.model);
+    const modelLabel = m ? m.label : node.model;
+    const el = document.getElementById(`lb-meta-${id}`);
+    if (el) el.textContent = `${modelLabel} · ${provLabel}`;
+}
+
+function updateResultDot(id) {
+    const el = document.getElementById(`lb-dot-${id}`);
+    if (el) el.classList.toggle('visible', !!(nodes[id]?.hasResult));
+}
+
+// ── Palette ────────────────────────────────────────────────────
+function togglePalette(e) {
+    e.stopPropagation();
+    const p = document.getElementById('lb-palette');
+    p.style.display = p.style.display === 'none' ? '' : 'none';
+}
+function closePalette() { document.getElementById('lb-palette').style.display = 'none'; }
+
+function addNode(type) {
+    closePalette();
+    const allPos = Object.values(nodes).map(n => n.position.x);
+    const maxX = allPos.length ? Math.max(...allPos) : 60;
+    const pos = { x: maxX + 300, y: 80 };
+    const id = 'n' + nextNodeId++;
+    const researcherCount = Object.values(nodes).filter(n=>n.type==='researcher').length;
+    const customCount     = Object.values(nodes).filter(n=>n.type==='custom').length;
+    const name = type === 'researcher'
+        ? (researcherCount === 0 ? 'Scout' : `Scout ${researcherCount + 1}`)
+        : (customCount === 0 ? 'Custom Agent' : `Custom Agent ${customCount + 1}`);
+    nodes[id] = makeNode(id, type, name, pos);
+    document.getElementById('lb-stage').appendChild(createNodeElement(nodes[id]));
+    drawConnectors();
+    saveState();
+    openPanel(id);
+}
+
+// ── Connect mode ───────────────────────────────────────────────
+function onPortClick(e) {
+    e.stopPropagation();
+    const port     = e.currentTarget;
+    const nodeId   = port.dataset.nodeId;
+    const portType = port.dataset.port;
+
+    if (connectMode) {
+        if (portType === 'in' && connectMode.fromNodeId !== nodeId) {
+            tryCreateConnection(connectMode.fromNodeId, nodeId);
+        }
+        cancelConnectMode();
+        return;
+    }
+    if (portType === 'out') startConnectMode(nodeId);
+}
+
+function startConnectMode(fromNodeId) {
+    connectMode = { fromNodeId };
+    document.body.classList.add('lb-connecting');
+    const port = document.querySelector(`#lb-node-${fromNodeId} .lb-port--out`);
+    if (port) port.classList.add('lb-port--active');
+    document.addEventListener('mousemove', onConnectMouseMove);
+
+    const svg = document.getElementById('lb-svg');
+    const tmpLine = document.createElementNS('http://www.w3.org/2000/svg','path');
+    tmpLine.id = 'lb-tmp-line';
+    tmpLine.setAttribute('fill','none');
+    tmpLine.setAttribute('stroke','rgba(99,102,241,.7)');
+    tmpLine.setAttribute('stroke-width','2');
+    tmpLine.setAttribute('stroke-dasharray','5 3');
+    tmpLine.style.pointerEvents = 'none';
+    svg.appendChild(tmpLine);
+}
+
+function cancelConnectMode() {
+    if (!connectMode) return;
+    document.body.classList.remove('lb-connecting');
+    const port = document.querySelector(`#lb-node-${connectMode.fromNodeId} .lb-port--out`);
+    if (port) port.classList.remove('lb-port--active');
+    document.removeEventListener('mousemove', onConnectMouseMove);
+    document.getElementById('lb-tmp-line')?.remove();
+    connectMode = null;
+}
+
+function onConnectMouseMove(e) {
+    if (!connectMode) return;
+    const fromEl = document.getElementById(`lb-node-${connectMode.fromNodeId}`);
+    if (!fromEl) return;
+    const stage = document.getElementById('lb-stage');
+    const sr = stage.getBoundingClientRect();
+    const fx = parseInt(fromEl.style.left) + fromEl.offsetWidth;
+    const fy = parseInt(fromEl.style.top)  + fromEl.offsetHeight / 2;
+    const tx = e.clientX - sr.left;
+    const ty = e.clientY - sr.top;
+    const cx = (fx + tx) / 2;
+    const tmp = document.getElementById('lb-tmp-line');
+    if (tmp) tmp.setAttribute('d', `M ${fx} ${fy} C ${cx} ${fy} ${cx} ${ty} ${tx} ${ty}`);
+}
+
+function tryCreateConnection(fromNodeId, toNodeId) {
+    if (fromNodeId === toNodeId) return;
+    if (connections.some(c => c.fromNodeId === fromNodeId && c.toNodeId === toNodeId)) return;
+    if (isAncestor(toNodeId, fromNodeId)) return; // cycle check
+    connections.push({ id: 'c' + (++connCounter), fromNodeId, toNodeId });
+    drawConnectors();
+    saveState();
+}
+
+function isAncestor(candidateId, targetId) {
+    // BFS forward from candidateId; returns true if we reach targetId (would create a cycle)
+    const visited = new Set();
+    const queue = [candidateId];
+    while (queue.length) {
+        const cur = queue.shift();
+        if (cur === targetId) return true;
+        if (visited.has(cur)) continue;
+        visited.add(cur);
+        connections.filter(c => c.fromNodeId === cur).forEach(c => queue.push(c.toNodeId));
+    }
+    return false;
+}
+
+// ── SVG connectors ─────────────────────────────────────────────
+function drawConnectors() {
+    const svg = document.getElementById('lb-svg');
+    svg.querySelectorAll('g.lb-conn').forEach(el => el.remove());
+
+    connections.forEach(conn => {
+        const fromEl = document.getElementById(`lb-node-${conn.fromNodeId}`);
+        const toEl   = document.getElementById(`lb-node-${conn.toNodeId}`);
+        if (!fromEl || !toEl) return;
+
+        const fx = parseInt(fromEl.style.left) + fromEl.offsetWidth;
+        const fy = parseInt(fromEl.style.top)  + fromEl.offsetHeight / 2;
+        const tx = parseInt(toEl.style.left);
+        const ty = parseInt(toEl.style.top)    + toEl.offsetHeight / 2;
+        const cx = (fx + tx) / 2;
+        const d  = `M ${fx} ${fy} C ${cx} ${fy} ${cx} ${ty} ${tx} ${ty}`;
+
+        const g = document.createElementNS('http://www.w3.org/2000/svg','g');
+        g.classList.add('lb-conn');
+        g.dataset.connId = conn.id;
+
+        // Wide transparent hit path
+        const hit = document.createElementNS('http://www.w3.org/2000/svg','path');
+        hit.setAttribute('d', d);
+        hit.setAttribute('fill','none');
+        hit.setAttribute('stroke','transparent');
+        hit.setAttribute('stroke-width','14');
+        hit.style.cursor = 'pointer';
+        hit.style.pointerEvents = 'stroke';
+
+        // Visible path
+        const vis = document.createElementNS('http://www.w3.org/2000/svg','path');
+        vis.setAttribute('d', d);
+        vis.setAttribute('fill','none');
+        vis.setAttribute('stroke','rgba(99,102,241,.55)');
+        vis.setAttribute('stroke-width','2');
+        vis.setAttribute('stroke-dasharray','6 4');
+        vis.style.pointerEvents = 'none';
+
+        g.appendChild(hit);
+        g.appendChild(vis);
+        g.addEventListener('contextmenu', onConnectionRightClick);
+        svg.appendChild(g);
+    });
+}
+
+function onConnectionRightClick(e) {
+    e.preventDefault();
+    const connId = e.currentTarget.dataset.connId;
+    connections = connections.filter(c => c.id !== connId);
+    drawConnectors();
+    saveState();
+}
+
+// ── Delete node ────────────────────────────────────────────────
+function onDeleteNodeClick(e) {
+    e.stopPropagation();
+    const nodeId = e.currentTarget.dataset.nodeId;
+    if (Object.keys(nodes).length <= 1) return;
+    if (currentPanel?.nodeId === nodeId) closePanel();
+    connections = connections.filter(c => c.fromNodeId !== nodeId && c.toNodeId !== nodeId);
+    document.getElementById(`lb-node-${nodeId}`)?.remove();
+    delete nodes[nodeId];
+    drawConnectors();
+    saveState();
+}
+
+// ── Incoming data ──────────────────────────────────────────────
+function getIncomingText(nodeId) {
+    const upstreamIds = connections.filter(c => c.toNodeId === nodeId).map(c => c.fromNodeId);
+    if (!upstreamIds.length) return '';
+    const parts = upstreamIds.map(uid => {
+        const n = nodes[uid];
+        if (!n || !n.results.length) return null;
+        const latest = n.results[n.results.length - 1];
+        return `[${n.name}]\n${latest.text}`;
+    }).filter(Boolean);
+    return parts.join('\n\n---\n\n');
+}
+
+// ── Panel ──────────────────────────────────────────────────────
+function openPanel(nodeId, resultId = null) {
+    currentPanel = resultId ? { type:'result', nodeId, resultId } : { type:'node', nodeId };
+    document.getElementById('lb-overlay').classList.add('open');
+    document.body.style.overflow = 'hidden';
+
+    document.getElementById('lb-panel-node').style.display   = !resultId ? '' : 'none';
+    document.getElementById('lb-panel-result').style.display = resultId  ? '' : 'none';
+
+    document.querySelectorAll('.flow-node').forEach(n => n.classList.remove('is-selected'));
+    document.getElementById(`lb-node-${nodeId}`)?.classList.add('is-selected');
+
+    if (!resultId) renderNodePanel(nodes[nodeId]);
+    else           renderResultPanel(nodeId, resultId);
+}
+
+function closePanel() {
+    document.getElementById('lb-overlay').classList.remove('open');
+    document.body.style.overflow = '';
+    document.querySelectorAll('.flow-node').forEach(n => n.classList.remove('is-selected'));
+    currentPanel = null;
+}
+
+function backToNode() {
+    if (currentPanel) openPanel(currentPanel.nodeId);
+}
+
+function renderNodePanel(node) {
+    // Header
+    const avatarEl = document.getElementById('lb-panel-avatar');
+    avatarEl.className = `lb-panel-avatar lb-avatar--${node.type}`;
+    avatarEl.style.cssText = node.type === 'researcher'
+        ? 'background:linear-gradient(135deg,rgba(99,102,241,.28),rgba(139,92,246,.28));border:1.5px solid rgba(99,102,241,.45);color:#a5b4fc'
+        : 'background:linear-gradient(135deg,rgba(245,158,11,.28),rgba(217,119,6,.28));border:1.5px solid rgba(245,158,11,.45);color:#fcd34d';
+    avatarEl.innerHTML = NODE_ICONS[node.type] || '';
+    document.getElementById('lb-pname').textContent = node.name;
+    const roleEl = document.getElementById('lb-prole');
+    roleEl.textContent = node.type === 'researcher' ? 'AI Researcher' : 'Custom Agent';
+    roleEl.style.color  = node.type === 'researcher' ? '#818cf8' : '#f59e0b';
+
+    // Incoming data
+    const incoming = getIncomingText(node.id);
+    const incSection = document.getElementById('lb-incoming-section');
+    if (incoming) {
+        incSection.style.display = '';
+        const preview = incoming.length > 300 ? incoming.slice(0, 297) + '…' : incoming;
+        document.getElementById('lb-incoming-preview').textContent = preview;
+    } else {
+        incSection.style.display = 'none';
+    }
+
+    // System prompt (custom only)
+    document.getElementById('lb-sysprompt-row').style.display = node.type === 'custom' ? '' : 'none';
+    document.getElementById('lb-sysprompt').value = node.systemPrompt;
+
+    // Form fields
+    document.getElementById('lb-node-prompt').value  = node.prompt;
+    document.getElementById('lb-node-context').value = node.context;
+
+    // Provider
+    const provBtn = (p) => document.getElementById(`btn-${p}`);
+    provBtn('openai').classList.toggle('is-active', node.provider === 'openai');
+    provBtn('gemini').classList.toggle('is-active', node.provider === 'gemini');
+    populatePanelModelSelect(node.provider, node.model);
+
+    // Run button
+    const btn = document.getElementById('lb-run-btn');
+    btn.textContent = `Run ${node.name}`;
+    btn.disabled = node.running;
+    hideError();
+}
+
+function renderResultPanel(nodeId, resultId) {
+    const node = nodes[nodeId];
+    const result = node?.results.find(r => r.id === resultId);
+    if (!result) return;
+    const provLabel = result.provider === 'openai' ? 'OpenAI' : 'Gemini';
+    document.getElementById('lb-result-title').textContent = `${node.name}'s Result`;
+    document.getElementById('lb-result-meta').textContent  = `${provLabel} · ${result.model}`;
+    document.getElementById('lb-output-text').textContent  = result.text;
+    const btn = document.getElementById('lb-copy-btn');
+    btn.textContent = 'Copy'; btn.classList.remove('copied');
+}
+
+function copyResult() {
+    if (!currentPanel) return;
+    const node = nodes[currentPanel.nodeId];
+    const result = node?.results.find(r => r.id === currentPanel.resultId);
+    if (!result) return;
+    navigator.clipboard.writeText(result.text).then(() => {
+        const btn = document.getElementById('lb-copy-btn');
+        btn.textContent = 'Copied!'; btn.classList.add('copied');
+        setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+    }).catch(()=>{});
+}
+
+// ── Panel provider/model ───────────────────────────────────────
+function setPanelProvider(p) {
+    if (!currentPanel?.nodeId) return;
+    const node = nodes[currentPanel.nodeId];
+    node.provider = p;
+    node.model    = PROVIDER_MODELS[p][0].id;
+    document.getElementById('btn-openai').classList.toggle('is-active', p === 'openai');
+    document.getElementById('btn-gemini').classList.toggle('is-active', p === 'gemini');
+    populatePanelModelSelect(p, node.model);
+    updateNodeMeta(node.id);
+    saveState();
+}
+
+function onPanelModelChange(val) {
+    if (!currentPanel?.nodeId) return;
+    nodes[currentPanel.nodeId].model = val;
+    updateNodeMeta(currentPanel.nodeId);
+    saveState();
+}
+
+function populatePanelModelSelect(provider, selectedModel) {
+    const sel = document.getElementById('lb-node-model');
+    sel.innerHTML = '';
+    (PROVIDER_MODELS[provider]||[]).forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m.id; opt.textContent = m.label;
+        if (m.id === selectedModel) opt.selected = true;
+        sel.appendChild(opt);
+    });
+}
+
+// ── Run ────────────────────────────────────────────────────────
+async function runNode() {
+    if (!currentPanel?.nodeId) return;
+    const nodeId = currentPanel.nodeId;
+    const node   = nodes[nodeId];
+    if (!node || node.running) return;
+    if (!node.prompt.trim()) { showError('Prompt is required.'); return; }
+
+    node.running = true;
+    const btn = document.getElementById('lb-run-btn');
+    btn.textContent = 'Running…'; btn.disabled = true;
+    hideError();
+    document.getElementById('lb-run-indicator').classList.add('visible');
+
+    const incomingText = getIncomingText(nodeId);
+
+    try {
+        const resp = await fetch('/landing-builder/run-node', {
+            method: 'POST',
+            headers: withCsrfHeaders({'Content-Type':'application/json'}),
+            body: JSON.stringify({
+                type:          node.type,
+                prompt:        node.prompt,
+                context:       node.context,
+                system_prompt: node.systemPrompt,
+                incoming_text: incomingText,
+                provider:      node.provider,
+                model:         node.model,
+            }),
+        });
+        const data = await resp.json();
+
+        if (!resp.ok || data.error) {
+            let msg = data.error || 'An error occurred.';
+            if (msg === 'no_openai_key') msg = 'No OpenAI API key configured. Add one in your account settings.';
+            if (msg === 'no_gemini_key') msg = 'No Gemini API key configured. Add one in your account settings.';
+            showError(msg); return;
+        }
+
+        const result = {
+            id: nextResultId++,
+            nodeId,
+            text:      data.result,
+            provider:  data.provider,
+            model:     data.model,
+            timestamp: Date.now(),
+        };
+        node.results.push(result);
+        node.hasResult = true;
+        updateResultDot(nodeId);
+        updateNodeMeta(nodeId);
+        saveState();
+        closePanel();
+        openPanel(nodeId, result.id);
+
+    } catch (_) {
+        showError('Network error. Please try again.');
+    } finally {
+        node.running = false;
+        const b = document.getElementById('lb-run-btn');
+        if (b) { b.textContent = `Run ${node.name}`; b.disabled = false; }
+        document.getElementById('lb-run-indicator').classList.remove('visible');
+    }
+}
+
+function showError(msg) { const e=document.getElementById('lb-error'); e.textContent=msg; e.style.display=''; }
+function hideError() { document.getElementById('lb-error').style.display='none'; }
+
+// ── Node click ─────────────────────────────────────────────────
+function onNodeClick(e) {
+    if (e.target.closest('.lb-port,.lb-node-delete')) return;
+    if (lastDragMoved) { lastDragMoved = false; return; } // was a drag, not a click
+    const nodeId = e.currentTarget.id.replace('lb-node-','');
+    openPanel(nodeId);
+}
+
+// ── Drag ───────────────────────────────────────────────────────
+// Uses document-level mousemove/mouseup so pointer capture never re-routes
+// the 'click' event away from the node element.
+let _dragEl = null, _dragOffX = 0, _dragOffY = 0, _dragMoved = false;
+
+function initDrag() {} // no-op — drag is wired per-node via mousedown in createNodeElement
+
+function startNodeDrag(e) {
+    if (connectMode) return;
+    if (e.button !== 0) return;
+    if (e.target.closest('.lb-port,.lb-node-delete')) return;
+    _dragEl = e.currentTarget;
+    const nr = _dragEl.getBoundingClientRect();
+    _dragOffX = e.clientX - nr.left;
+    _dragOffY = e.clientY - nr.top;
+    _dragMoved = false;
+    lastDragMoved = false;
+    _dragEl.classList.add('dragging');
+    document.addEventListener('mousemove', _onDocDragMove);
+    document.addEventListener('mouseup',   _onDocDragUp);
+}
+
+function _onDocDragMove(e) {
+    if (!_dragEl) return;
+    const stage = document.getElementById('lb-stage');
+    const sr = stage.getBoundingClientRect();
+    let x = e.clientX - sr.left - _dragOffX;
+    let y = e.clientY - sr.top  - _dragOffY;
+    x = Math.max(0, Math.min(x, stage.offsetWidth  - _dragEl.offsetWidth));
+    y = Math.max(0, Math.min(y, stage.offsetHeight - _dragEl.offsetHeight));
+    _dragEl.style.left = `${x}px`;
+    _dragEl.style.top  = `${y}px`;
+    _dragMoved = true;
+    drawConnectors();
+}
+
+function _onDocDragUp() {
+    if (!_dragEl) return;
+    _dragEl.classList.remove('dragging');
+    lastDragMoved = _dragMoved;
+    if (_dragMoved) {
+        const nodeId = _dragEl.id.replace('lb-node-','');
+        if (nodes[nodeId]) {
+            nodes[nodeId].position = {
+                x: parseInt(_dragEl.style.left) || 0,
+                y: parseInt(_dragEl.style.top)  || 0,
+            };
+            saveState();
+        }
+    }
+    _dragEl = null;
+    document.removeEventListener('mousemove', _onDocDragMove);
+    document.removeEventListener('mouseup',   _onDocDragUp);
+}
+
+// ── Helpers ────────────────────────────────────────────────────
+function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function withCsrfHeaders(base = {}) {
+    const t = document.querySelector('meta[name="csrf-token"]')?.content || '';
+    return { ...base, 'X-CSRF-Token': t };
+}
+</script>
+{% endblock %}

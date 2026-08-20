@@ -1,0 +1,291 @@
+{% extends "base.html" %}
+{% block title %}Product Images - EcomFans{% endblock %}
+{% set lacy_selected = selected_agent == 'lacy' %}
+{% block content %}
+<div class="ai-image-page product-images-page">
+    <div class="dashboard-header">
+        <span class="page-eyebrow">Tools</span>
+        <h1>Product images</h1>
+        <p>Auto generate product images by replacing competitor mockups with your saved product.</p>
+    </div>
+
+    <div class="ai-credits-bar">
+        <div class="credits-badge">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <path d="M12 6v6l4 2" />
+            </svg>
+            <span><strong id="lacy-credits-count" data-plan-tier="{{ plan_tier }}">{{ credits }}</strong> credits available</span>
+        </div>
+        <div class="credits-badge credits-breakdown">
+            <span><strong>{{ monthly_credits }}</strong> monthly + <strong>{{ extra_credits }}</strong> extra</span>
+        </div>
+        <div class="credits-actions">
+            <a class="btn btn-ghost btn-sm" href="{{ url_for('billing.upgrade_page') }}">Upgrade</a>
+            <a class="btn btn-ghost btn-sm" href="{{ url_for('billing.credits_store_page') }}">Buy Credits</a>
+        </div>
+    </div>
+
+    {% if not has_gemini_key %}
+    <div class="api-key-banner">
+        <div class="api-key-banner-content">
+            <div class="api-key-icon">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4" />
+                </svg>
+            </div>
+            <div class="api-key-text">
+                <h3>Gemini Platform Key Required</h3>
+                <p>Lacy uses the Gemini image generation pipeline. The server key must be configured.</p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Step 1: Agent Selection -->
+    <div id="pi-step-agents" class="pi-step pi-step-agents{% if lacy_selected %} pi-step-hidden{% endif %}"{% if lacy_selected %} hidden style="display:none;"{% endif %}>
+        <div class="pi-step-intro">
+            <span class="pi-step-label">Step 1 of 2</span>
+            <h2>Select an agent</h2>
+            <p>Choose which AI agent will process your product images.</p>
+        </div>
+
+        <div class="pi-agents-grid">
+            <!-- Lacy -->
+            <a href="{{ url_for('product_images.product_images_page', agent='lacy') }}" class="pi-agent-card" data-agent="lacy" role="button" aria-pressed="{{ 'true' if lacy_selected else 'false' }}">
+                <div class="pi-agent-icon-wrap">
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="3" width="18" height="18" rx="3" />
+                        <circle cx="8.5" cy="8.5" r="1.5" />
+                        <path d="m21 15-5-5L5 21" />
+                    </svg>
+                </div>
+                <div class="pi-agent-body">
+                    <span class="pi-agent-avail-badge">Available</span>
+                    <h3 class="pi-agent-name">Lacy</h3>
+                    <p class="pi-agent-desc">Auto scrape or upload competitor product images, then replace each mockup with your product using Gemini.</p>
+                    <div class="pi-agent-meta">
+                        <span class="pi-agent-meta-item">
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+                            </svg>
+                            2 credits / image
+                        </span>
+                        <span class="pi-agent-meta-item">
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                <rect x="3" y="3" width="18" height="18" rx="2" />
+                                <path d="M3 9h18M9 21V9" />
+                            </svg>
+                            Up to 10 sources
+                        </span>
+                        <span class="pi-agent-meta-item">
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                <circle cx="11" cy="11" r="8" />
+                                <path d="m21 21-4.35-4.35" />
+                            </svg>
+                            Auto scrape or upload
+                        </span>
+                    </div>
+                </div>
+                <div class="pi-agent-arrow">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path d="m9 18 6-6-6-6" />
+                    </svg>
+                </div>
+            </a>
+        </div>
+    </div>
+
+    <!-- Step 2: Configure selected agent -->
+    <div id="pi-step-config" class="pi-step pi-step-config{% if not lacy_selected %} pi-step-hidden{% endif %}"{% if not lacy_selected %} hidden style="display:none;"{% endif %}>
+
+        <div class="pi-config-breadcrumb">
+            <a href="{{ url_for('product_images.product_images_page') }}" class="pi-back-btn" data-product-images-back role="button">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="m15 18-6-6 6-6" />
+                </svg>
+                Change agent
+            </a>
+            <span class="pi-breadcrumb-sep">/</span>
+            <div class="pi-breadcrumb-current">
+                <span class="pi-breadcrumb-agent-dot"></span>
+                <span class="pi-breadcrumb-agent-name">Lacy</span>
+                <span class="pi-breadcrumb-desc">Auto product image generator</span>
+            </div>
+        </div>
+
+        <div class="prompt-card pi-config-card">
+
+            <!-- Card header -->
+            <div class="pi-config-card-header">
+                <div class="pi-config-card-iconwrap">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="3" width="18" height="18" rx="3" />
+                        <circle cx="8.5" cy="8.5" r="1.5" />
+                        <path d="m21 15-5-5L5 21" />
+                    </svg>
+                </div>
+                <div class="pi-config-card-title">
+                    <span class="page-eyebrow">Step 2 of 2 - Lacy</span>
+                    <h2>Configure your run</h2>
+                </div>
+                <span class="pi-output-pill">1 output per source image</span>
+            </div>
+
+            <!-- Section 1: Product -->
+            <div class="pi-form-section">
+                <div class="pi-form-section-hd">
+                    <span class="pi-section-num">1</span>
+                    <span class="pi-section-title">Product</span>
+                </div>
+                <div class="pi-form-section-body">
+                    <div class="avatar-field">
+                        <label for="lacy-product">Your product</label>
+                        <select id="lacy-product" class="avatar-select" onchange="updateLacyProductHint()">
+                            <option value="" data-image-count="0">Select a product...</option>
+                            {% for product in products %}
+                            <option value="{{ product.id }}" data-image-count="{{ product.images|length }}">
+                                {{ product.name }}{% if product.images|length == 0 %} (no images){% endif %}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <p class="field-hint" id="lacy-product-hint">
+                            Select a product with at least one saved product image.
+                            {% if not products %}<a href="{{ url_for('products.products_page') }}">Create one first</a>.{% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 2: Source images -->
+            <div class="pi-form-section">
+                <div class="pi-form-section-hd">
+                    <span class="pi-section-num">2</span>
+                    <span class="pi-section-title">Source images</span>
+                </div>
+                <div class="pi-form-section-body">
+                    <div class="lacy-source-mode">
+                        <div class="remix-toggle-row">
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="lacy-auto-scrape-toggle" checked onchange="toggleLacySourceMode()">
+                                <span class="toggle-slider"></span>
+                            </label>
+                            <div class="remix-label">
+                                <span class="remix-title">Auto scrape competitor URL</span>
+                                <span class="remix-description">Turn off to manually upload 1-10 source images instead.</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="lacy-auto-source" class="avatar-field" style="margin-top:14px;">
+                        <label for="lacy-competitor-url">Competitor product URL</label>
+                        <input type="url" id="lacy-competitor-url" class="avatar-text-input"
+                            placeholder="https://competitor-store.com/product-page" autocomplete="off">
+                        <p class="field-hint">Lacy imports up to 10 public images from this page.</p>
+                    </div>
+
+                    <div id="lacy-manual-source" class="avatar-field" style="display:none; margin-top:14px;">
+                        <label>Upload source images</label>
+                        <label class="upload-drop-zone lacy-upload-zone" id="lacy-upload-zone"
+                            ondragover="event.preventDefault(); this.classList.add('drag-over')"
+                            ondragleave="this.classList.remove('drag-over')"
+                            ondrop="handleLacySourceDrop(event)">
+                            <input type="file" id="lacy-source-files" accept="image/*" multiple style="display:none"
+                                onchange="handleLacySourceFileSelect(event)">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                <polyline points="17 8 12 3 7 8" />
+                                <line x1="12" y1="3" x2="12" y2="15" />
+                            </svg>
+                            <span>Click or drag 1-10 images</span>
+                        </label>
+                        <div id="lacy-manual-previews" class="lacy-source-preview-grid"></div>
+                        <p class="field-hint">PNG, JPG, WEBP, or GIF accepted.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 3: Prompt & model -->
+            <div class="pi-form-section">
+                <div class="pi-form-section-hd">
+                    <span class="pi-section-num">3</span>
+                    <span class="pi-section-title">Prompt &amp; model</span>
+                </div>
+                <div class="pi-form-section-body">
+                    <div class="avatar-field">
+                        <label for="lacy-prompt">Lacy prompt</label>
+                        <textarea id="lacy-prompt" class="avatar-textarea prompt-textarea" rows="5"
+                            placeholder="Tell Lacy how to replace competitor mockups...">{{ default_lacy_prompt }}</textarea>
+                        <p class="field-hint">Used as the base prompt for each generated product image.</p>
+                    </div>
+                    <div class="avatar-field" style="margin-top:14px;">
+                        <label for="lacy-gemini-model">Gemini image model</label>
+                        <select id="lacy-gemini-model" class="avatar-select" data-default-model="{{ default_gemini_image_model }}">
+                            <option value="{{ default_gemini_image_model }}">{{ default_gemini_image_model }}</option>
+                        </select>
+                        <p class="field-hint">Saved as your default model preference.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Run bar -->
+            <div class="prompt-controls product-images-actions pi-run-bar">
+                <span class="cost-label" id="lacy-cost-label">Cost: up to 20 credits (2 per scraped image)</span>
+                <button id="lacy-generate-btn" class="btn btn-accent" onclick="generateLacyProductImages()"
+                    {% if not has_gemini_key %}disabled{% endif %}>
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+                    </svg>
+                    Run Lacy
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading -->
+    <div id="lacy-loading" class="loading-state" style="display:none;">
+        <div class="spinner"></div>
+        <p id="lacy-loading-text">Preparing Lacy run...</p>
+    </div>
+
+    <!-- Source preview (post-run) -->
+    <div id="lacy-source-preview" class="prompt-section" style="display:none;">
+        <h2>Source images</h2>
+        <p class="field-hint" id="lacy-source-summary"></p>
+        <div id="lacy-source-preview-grid" class="lacy-source-preview-grid"></div>
+    </div>
+
+    <!-- Results -->
+    <div id="lacy-results" class="gen-results" style="display:none;">
+        <h3>Generated product images</h3>
+        <div id="lacy-results-grid" class="lacy-results-grid"></div>
+    </div>
+</div>
+
+<div id="image-modal" class="image-modal" onclick="closeModal(event)">
+    <div class="modal-content">
+        <button class="modal-close" onclick="document.getElementById('image-modal').style.display='none'">&times;</button>
+        <img id="modal-image" src="" alt="Full size image">
+    </div>
+</div>
+
+<script id="product-images-bootstrap" type="application/json">
+{
+    "lacyAnalysisPrompt": {{ lacy_analysis_prompt | tojson }},
+    "creditsRedirectUrl": {{ ('/upgrade' if plan_tier == 'free' else '/credits-store') | tojson }},
+    "productsUrl": {{ url_for('products.products_page') | tojson }},
+    "initialAgent": {{ selected_agent | tojson }}
+}
+</script>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/product_images.js', v='3') }}"></script>
+{% endblock %}

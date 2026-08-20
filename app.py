@@ -1,5 +1,6 @@
 import base64
 import hmac
+import mimetypes
 import os
 import secrets
 import time
@@ -35,9 +36,17 @@ from billing_service import get_billing_summary, refresh_cycle_if_needed
 from db import CreativeInspiration, ProductImage, User, db, migrate
 from media import media_bp
 from media_storage import save_inspiration_image, save_product_image
+from metrics import metrics_bp
+from notes import notes_bp
 from products import products_bp
+from product_images import product_images_bp
+from prompts import prompts_bp
+from landing_builder import landing_builder_bp
+from competitors import competitors_bp
 from script_optimizer import script_optimizer_bp
 from scraper import scraper_bp
+from social_downloader import social_downloader_bp
+from storyboarder import storyboarder_bp
 from utils_crypto import encrypt_api_key
 from worker_runtime import run_worker_pool
 
@@ -45,6 +54,9 @@ from worker_runtime import run_worker_pool
 landing_bp = Blueprint("landing", __name__)
 
 load_dotenv()
+mimetypes.add_type("application/javascript", ".js")
+mimetypes.add_type("application/javascript", ".mjs")
+mimetypes.add_type("text/css", ".css")
 
 _sentry_dsn = (os.getenv("SENTRY_DSN") or "").strip()
 if _sentry_dsn:
@@ -120,6 +132,9 @@ def _match_rate_limit(path: str, method: str) -> tuple[int, int] | None:
         ("/download", "POST"): (20, 60),
         ("/ai-image/generate", "POST"): (10, 60),
         ("/products/remove-background", "POST"): (12, 60),
+        ("/product-images/lacy/auto-scrape", "POST"): (8, 60),
+        ("/metrics/import", "POST"): (10, 60),
+        ("/social-downloader/items", "POST"): (20, 60),
         ("/avatars/generate", "POST"): (8, 60),
         ("/ai-creatives/generate", "POST"): (8, 60),
         ("/ai-creatives/inspirations", "POST"): (16, 60),
@@ -141,6 +156,11 @@ def _prefers_json_response() -> bool:
             "/scrape",
             "/download",
             "/media/",
+            "/metrics/",
+            "/notes/",
+            "/product-images/",
+            "/social-downloader/",
+            "/storyboarder/",
             "/brand-dna/",
         )
     ):
@@ -173,6 +193,9 @@ app.config["SQLALCHEMY_DATABASE_URI"] = get_database_uri()
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["MAX_CONTENT_LENGTH"] = (
     max(1, int(os.getenv("MAX_CONTENT_LENGTH_MB", "32"))) * 1024 * 1024
+)
+app.config["SCRIPT_TRANSCRIBE_MAX_UPLOAD_BYTES"] = (
+    max(25, int(os.getenv("SCRIPT_TRANSCRIBE_MAX_UPLOAD_MB", "500"))) * 1024 * 1024
 )
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SECURE"] = _is_truthy(
@@ -271,18 +294,33 @@ app.register_blueprint(auth_bp)
 app.register_blueprint(scraper_bp)
 app.register_blueprint(ai_image_bp)
 app.register_blueprint(products_bp)
+app.register_blueprint(product_images_bp)
+app.register_blueprint(prompts_bp)
 app.register_blueprint(avatars_bp)
 app.register_blueprint(ai_creatives_bp)
 app.register_blueprint(script_optimizer_bp)
+app.register_blueprint(competitors_bp)
 app.register_blueprint(billing_bp)
 app.register_blueprint(media_bp)
 app.register_blueprint(brand_dna_bp)
+app.register_blueprint(landing_builder_bp)
+app.register_blueprint(metrics_bp)
+app.register_blueprint(notes_bp)
+app.register_blueprint(social_downloader_bp)
+app.register_blueprint(storyboarder_bp)
 
 
 @app.before_request
 def apply_request_guardrails():
     if request.endpoint == "static":
         return None
+
+    # Flask 3.1 supports per-request limits. Larger script-optimizer uploads are
+    # streamed to worker storage, while other endpoints keep the tighter default.
+    if request.path == "/script-optimizer/transcribe" and request.method == "POST":
+        request.max_content_length = (
+            app.config["SCRIPT_TRANSCRIBE_MAX_UPLOAD_BYTES"] + 2 * 1024 * 1024
+        )
 
     session.permanent = True
     _ensure_csrf_token()
@@ -342,7 +380,11 @@ def add_security_headers(response):
 
 @app.errorhandler(RequestEntityTooLarge)
 def handle_request_too_large(_error):
-    max_mb = int(app.config.get("MAX_CONTENT_LENGTH", 0) / (1024 * 1024))
+    if request.path == "/script-optimizer/transcribe":
+        max_bytes = app.config.get("SCRIPT_TRANSCRIBE_MAX_UPLOAD_BYTES", 0)
+    else:
+        max_bytes = request.max_content_length or 0
+    max_mb = int(max_bytes / (1024 * 1024))
     if _prefers_json_response():
         return jsonify({"error": f"Request too large. Limit is {max_mb} MB."}), 413
     return f"Request too large. Limit is {max_mb} MB.", 413

@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+
+{% block title %}Page media extractor - Competitors - EcomFans{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/competitors.css', v='1') }}">
+{% endblock %}
+
+{% block content %}
+<div class="comp-page" id="image-extractor"
+    data-max-html-mb="{{ max_html_mb }}"
+    data-max-zip="{{ max_zip_images }}">
+
+    <a class="comp-back" href="{{ url_for('competitors.competitors_page') }}">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+        </svg>
+        Competitors
+    </a>
+
+    <header class="comp-header">
+        <div>
+            <span class="comp-eyebrow">Research</span>
+            <h1>Page media extractor</h1>
+            <p>Paste the full source code of any product or landing page. Every image and video is
+                pulled out in the best available quality and laid out in a grid you can download from.</p>
+        </div>
+    </header>
+
+    <div id="comp-flash" class="comp-flash" role="status" aria-live="polite" hidden></div>
+
+    <section class="comp-add-card harvest-form">
+        <div class="comp-add-heading">
+            <span class="comp-eyebrow">Source code</span>
+            <h2>Paste page source</h2>
+        </div>
+        <p class="harvest-hint">
+            On the page you want, right-click → <strong>View page source</strong> (or press
+            <kbd>Ctrl</kbd>+<kbd>U</kbd>), select all, copy, and paste it below.
+        </p>
+
+        <div class="comp-field comp-field-grow">
+            <label for="harvest-source">Page HTML source</label>
+            <textarea id="harvest-source" class="harvest-textarea" spellcheck="false"
+                placeholder="&lt;!DOCTYPE html&gt;&lt;html&gt; … paste the whole page source here …"></textarea>
+        </div>
+
+        <div class="harvest-form-row">
+            <div class="comp-field comp-field-grow">
+                <label for="harvest-base">Page URL <span class="harvest-optional">(optional — helps resolve relative image paths)</span></label>
+                <input id="harvest-base" type="url" inputmode="url" autocomplete="off"
+                    placeholder="https://competitor.com/products/best-seller">
+            </div>
+            <div class="harvest-actions">
+                <button id="harvest-clear" class="comp-btn comp-btn-ghost" type="button">Clear</button>
+                <button id="harvest-extract" class="comp-btn comp-btn-primary" type="button">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="3" width="18" height="18" rx="2"/>
+                        <circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
+                    </svg>
+                    Extract images
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <section class="harvest-results" id="harvest-results" hidden>
+        <div class="harvest-results-bar">
+            <div class="harvest-results-head">
+                <span class="comp-eyebrow">Results</span>
+                <h2 id="harvest-count">Media</h2>
+            </div>
+            <div class="harvest-filter" id="harvest-filter" role="tablist" hidden>
+                <button class="harvest-filter-btn is-active" type="button" data-filter="all" role="tab">All</button>
+                <button class="harvest-filter-btn" type="button" data-filter="image" role="tab" id="harvest-filter-images">Images</button>
+                <button class="harvest-filter-btn" type="button" data-filter="video" role="tab" id="harvest-filter-videos">Videos</button>
+            </div>
+            <button id="harvest-download-all" class="comp-btn comp-btn-primary" type="button">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+                Download all images (ZIP)
+            </button>
+        </div>
+        <div id="harvest-grid" class="harvest-grid" aria-live="polite"></div>
+    </section>
+
+    <div id="harvest-empty" class="comp-empty" hidden>
+        <div class="comp-empty-icon">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"
+                stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2"/>
+                <circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
+            </svg>
+        </div>
+        <h3>No media found</h3>
+        <p>We couldn't find any images or videos in that source code. Make sure you copied the full
+            page source, not just a fragment.</p>
+    </div>
+</div>
+
+<div class="comp-modal" id="harvest-modal" hidden>
+    <div class="comp-modal-backdrop" data-modal-close></div>
+    <div class="comp-modal-dialog harvest-modal-dialog" role="dialog" aria-modal="true">
+        <button class="comp-icon-btn comp-modal-close" type="button" data-modal-close aria-label="Close">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+        </button>
+        <div class="harvest-modal-media">
+            <img id="harvest-modal-img" alt="Extracted image preview">
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/image_extractor.js', v='1') }}"></script>
+{% endblock %}

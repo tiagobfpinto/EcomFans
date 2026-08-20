@@ -17,6 +17,10 @@ os.environ.setdefault("OPENAI_API_KEY", "test-openai-key")
 os.environ.setdefault("ALLOW_USER_API_KEYS", "false")
 os.environ.setdefault("FERNET_KEY", "")
 
+# Single file-based SQLite database shared across the whole test session.
+_DB_FILE = tempfile.mktemp(suffix=".db", prefix="ecomfans_test_")
+os.environ["DATABASE_URL"] = f"sqlite:///{_DB_FILE}"
+
 import pytest
 from datetime import timedelta
 from werkzeug.security import generate_password_hash
@@ -31,9 +35,6 @@ from billing_service import utc_now  # noqa: E402
 # StaticPool (in-memory) cannot be shared across multiple SQLAlchemy sessions
 # because concurrent transactions on a single connection conflict in SQLite.
 # A named file-based database is visible to all sessions independently.
-_DB_FILE = tempfile.mktemp(suffix=".db", prefix="ecomfans_test_")
-os.environ["DATABASE_URL"] = f"sqlite:///{_DB_FILE}"
-
 flask_app.config.update(
     {
         "TESTING": True,

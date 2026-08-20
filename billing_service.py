@@ -446,6 +446,7 @@ def get_billing_summary(user: User) -> dict:
         "plan_tier": plan_tier,
         "plan_name": plan["name"],
         "avatars_enabled": bool(plan["avatars_enabled"]),
+        "social_downloader_enabled": bool(plan["social_downloader_enabled"]),
         "monthly_plan_price_eur": str(plan["monthly_price_eur"]),
         "monthly_plan_credits": int(plan["monthly_credits"]),
         "next_credit_reset_at": user.next_credit_reset_at.isoformat() if user.next_credit_reset_at else None,
@@ -463,6 +464,7 @@ def list_plan_cards(current_plan: str) -> list[dict]:
             "price_eur": str(plan["monthly_price_eur"]),
             "monthly_credits": int(plan["monthly_credits"]),
             "avatars_enabled": bool(plan["avatars_enabled"]),
+            "social_downloader_enabled": bool(plan["social_downloader_enabled"]),
             "is_current": plan_id == current_plan,
         })
     return cards

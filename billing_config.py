@@ -8,18 +8,21 @@ PLAN_DEFINITIONS = {
         "monthly_price_eur": Decimal("0"),
         "monthly_credits": 30,
         "avatars_enabled": False,
+        "social_downloader_enabled": False,
     },
     "pro": {
         "name": "Pro",
         "monthly_price_eur": Decimal("39"),
         "monthly_credits": 600,
         "avatars_enabled": True,
+        "social_downloader_enabled": True,
     },
     "ultra": {
         "name": "Ultra",
         "monthly_price_eur": Decimal("99"),
         "monthly_credits": 2000,
         "avatars_enabled": True,
+        "social_downloader_enabled": True,
     },
 }
 

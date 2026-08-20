@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+
+{% block title %}{{ competitor.name }} - Competitors - EcomFans{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/competitors.css', v='1') }}">
+{% endblock %}
+
+{% block content %}
+<div class="comp-page" id="competitor-detail"
+    data-competitor-id="{{ competitor.id }}"
+    data-has-openai-key="{{ 'true' if has_openai_key else 'false' }}"
+    data-max-upload-mb="{{ max_upload_mb }}">
+
+    <a class="comp-back" href="{{ url_for('competitors.competitors_page') }}">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+        </svg>
+        Competitors
+    </a>
+
+    <header class="comp-header comp-detail-header">
+        <div class="comp-detail-identity">
+            <div class="comp-avatar comp-avatar-lg">{{ competitor.name[0]|upper }}</div>
+            <div>
+                <h1 id="comp-detail-name">{{ competitor.name }}</h1>
+                <div class="comp-detail-meta">
+                    <label class="comp-inline-select" title="Product this competitor competes with">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M6 2L3 6V20A2 2 0 0 0 5 22H19A2 2 0 0 0 21 20V6L18 2Z"/>
+                            <path d="M3 6H21"/>
+                        </svg>
+                        <select id="comp-detail-product">
+                            <option value="">No product assigned</option>
+                            {% for product in products %}
+                            <option value="{{ product.id }}"
+                                {% if competitor.product and competitor.product.id == product.id %}selected{% endif %}>
+                                {{ product.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </label>
+                    <span class="comp-chip comp-chip-muted" id="comp-detail-count">
+                        {{ ads|length }} ad{{ '' if ads|length == 1 else 's' }}
+                    </span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div id="comp-flash" class="comp-flash" role="status" aria-live="polite" hidden></div>
+
+    {% if not has_openai_key %}
+    <div class="comp-warning">
+        An OpenAI API key is required for transcription and AI analysis. Configure it before uploading ads.
+    </div>
+    {% endif %}
+
+    <section class="comp-upload-card" id="comp-dropzone">
+        <input id="comp-file-input" type="file" accept="video/*" multiple hidden>
+        <div class="comp-upload-inner">
+            <div class="comp-upload-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="17 8 12 3 7 8"/>
+                    <line x1="12" y1="3" x2="12" y2="15"/>
+                </svg>
+            </div>
+            <div class="comp-upload-copy">
+                <h2>Upload competitor ads</h2>
+                <p>Drop video files here or <button type="button" class="comp-browse-btn" id="comp-browse">browse</button>.
+                    Each ad is transcribed automatically. Max {{ max_upload_mb }} MB per file.</p>
+            </div>
+        </div>
+        <div id="comp-upload-list" class="comp-upload-list" hidden></div>
+    </section>
+
+    <section class="comp-ads-section">
+        <div class="comp-ads-heading">
+            <div>
+                <span class="comp-eyebrow">Swipe file</span>
+                <h2>Ads</h2>
+            </div>
+        </div>
+        <div id="comp-ads-empty" class="comp-empty" hidden>
+            <div class="comp-empty-icon">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="2" y="4" width="20" height="16" rx="2"/>
+                    <polygon points="10 9 15 12 10 15 10 9"/>
+                </svg>
+            </div>
+            <h3>No ads yet</h3>
+            <p>Upload this competitor's ads above. Transcripts are generated automatically and you can run an AI analysis on each one.</p>
+        </div>
+        <div id="comp-ads-grid" class="comp-ads-grid" aria-live="polite"></div>
+    </section>
+</div>
+
+<div class="comp-modal" id="comp-modal" hidden>
+    <div class="comp-modal-backdrop" data-modal-close></div>
+    <div class="comp-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="comp-modal-title">
+        <button class="comp-icon-btn comp-modal-close" type="button" data-modal-close aria-label="Close">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+        </button>
+        <div class="comp-modal-media">
+            <video id="comp-modal-video" controls playsinline preload="metadata"></video>
+        </div>
+        <div class="comp-modal-panel">
+            <h3 id="comp-modal-title">Ad</h3>
+            <p class="comp-modal-sub" id="comp-modal-sub"></p>
+
+            <div class="comp-panel-block">
+                <div class="comp-panel-block-head">
+                    <h4>Script</h4>
+                    <button class="comp-btn comp-btn-ghost comp-btn-sm" type="button" id="comp-copy-transcript">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="9" y="9" width="13" height="13" rx="2"/>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                        </svg>
+                        Copy
+                    </button>
+                </div>
+                <div class="comp-transcript" id="comp-modal-transcript"></div>
+            </div>
+
+            <div class="comp-panel-block">
+                <div class="comp-panel-block-head">
+                    <h4>AI analysis</h4>
+                    <button class="comp-btn comp-btn-primary comp-btn-sm" type="button" id="comp-modal-analyze">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 2l2.4 5.6L20 10l-5.6 2.4L12 18l-2.4-5.6L4 10l5.6-2.4L12 2z"/>
+                        </svg>
+                        AI analyse
+                    </button>
+                </div>
+                <div class="comp-analysis" id="comp-modal-analysis"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script type="application/json" id="comp-bootstrap">{{ ads|tojson }}</script>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/competitors.js', v='1') }}"></script>
+{% endblock %}

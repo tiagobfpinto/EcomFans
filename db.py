@@ -48,6 +48,18 @@ class User(db.Model):
 
     api_keys = db.relationship("ApiKey", backref="user", lazy=True)
     prompts = db.relationship("ImagePrompt", backref="user", lazy=True)
+    prompt_library_targets = db.relationship(
+        "PromptLibraryTarget",
+        backref="user",
+        lazy=True,
+        cascade="all, delete-orphan",
+    )
+    prompt_library_items = db.relationship(
+        "PromptLibraryItem",
+        backref="user",
+        lazy=True,
+        cascade="all, delete-orphan",
+    )
     products = db.relationship(
         "Product", backref="user", lazy=True, cascade="all, delete-orphan"
     )
@@ -77,6 +89,24 @@ class User(db.Model):
     )
     brand_dna_analyses = db.relationship(
         "BrandDNAAnalysis", backref="user", lazy=True, cascade="all, delete-orphan"
+    )
+    ad_metrics_snapshots = db.relationship(
+        "AdMetricsSnapshot", backref="user", lazy=True, cascade="all, delete-orphan"
+    )
+    social_downloads = db.relationship(
+        "SocialDownload", backref="user", lazy=True, cascade="all, delete-orphan"
+    )
+    storyboard_projects = db.relationship(
+        "StoryboardProject",
+        backref="user",
+        lazy=True,
+        cascade="all, delete-orphan",
+    )
+    note_boards = db.relationship(
+        "NoteBoard",
+        backref="user",
+        lazy=True,
+        cascade="all, delete-orphan",
     )
 
 
@@ -289,6 +319,146 @@ class ProductImage(db.Model):
     )
 
 
+class PromptLibraryTarget(db.Model):
+    __tablename__ = "prompt_library_targets"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    target_type = db.Column(db.String(20), nullable=False)
+    name = db.Column(db.String(160), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    product_id = db.Column(
+        db.Integer,
+        db.ForeignKey("products.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    created_at = db.Column(
+        db.DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at = db.Column(
+        db.DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+    product = db.relationship("Product", lazy=True)
+    prompts = db.relationship(
+        "PromptLibraryItem",
+        backref="target",
+        lazy=True,
+        cascade="all, delete-orphan",
+        order_by="PromptLibraryItem.created_at.desc()",
+    )
+    images = db.relationship(
+        "PromptLibraryTargetImage",
+        backref="target",
+        lazy=True,
+        cascade="all, delete-orphan",
+        order_by="PromptLibraryTargetImage.sort_order",
+    )
+
+    __table_args__ = (
+        db.Index(
+            "ix_prompt_library_targets_user_type_name",
+            "user_id",
+            "target_type",
+            "name",
+        ),
+        db.Index("ix_prompt_library_targets_product_id", "product_id"),
+    )
+
+
+class PromptLibraryItem(db.Model):
+    __tablename__ = "prompt_library_items"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    target_id = db.Column(
+        db.Integer,
+        db.ForeignKey("prompt_library_targets.id"),
+        nullable=True,
+    )
+    name = db.Column(db.String(160), nullable=False, default="Untitled prompt")
+    prompt_text = db.Column(db.Text, nullable=False)
+    created_at = db.Column(
+        db.DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at = db.Column(
+        db.DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+    thumbnails = db.relationship(
+        "PromptLibraryThumbnail",
+        backref="prompt",
+        lazy=True,
+        cascade="all, delete-orphan",
+        order_by="PromptLibraryThumbnail.sort_order",
+    )
+
+    __table_args__ = (
+        db.Index(
+            "ix_prompt_library_items_user_created",
+            "user_id",
+            "created_at",
+        ),
+        db.Index("ix_prompt_library_items_target_id", "target_id"),
+    )
+
+
+class PromptLibraryThumbnail(db.Model):
+    __tablename__ = "prompt_library_thumbnails"
+
+    id = db.Column(db.Integer, primary_key=True)
+    prompt_id = db.Column(
+        db.Integer,
+        db.ForeignKey("prompt_library_items.id"),
+        nullable=False,
+    )
+    sort_order = db.Column(db.Integer, nullable=False, default=1)
+    filename = db.Column(db.String(255), nullable=True)
+    mime_type = db.Column(db.String(100), nullable=False)
+    storage_path = db.Column(db.String(500), nullable=False)
+    width = db.Column(db.Integer, nullable=True)
+    height = db.Column(db.Integer, nullable=True)
+    file_size_bytes = db.Column(db.Integer, nullable=True)
+    created_at = db.Column(
+        db.DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    __table_args__ = (
+        db.Index("ix_prompt_library_thumbnails_prompt_id", "prompt_id"),
+    )
+
+
+class PromptLibraryTargetImage(db.Model):
+    __tablename__ = "prompt_library_target_images"
+
+    id = db.Column(db.Integer, primary_key=True)
+    target_id = db.Column(
+        db.Integer,
+        db.ForeignKey("prompt_library_targets.id"),
+        nullable=False,
+    )
+    sort_order = db.Column(db.Integer, nullable=False, default=1)
+    filename = db.Column(db.String(255), nullable=True)
+    mime_type = db.Column(db.String(100), nullable=False)
+    storage_path = db.Column(db.String(500), nullable=False)
+    width = db.Column(db.Integer, nullable=True)
+    height = db.Column(db.Integer, nullable=True)
+    file_size_bytes = db.Column(db.Integer, nullable=True)
+    created_at = db.Column(
+        db.DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    __table_args__ = (
+        db.Index("ix_prompt_library_target_images_target_id", "target_id"),
+    )
+
+
 class AvatarBatch(db.Model):
     __tablename__ = "avatar_batches"
 
@@ -439,4 +609,317 @@ class BrandDNAAnalysis(db.Model):
     __table_args__ = (
         db.Index("ix_brand_dna_analyses_user_id", "user_id"),
         db.Index("ix_brand_dna_analyses_worker_job_id", "worker_job_id"),
+    )
+
+
+class AdMetricsSnapshot(db.Model):
+    __tablename__ = "ad_metrics_snapshots"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    metric_date = db.Column(db.Date, nullable=False)
+    filename = db.Column(db.String(255), nullable=False)
+    reported_ad_count = db.Column(db.Integer, nullable=False, default=0)
+    has_reported_total = db.Column(db.Boolean, nullable=False, default=False)
+    total_spend = db.Column(db.Numeric(14, 2), nullable=False, default=0)
+    total_cpm = db.Column(db.Numeric(14, 4), nullable=False, default=0)
+    total_cpc = db.Column(db.Numeric(14, 4), nullable=False, default=0)
+    total_ctr = db.Column(db.Numeric(10, 4), nullable=False, default=0)
+    total_adds_to_cart = db.Column(db.Integer, nullable=False, default=0)
+    total_purchases = db.Column(db.Integer, nullable=False, default=0)
+    total_cost_per_purchase = db.Column(
+        db.Numeric(14, 4), nullable=False, default=0
+    )
+    total_roas = db.Column(db.Numeric(14, 4), nullable=False, default=0)
+    total_frequency = db.Column(db.Numeric(14, 4), nullable=False, default=0)
+    imported_at = db.Column(
+        db.DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    metrics = db.relationship(
+        "AdMetric",
+        backref="snapshot",
+        lazy=True,
+        cascade="all, delete-orphan",
+        order_by="AdMetric.spend.desc()",
+    )
+
+    __table_args__ = (
+        db.UniqueConstraint(
+            "user_id", "metric_date", name="uq_ad_metrics_snapshots_user_date"
+        ),
+        db.Index(
+            "ix_ad_metrics_snapshots_user_date", "user_id", "metric_date"
+        ),
+    )
+
+
+class AdMetric(db.Model):
+    __tablename__ = "ad_metrics"
+
+    id = db.Column(db.Integer, primary_key=True)
+    snapshot_id = db.Column(
+        db.Integer, db.ForeignKey("ad_metrics_snapshots.id"), nullable=False
+    )
+    ad_name = db.Column(db.String(255), nullable=False)
+    spend = db.Column(db.Numeric(14, 2), nullable=False, default=0)
+    cpm = db.Column(db.Numeric(14, 4), nullable=False, default=0)
+    cpc = db.Column(db.Numeric(14, 4), nullable=False, default=0)
+    ctr = db.Column(db.Numeric(10, 4), nullable=False, default=0)
+    adds_to_cart = db.Column(db.Integer, nullable=False, default=0)
+    purchases = db.Column(db.Integer, nullable=False, default=0)
+    cost_per_purchase = db.Column(
+        db.Numeric(14, 4), nullable=False, default=0
+    )
+    roas = db.Column(db.Numeric(14, 4), nullable=False, default=0)
+    frequency = db.Column(db.Numeric(14, 4), nullable=False, default=0)
+
+    __table_args__ = (
+        db.UniqueConstraint(
+            "snapshot_id", "ad_name", name="uq_ad_metrics_snapshot_ad"
+        ),
+        db.Index("ix_ad_metrics_snapshot_id", "snapshot_id"),
+    )
+
+
+class SocialDownload(db.Model):
+    __tablename__ = "social_downloads"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    worker_job_id = db.Column(
+        db.Integer, db.ForeignKey("worker_jobs.id"), nullable=True
+    )
+    source_url = db.Column(db.String(2048), nullable=False)
+    platform = db.Column(db.String(20), nullable=False)
+    status = db.Column(db.String(20), nullable=False, default="queued")
+    title = db.Column(db.String(500), nullable=True)
+    storage_path = db.Column(db.String(500), nullable=True)
+    mime_type = db.Column(db.String(100), nullable=True)
+    file_size_bytes = db.Column(db.BigInteger, nullable=True)
+    error = db.Column(db.Text, nullable=True)
+    created_at = db.Column(
+        db.DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at = db.Column(
+        db.DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+    finished_at = db.Column(db.DateTime(timezone=True), nullable=True)
+
+    worker_job = db.relationship("WorkerJob", lazy=True)
+
+    __table_args__ = (
+        db.Index(
+            "ix_social_downloads_user_created", "user_id", "created_at"
+        ),
+        db.Index(
+            "ix_social_downloads_user_status", "user_id", "status"
+        ),
+        db.Index("ix_social_downloads_worker_job_id", "worker_job_id"),
+    )
+
+
+class SavedScript(db.Model):
+    __tablename__ = "saved_scripts"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    title = db.Column(db.String(200), nullable=False, default="Untitled script")
+    transcript = db.Column(db.Text, nullable=False)
+    source_filename = db.Column(db.String(255), nullable=True)
+    thumbnail_storage_path = db.Column(db.String(500), nullable=True)
+    thumbnail_mime_type = db.Column(db.String(100), nullable=True)
+    created_at = db.Column(
+        db.DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    __table_args__ = (
+        db.Index("ix_saved_scripts_user_created", "user_id", "created_at"),
+    )
+
+
+class Competitor(db.Model):
+    __tablename__ = "competitors"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    product_id = db.Column(
+        db.Integer,
+        db.ForeignKey("products.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    name = db.Column(db.String(160), nullable=False)
+    created_at = db.Column(
+        db.DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    product = db.relationship("Product", lazy=True)
+    ads = db.relationship(
+        "CompetitorAd",
+        backref="competitor",
+        lazy=True,
+        cascade="all, delete-orphan",
+        order_by="desc(CompetitorAd.created_at)",
+    )
+
+    __table_args__ = (
+        db.Index("ix_competitors_user_created", "user_id", "created_at"),
+        db.Index("ix_competitors_product_id", "product_id"),
+    )
+
+
+class CompetitorAd(db.Model):
+    __tablename__ = "competitor_ads"
+
+    id = db.Column(db.Integer, primary_key=True)
+    competitor_id = db.Column(
+        db.Integer, db.ForeignKey("competitors.id"), nullable=False
+    )
+    original_filename = db.Column(db.String(255), nullable=True)
+    mime_type = db.Column(db.String(100), nullable=False, default="video/mp4")
+    storage_path = db.Column(db.String(500), nullable=True)
+    file_size_bytes = db.Column(db.BigInteger, nullable=True)
+
+    transcript = db.Column(db.Text, nullable=True)
+    transcript_status = db.Column(db.String(20), nullable=False, default="queued")
+    transcript_error = db.Column(db.Text, nullable=True)
+    transcribe_job_id = db.Column(
+        db.Integer, db.ForeignKey("worker_jobs.id"), nullable=True
+    )
+
+    analysis_json = db.Column(db.Text, nullable=True)
+    analysis_status = db.Column(db.String(20), nullable=False, default="none")
+    analysis_error = db.Column(db.Text, nullable=True)
+    analysis_job_id = db.Column(
+        db.Integer, db.ForeignKey("worker_jobs.id"), nullable=True
+    )
+
+    created_at = db.Column(
+        db.DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at = db.Column(
+        db.DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+    __table_args__ = (
+        db.Index("ix_competitor_ads_competitor_created", "competitor_id", "created_at"),
+    )
+
+
+class StoryboardProject(db.Model):
+    __tablename__ = "storyboard_projects"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    product_id = db.Column(
+        db.Integer,
+        db.ForeignKey("products.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    name = db.Column(db.String(160), nullable=False)
+    base_prompt = db.Column(db.Text, nullable=False, default="")
+    prompt_blocks_json = db.Column(db.Text, nullable=False, default="{}")
+    created_at = db.Column(
+        db.DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at = db.Column(
+        db.DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+    product = db.relationship("Product", lazy=True)
+    frames = db.relationship(
+        "StoryboardFrame",
+        backref="project",
+        lazy=True,
+        cascade="all, delete-orphan",
+        order_by="StoryboardFrame.sort_order",
+    )
+
+    __table_args__ = (
+        db.Index(
+            "ix_storyboard_projects_user_created",
+            "user_id",
+            "created_at",
+        ),
+        db.Index("ix_storyboard_projects_product_id", "product_id"),
+    )
+
+
+class StoryboardFrame(db.Model):
+    __tablename__ = "storyboard_frames"
+
+    id = db.Column(db.Integer, primary_key=True)
+    project_id = db.Column(
+        db.Integer,
+        db.ForeignKey("storyboard_projects.id"),
+        nullable=False,
+    )
+    sort_order = db.Column(db.Integer, nullable=False)
+    label = db.Column(db.Text, nullable=False)
+    clip_type = db.Column(db.Text, nullable=False)
+    timestamp = db.Column(db.Text, nullable=False)
+    photo = db.Column(db.Text, nullable=False)
+    transform_prompt = db.Column(db.Text, nullable=False)
+    voiceover = db.Column(db.Text, nullable=False)
+    video_prompt = db.Column(db.Text, nullable=False)
+    thumbnail_filename = db.Column(db.String(255), nullable=True)
+    thumbnail_mime_type = db.Column(db.String(100), nullable=True)
+    thumbnail_storage_path = db.Column(db.String(500), nullable=True)
+    thumbnail_width = db.Column(db.Integer, nullable=True)
+    thumbnail_height = db.Column(db.Integer, nullable=True)
+    thumbnail_file_size_bytes = db.Column(db.BigInteger, nullable=True)
+    created_at = db.Column(
+        db.DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at = db.Column(
+        db.DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+    __table_args__ = (
+        db.UniqueConstraint(
+            "project_id",
+            "sort_order",
+            name="uq_storyboard_frames_project_sort_order",
+        ),
+        db.Index("ix_storyboard_frames_project_id", "project_id"),
+    )
+
+
+class NoteBoard(db.Model):
+    __tablename__ = "note_boards"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    name = db.Column(db.String(160), nullable=False)
+    document_json = db.Column(
+        db.Text,
+        nullable=False,
+        default='{"schema_version":1,"viewport":{"x":0,"y":0,"zoom":1},"objects":[]}',
+    )
+    object_count = db.Column(db.Integer, nullable=False, default=0)
+    revision = db.Column(db.Integer, nullable=False, default=1)
+    created_at = db.Column(
+        db.DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at = db.Column(
+        db.DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+    __table_args__ = (
+        db.Index("ix_note_boards_user_updated", "user_id", "updated_at"),
     )

@@ -3,4 +3,7 @@ JOB_TYPE_AI_IMAGE_GENERATE = "ai_image.generate"
 JOB_TYPE_AVATARS_GENERATE = "avatars.generate"
 JOB_TYPE_CREATIVES_GENERATE = "ai_creatives.generate"
 JOB_TYPE_BRAND_DNA_ANALYZE = "brand_dna.analyze"
-
+JOB_TYPE_LACY_GENERATE = "lacy.generate"
+JOB_TYPE_SOCIAL_DOWNLOAD = "social_download.download"
+JOB_TYPE_COMPETITOR_AD_TRANSCRIBE = "competitors.transcribe_ad"
+JOB_TYPE_COMPETITOR_AD_ANALYZE = "competitors.analyze_ad"

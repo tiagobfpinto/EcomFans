@@ -6,9 +6,12 @@ python-dotenv==1.0.1
 requests==2.32.3
 beautifulsoup4==4.13.3
 werkzeug==3.1.3
+Pillow>=10.0.0
+imageio-ffmpeg>=0.5.1,<0.7
 rembg>=2.0.60
 cryptography>=46.0.0
 stripe>=11.0.0
 sentry-sdk[flask]>=2.0.0
 redis>=5.0.0
 gunicorn>=22.0.0
+-e ../ads/dlqueue

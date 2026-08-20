@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+
+{% block title %}Storyboarder - EcomFans{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/storyboarder.css', v='1') }}">
+{% endblock %}
+
+{% block content %}
+<div class="sb-page" id="storyboarder-list">
+    <header class="sb-page-header">
+        <div>
+            <span class="sb-eyebrow">AI Generation</span>
+            <h1>Storyboarder</h1>
+            <p>Turn structured creative briefs into editable, production-ready storyboard images.</p>
+        </div>
+        <button class="sb-btn sb-btn-primary" id="sb-new-project" type="button" {% if not products %}disabled{% endif %}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            New project
+        </button>
+    </header>
+
+    <div id="sb-flash" class="sb-flash" role="status" aria-live="polite" hidden></div>
+
+    {% if not products %}
+    <section class="sb-callout">
+        <div class="sb-callout-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18"/>
+            </svg>
+        </div>
+        <div>
+            <h2>Create a product first</h2>
+            <p>Every storyboard project must be associated with one of your products.</p>
+        </div>
+        <a class="sb-btn sb-btn-ghost" href="{{ url_for('products.products_page') }}">Create product</a>
+    </section>
+    {% endif %}
+
+    <section class="sb-projects-section">
+        <div class="sb-section-heading">
+            <div>
+                <span class="sb-eyebrow">Workspace</span>
+                <h2>Your projects</h2>
+            </div>
+            <label class="sb-filter" for="sb-product-filter">
+                <span>Filter by product</span>
+                <select id="sb-product-filter">
+                    <option value="">All products</option>
+                    {% for product in products %}
+                    <option value="{{ product.id }}">{{ product.name }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+        </div>
+
+        <div class="sb-project-grid" id="sb-project-grid">
+            {% for project in projects %}
+            <a class="sb-project-card" href="/storyboarder/projects/{{ project.id }}"
+                data-product-id="{{ project.product.id }}">
+                <div class="sb-project-cover">
+                    {% if project.thumbnail_url %}
+                    <img src="{{ project.thumbnail_url }}" alt="" loading="lazy">
+                    {% else %}
+                    <div class="sb-project-placeholder" aria-hidden="true">
+                        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+                            stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/>
+                            <polyline points="21 15 16 10 5 21"/>
+                        </svg>
+                    </div>
+                    {% endif %}
+                    <span class="sb-count-badge">{{ project.frame_count }} image{{ '' if project.frame_count == 1 else 's' }}</span>
+                </div>
+                <div class="sb-project-body">
+                    <h3>{{ project.name }}</h3>
+                    <div class="sb-project-meta">
+                        <span class="sb-product-chip">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18"/>
+                            </svg>
+                            {{ project.product.name }}
+                        </span>
+                        <span class="sb-card-arrow">
+                            Open
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
+                            </svg>
+                        </span>
+                    </div>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+
+        <div class="sb-empty" id="sb-project-empty" {% if projects %}hidden{% endif %}>
+            <div class="sb-empty-icon">
+                <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"
+                    stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/>
+                </svg>
+            </div>
+            <h3 id="sb-empty-title">No projects yet</h3>
+            <p id="sb-empty-copy">Create a project, paste your clip script, and your storyboard images will appear here.</p>
+            {% if products %}
+            <button class="sb-btn sb-btn-primary" type="button" data-open-project-modal>Create your first project</button>
+            {% endif %}
+        </div>
+    </section>
+</div>
+
+<div class="sb-modal" id="sb-project-modal" hidden>
+    <div class="sb-modal-backdrop" data-close-modal></div>
+    <section class="sb-modal-dialog sb-modal-dialog-sm" role="dialog" aria-modal="true" aria-labelledby="sb-project-modal-title">
+        <button class="sb-icon-btn sb-modal-close" type="button" data-close-modal aria-label="Close">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+        </button>
+        <div class="sb-modal-heading">
+            <span class="sb-eyebrow">New storyboard</span>
+            <h2 id="sb-project-modal-title">Create a project</h2>
+            <p>Give this storyboard a name and connect it to a product.</p>
+        </div>
+        <form class="sb-form" id="sb-project-form" autocomplete="off">
+            <label class="sb-field">
+                <span>Project name</span>
+                <input id="sb-project-name" name="name" type="text" maxlength="160" placeholder="e.g. Summer launch UGC" required>
+            </label>
+            <label class="sb-field">
+                <span>Product</span>
+                <select id="sb-project-product" name="product_id" required>
+                    <option value="" selected disabled>Select a product</option>
+                    {% for product in products %}
+                    <option value="{{ product.id }}">{{ product.name }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <p class="sb-form-error" id="sb-project-form-error" role="alert" hidden></p>
+            <div class="sb-modal-actions">
+                <button class="sb-btn sb-btn-ghost" type="button" data-close-modal>Cancel</button>
+                <button class="sb-btn sb-btn-primary" id="sb-create-project" type="submit">Create project</button>
+            </div>
+        </form>
+    </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/storyboarder.js', v='2') }}"></script>
+{% endblock %}

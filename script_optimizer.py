@@ -7,16 +7,44 @@ from flask import Blueprint, current_app, jsonify, render_template, request, ses
 
 from auth import login_required
 from billing_service import get_effective_api_key
-from db import User, db
+from db import SavedScript, User, db
+from media_storage import (
+    delete_storage_file,
+    prepare_prompt_thumbnail_image,
+    save_saved_script_thumbnail,
+)
 from worker_queue import enqueue_worker_job, get_worker_job_for_user, serialize_worker_job
 from worker_tasks import JOB_TYPE_SCRIPT_TRANSCRIBE
 
 script_optimizer_bp = Blueprint("script_optimizer", __name__)
 
-MAX_UPLOAD_BYTES = 25 * 1024 * 1024
+DEFAULT_MAX_UPLOAD_MB = 500
+MAX_UPLOAD_BYTES = DEFAULT_MAX_UPLOAD_MB * 1024 * 1024
+MAX_THUMBNAIL_BYTES = 8 * 1024 * 1024
+MAX_TRANSCRIPT_CHARS = 100_000
 WORKER_UPLOAD_SUBDIR = "worker_uploads"
 TRANSCRIBE_JOB_QUEUE = "default"
 TRANSCRIBE_JOB_MAX_ATTEMPTS = 2
+
+
+def _max_upload_bytes() -> int:
+    return int(current_app.config.get("SCRIPT_TRANSCRIBE_MAX_UPLOAD_BYTES", MAX_UPLOAD_BYTES))
+
+
+def _serialize_saved_script(script: SavedScript) -> dict:
+    return {
+        "id": script.id,
+        "title": script.title,
+        "transcript": script.transcript,
+        "source_filename": script.source_filename,
+        "has_thumbnail": bool(script.thumbnail_storage_path),
+        "thumbnail_url": (
+            f"/media/script-thumbnails/{script.id}"
+            if script.thumbnail_storage_path
+            else None
+        ),
+        "created_at": script.created_at.isoformat() if script.created_at else None,
+    }
 
 
 def _get_user():
@@ -63,10 +91,16 @@ def _persist_upload_for_worker(video_file, original_name: str) -> tuple[str, int
 def script_optimizer_page():
     user = _get_user()
     openai_key = get_effective_api_key(user.id, "openai")
+    saved_scripts = (
+        SavedScript.query.filter_by(user_id=user.id)
+        .order_by(SavedScript.created_at.desc())
+        .all()
+    )
     return render_template(
         "script_optimizer.html",
         has_openai_key=bool(openai_key),
-        max_upload_mb=MAX_UPLOAD_BYTES // (1024 * 1024),
+        max_upload_mb=_max_upload_bytes() // (1024 * 1024),
+        saved_scripts=[_serialize_saved_script(s) for s in saved_scripts],
     )
 
 
@@ -99,7 +133,8 @@ def transcribe_video():
             except OSError:
                 pass
             return jsonify({"error": "Uploaded file is empty."}), 400
-        if file_size > MAX_UPLOAD_BYTES:
+        max_upload_bytes = _max_upload_bytes()
+        if file_size > max_upload_bytes:
             try:
                 os.remove(temp_path)
             except OSError:
@@ -107,7 +142,7 @@ def transcribe_video():
             return jsonify(
                 {
                     "error": (
-                        f"Video is too large. Maximum supported size is {MAX_UPLOAD_BYTES // (1024 * 1024)} MB."
+                        f"Video is too large. Maximum supported size is {max_upload_bytes // (1024 * 1024)} MB."
                     )
                 }
             ), 400
@@ -163,3 +198,81 @@ def transcribe_video_job_status(job_id: int):
         response["message"] = "Transcribing in background."
 
     return jsonify(response)
+
+
+@script_optimizer_bp.route("/script-optimizer/scripts", methods=["GET"])
+@login_required
+def list_saved_scripts():
+    scripts = (
+        SavedScript.query.filter_by(user_id=session["user_id"])
+        .order_by(SavedScript.created_at.desc())
+        .all()
+    )
+    return jsonify({"scripts": [_serialize_saved_script(s) for s in scripts]})
+
+
+@script_optimizer_bp.route("/script-optimizer/scripts", methods=["POST"])
+@login_required
+def save_script():
+    user = _get_user()
+
+    transcript = (request.form.get("transcript") or "").strip()
+    if not transcript:
+        return jsonify({"error": "Cannot save an empty script."}), 400
+    if len(transcript) > MAX_TRANSCRIPT_CHARS:
+        return jsonify({"error": "Script is too long to save."}), 400
+
+    title = (request.form.get("title") or "").strip()
+    if not title:
+        # Derive a friendly title from the first line of the transcript.
+        first_line = transcript.splitlines()[0].strip() if transcript else ""
+        title = (first_line[:80] or "Untitled script")
+    title = title[:200]
+
+    source_filename = (request.form.get("source_filename") or "").strip()[:255] or None
+
+    script = SavedScript(
+        user_id=user.id,
+        title=title,
+        transcript=transcript,
+        source_filename=source_filename,
+    )
+    db.session.add(script)
+    db.session.flush()  # assign script.id before storing the thumbnail
+
+    thumbnail_file = request.files.get("thumbnail")
+    if thumbnail_file and thumbnail_file.filename:
+        raw = thumbnail_file.read(MAX_THUMBNAIL_BYTES + 1)
+        if len(raw) > MAX_THUMBNAIL_BYTES:
+            db.session.rollback()
+            return jsonify({"error": "Thumbnail image is too large."}), 400
+        if raw:
+            try:
+                processed, mime_type, _w, _h = prepare_prompt_thumbnail_image(raw)
+                storage_path = save_saved_script_thumbnail(
+                    user.id, script.id, mime_type, processed
+                )
+                script.thumbnail_storage_path = storage_path
+                script.thumbnail_mime_type = mime_type
+            except (ValueError, RuntimeError):
+                # A bad/undecodable frame shouldn't block saving the script itself.
+                script.thumbnail_storage_path = None
+                script.thumbnail_mime_type = None
+
+    db.session.commit()
+    return jsonify({"script": _serialize_saved_script(script)}), 201
+
+
+@script_optimizer_bp.route("/script-optimizer/scripts/<int:script_id>", methods=["DELETE"])
+@login_required
+def delete_saved_script(script_id: int):
+    script = SavedScript.query.filter_by(
+        id=script_id, user_id=session["user_id"]
+    ).first()
+    if not script:
+        return jsonify({"error": "Script not found."}), 404
+
+    delete_storage_file(script.thumbnail_storage_path)
+    db.session.delete(script)
+    db.session.commit()
+    return jsonify({"ok": True})

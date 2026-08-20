@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+
+{% block title %}{{ board.name }} - Notes - EcomFans{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/notes.css', v='1') }}">
+{% endblock %}
+
+{% block content %}
+<div class="notes-editor" id="notes-editor" data-board-id="{{ board.id }}">
+    <header class="notes-editor-header">
+        <a class="notes-editor-back" href="{{ url_for('notes.notes_page') }}" title="Back to Notes" aria-label="Back to Notes">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>
+        </a>
+        <div class="notes-title-wrap">
+            <input class="notes-board-title" id="notes-board-title" type="text" maxlength="160" value="{{ board.name }}" aria-label="Board name">
+            <div class="notes-save-state" id="notes-save-state" role="status" aria-live="polite">
+                <span class="notes-save-dot"></span><span id="notes-save-label">Saved</span>
+                <button id="notes-save-retry" type="button" hidden>Retry</button>
+            </div>
+        </div>
+        <div class="notes-header-actions">
+            <button class="notes-icon-btn" id="notes-undo" type="button" title="Undo (Ctrl+Z)" aria-label="Undo" disabled>
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 7 4 12l5 5"/><path d="M20 17a8 8 0 0 0-8-8H4"/></svg>
+            </button>
+            <button class="notes-icon-btn" id="notes-redo" type="button" title="Redo (Ctrl+Shift+Z)" aria-label="Redo" disabled>
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 7 5 5-5 5"/><path d="M4 17a8 8 0 0 1 8-8h8"/></svg>
+            </button>
+            <span class="notes-header-divider"></span>
+            <button class="notes-icon-btn notes-icon-btn-danger" id="notes-delete-board" type="button" title="Delete board" aria-label="Delete board">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
+            </button>
+        </div>
+    </header>
+
+    <div class="notes-recovery" id="notes-recovery" hidden>
+        <div><strong>Unsaved work found</strong><span>A local recovery copy is available for this board.</span></div>
+        <button type="button" data-recovery="discard">Discard</button>
+        <button type="button" class="is-primary" data-recovery="restore">Restore</button>
+    </div>
+
+    <div class="notes-recovery notes-conflict" id="notes-conflict" hidden>
+        <div><strong>This board changed in another tab</strong><span>Choose which version you want to continue with.</span></div>
+        <button type="button" data-conflict="local">Keep mine</button>
+        <button type="button" class="is-primary" data-conflict="remote">Load newer</button>
+    </div>
+
+    <div class="notes-editor-body">
+        <nav class="notes-toolrail" aria-label="Board tools">
+            <button class="notes-tool is-active" type="button" data-tool="select" title="Select (V)" aria-label="Select tool">
+                <svg viewBox="0 0 24 24"><path d="m5 3 13 9-6 1.5L9 19z"/></svg><span>Select</span>
+            </button>
+            <button class="notes-tool" type="button" data-tool="hand" title="Hand (H or Space)" aria-label="Hand tool">
+                <svg viewBox="0 0 24 24"><path d="M7 11V6a1.5 1.5 0 0 1 3 0v4-6a1.5 1.5 0 0 1 3 0v6-5a1.5 1.5 0 0 1 3 0v6-3a1.5 1.5 0 0 1 3 0v6c0 4-3 7-7 7h-1c-2 0-3.5-.8-4.7-2.3L3 14.5A1.7 1.7 0 0 1 5.5 12L7 13.5"/></svg><span>Hand</span>
+            </button>
+            <span class="notes-tool-divider"></span>
+            <button class="notes-tool" type="button" data-tool="text" title="Text box (T)" aria-label="Text box tool">
+                <svg viewBox="0 0 24 24"><path d="M5 5h14M12 5v14M8 19h8"/></svg><span>Text</span>
+            </button>
+            <button class="notes-tool" type="button" data-tool="sticky" title="Sticky note (N)" aria-label="Sticky note tool">
+                <svg viewBox="0 0 24 24"><path d="M5 3h14v12l-6 6H5z"/><path d="M13 21v-6h6"/></svg><span>Sticky</span>
+            </button>
+            <button class="notes-tool" type="button" data-tool="rectangle" title="Rectangle (R)" aria-label="Rectangle tool">
+                <svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="2"/></svg><span>Rect</span>
+            </button>
+            <button class="notes-tool" type="button" data-tool="ellipse" title="Circle (O)" aria-label="Circle tool">
+                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/></svg><span>Circle</span>
+            </button>
+            <button class="notes-tool" type="button" data-tool="line" title="Line (L)" aria-label="Line tool">
+                <svg viewBox="0 0 24 24"><path d="M5 19 19 5"/></svg><span>Line</span>
+            </button>
+            <button class="notes-tool" type="button" data-tool="arrow" title="Arrow (A)" aria-label="Arrow tool">
+                <svg viewBox="0 0 24 24"><path d="M5 19 19 5M12 5h7v7"/></svg><span>Arrow</span>
+            </button>
+        </nav>
+
+        <main class="notes-stage" id="notes-stage" tabindex="0" aria-label="Infinite notes canvas">
+            <svg class="notes-canvas" id="notes-canvas" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <g id="notes-world"></g>
+            </svg>
+            <textarea class="notes-text-editor" id="notes-text-editor" aria-label="Edit text" hidden></textarea>
+            <div class="notes-canvas-hint" id="notes-canvas-hint">
+                <strong>Build your board</strong>
+                <span>Choose a tool or press T to add your first thought.</span>
+            </div>
+            <div class="notes-zoom-controls" aria-label="Zoom controls">
+                <button type="button" id="notes-zoom-out" title="Zoom out" aria-label="Zoom out">−</button>
+                <button type="button" id="notes-zoom-label" title="Reset zoom">100%</button>
+                <button type="button" id="notes-zoom-in" title="Zoom in" aria-label="Zoom in">+</button>
+                <button type="button" id="notes-fit" title="Fit content" aria-label="Fit board content">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5"/></svg>
+                </button>
+            </div>
+        </main>
+
+        <aside class="notes-inspector" id="notes-inspector">
+            <div class="notes-inspector-empty" id="notes-inspector-empty">
+                <span class="notes-inspector-icon">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="m5 3 13 9-6 1.5L9 19z"/></svg>
+                </span>
+                <strong>Nothing selected</strong>
+                <p>Select an object to change its style and position.</p>
+            </div>
+            <div class="notes-inspector-panel" id="notes-inspector-panel" hidden>
+                <div class="notes-inspector-heading">
+                    <div><span>Selected</span><strong id="notes-selection-type">Shape</strong></div>
+                    <button class="notes-icon-btn notes-icon-btn-danger" type="button" id="notes-delete-object" title="Delete object" aria-label="Delete selected object">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
+                    </button>
+                </div>
+                <section class="notes-inspector-section" id="notes-fill-section">
+                    <label class="notes-control"><span>Fill</span><input id="notes-fill" type="color" value="#7c6de8"></label>
+                    <label class="notes-check"><input id="notes-no-fill" type="checkbox"><span>No fill</span></label>
+                </section>
+                <section class="notes-inspector-section">
+                    <label class="notes-control"><span>Border</span><input id="notes-stroke" type="color" value="#b5adf5"></label>
+                    <label class="notes-control"><span>Width</span><input id="notes-stroke-width" type="range" min="0" max="12" step="1" value="2"><output id="notes-stroke-width-value">2</output></label>
+                    <label class="notes-control"><span>Opacity</span><input id="notes-opacity" type="range" min="5" max="100" step="5" value="100"><output id="notes-opacity-value">100%</output></label>
+                </section>
+                <section class="notes-inspector-section" id="notes-text-section" hidden>
+                    <label class="notes-control"><span>Text</span><input id="notes-text-color" type="color" value="#1d1b2d"></label>
+                    <label class="notes-control notes-control-input"><span>Size</span><input id="notes-font-size" type="number" min="8" max="240" value="24"></label>
+                    <label class="notes-control notes-control-input"><span>Weight</span>
+                        <select id="notes-font-weight"><option value="400">Regular</option><option value="500">Medium</option><option value="600">Semibold</option><option value="700">Bold</option></select>
+                    </label>
+                    <div class="notes-segmented" aria-label="Text alignment">
+                        <button type="button" data-align="left">Left</button><button type="button" data-align="center">Center</button><button type="button" data-align="right">Right</button>
+                    </div>
+                </section>
+                <section class="notes-inspector-section">
+                    <span class="notes-control-label">Layer</span>
+                    <div class="notes-layer-grid">
+                        <button type="button" data-layer="front">Bring to front</button>
+                        <button type="button" data-layer="forward">Bring forward</button>
+                        <button type="button" data-layer="backward">Send backward</button>
+                        <button type="button" data-layer="back">Send to back</button>
+                    </div>
+                </section>
+            </div>
+        </aside>
+    </div>
+</div>
+
+<script id="notes-bootstrap" type="application/json">{{ board|tojson }}</script>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/notes.js', v='1') }}"></script>
+{% endblock %}

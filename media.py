@@ -7,15 +7,24 @@ from auth import login_required
 from db import (
     AvatarBatch,
     AvatarResult,
+    Competitor,
+    CompetitorAd,
     CreativeBatch,
     CreativeInspiration,
     CreativeResult,
     ImageGeneration,
     ImagePrompt,
+    PromptLibraryItem,
+    PromptLibraryTarget,
+    PromptLibraryTargetImage,
+    PromptLibraryThumbnail,
     Product,
     ProductImage,
+    SavedScript,
+    StoryboardFrame,
+    StoryboardProject,
 )
-from media_storage import read_storage_bytes
+from media_storage import read_storage_bytes, resolve_storage_path
 
 
 media_bp = Blueprint("media", __name__)
@@ -94,6 +103,93 @@ def inspiration_image(inspiration_id: int):
     )
 
 
+@media_bp.route("/media/prompt-thumbnails/<int:thumbnail_id>")
+@login_required
+def prompt_thumbnail(thumbnail_id: int):
+    thumbnail = (
+        PromptLibraryThumbnail.query
+        .join(PromptLibraryItem, PromptLibraryItem.id == PromptLibraryThumbnail.prompt_id)
+        .filter(
+            PromptLibraryThumbnail.id == thumbnail_id,
+            PromptLibraryItem.user_id == session["user_id"],
+        )
+        .first()
+    )
+    if not thumbnail:
+        abort(404)
+
+    return _send_image_payload(
+        storage_path=thumbnail.storage_path,
+        fallback_b64=None,
+        mime_type=thumbnail.mime_type,
+        download_name=thumbnail.filename or f"prompt_thumbnail_{thumbnail.id}",
+    )
+
+
+@media_bp.route("/media/prompt-target-images/<int:image_id>")
+@login_required
+def prompt_target_image(image_id: int):
+    image = (
+        PromptLibraryTargetImage.query
+        .join(PromptLibraryTarget, PromptLibraryTarget.id == PromptLibraryTargetImage.target_id)
+        .filter(
+            PromptLibraryTargetImage.id == image_id,
+            PromptLibraryTarget.user_id == session["user_id"],
+        )
+        .first()
+    )
+    if not image:
+        abort(404)
+
+    return _send_image_payload(
+        storage_path=image.storage_path,
+        fallback_b64=None,
+        mime_type=image.mime_type,
+        download_name=image.filename or f"prompt_target_image_{image.id}",
+    )
+
+
+@media_bp.route("/media/storyboard-thumbnails/<int:frame_id>")
+@login_required
+def storyboard_thumbnail(frame_id: int):
+    frame = (
+        StoryboardFrame.query
+        .join(StoryboardProject, StoryboardProject.id == StoryboardFrame.project_id)
+        .filter(
+            StoryboardFrame.id == frame_id,
+            StoryboardProject.user_id == session["user_id"],
+        )
+        .first()
+    )
+    if not frame or not frame.thumbnail_storage_path:
+        abort(404)
+
+    return _send_image_payload(
+        storage_path=frame.thumbnail_storage_path,
+        fallback_b64=None,
+        mime_type=frame.thumbnail_mime_type or "image/webp",
+        download_name=frame.thumbnail_filename or f"storyboard_{frame.id}",
+    )
+
+
+@media_bp.route("/media/script-thumbnails/<int:script_id>")
+@login_required
+def script_thumbnail(script_id: int):
+    script = SavedScript.query.filter_by(
+        id=script_id,
+        user_id=session["user_id"],
+    ).first()
+    if not script or not script.thumbnail_storage_path:
+        abort(404)
+
+    return _send_image_payload(
+        storage_path=script.thumbnail_storage_path,
+        fallback_b64=None,
+        mime_type=script.thumbnail_mime_type or "image/jpeg",
+        download_name=f"script_thumbnail_{script.id}",
+    )
+
+
 @media_bp.route("/media/ai-image-generations/<int:generation_id>")
 @login_required
 def ai_image_generation_image(generation_id: int):
@@ -157,6 +253,37 @@ def avatar_result_after_image(result_id: int):
         fallback_b64=result.after_image,
         mime_type="image/png",
         download_name=f"avatar_after_{result.id}.png",
+    )
+
+
+@media_bp.route("/media/competitor-ads/<int:ad_id>")
+@login_required
+def competitor_ad_video(ad_id: int):
+    ad = (
+        CompetitorAd.query
+        .join(Competitor, Competitor.id == CompetitorAd.competitor_id)
+        .filter(
+            CompetitorAd.id == ad_id,
+            Competitor.user_id == session["user_id"],
+        )
+        .first()
+    )
+    if not ad or not ad.storage_path:
+        abort(404)
+
+    try:
+        file_path = resolve_storage_path(ad.storage_path)
+    except ValueError:
+        abort(404)
+    if not file_path.is_file():
+        abort(404)
+
+    return send_file(
+        file_path,
+        mimetype=ad.mime_type or "video/mp4",
+        as_attachment=False,
+        download_name=ad.original_filename or f"competitor_ad_{ad.id}.mp4",
+        conditional=True,
     )
 
 

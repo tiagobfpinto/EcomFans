@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block title %}Shorts Downloader - EcomFans{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/social_downloader.css', v='20260622') }}">
+{% endblock %}
+
+{% block content %}
+<div
+    class="social-downloader"
+    data-has-access="{{ 'true' if has_access else 'false' }}"
+    data-max-urls="{{ max_urls }}"
+>
+    {% if not has_access %}
+    <section class="social-lock-card">
+        <div class="social-lock-content">
+            <div class="social-premium-pill">Premium tool</div>
+            <h1>Shorts Downloader</h1>
+            <p>Queue TikTok, Instagram, and Facebook links in the background and download the files when they are ready.</p>
+            <div class="social-lock-features">
+                <span>TikTok, Instagram, and Facebook</span>
+                <span>Background queue</span>
+                <span>Clean video files when available</span>
+            </div>
+            <a class="social-upgrade-button" href="{{ url_for('billing.upgrade_page', feature='social_downloader') }}">
+                Unlock with Pro
+            </a>
+        </div>
+    </section>
+    {% else %}
+    <header class="social-page-header">
+        <div>
+            <div class="social-premium-pill">Premium</div>
+            <h1>Shorts Downloader</h1>
+            <p>Paste TikTok, Instagram, or Facebook links. The worker handles the downloads.</p>
+        </div>
+        <div class="social-platforms" aria-label="Supported platforms">
+            <span>TikTok</span>
+            <span>Instagram</span>
+            <span>Facebook</span>
+        </div>
+    </header>
+
+    <div id="social-flash" class="social-flash" role="status" aria-live="polite" hidden></div>
+
+    <section class="social-composer-card">
+        <div class="social-composer-heading">
+            <div>
+                <span class="social-eyebrow">New batch</span>
+                <h2>Paste links</h2>
+            </div>
+            <span class="social-limit"><strong id="social-link-count">0</strong>/{{ max_urls }} links</span>
+        </div>
+        <label class="visually-hidden" for="social-urls">TikTok, Instagram, or Facebook links</label>
+        <textarea
+            id="social-urls"
+            rows="5"
+            placeholder="https://www.tiktok.com/@creator/video/...&#10;https://www.instagram.com/reel/...&#10;https://www.facebook.com/share/r/..."
+            spellcheck="false"
+            autocomplete="off"
+        ></textarea>
+        <div class="social-composer-footer">
+            <p>One link per line. Only download content you own or have permission to use.</p>
+            <button id="social-submit" type="button" disabled>Add to queue</button>
+        </div>
+    </section>
+
+    <section class="social-stats" aria-label="Download queue summary">
+        <article>
+            <div><strong id="social-stat-active">0</strong><span>Active</span></div>
+        </article>
+        <article>
+            <div><strong id="social-stat-complete">0</strong><span>Completed</span></div>
+        </article>
+        <article>
+            <div><strong id="social-stat-failed">0</strong><span>Failed</span></div>
+        </article>
+    </section>
+
+    <section class="social-queue-section">
+        <div class="social-queue-heading">
+            <div>
+                <span class="social-eyebrow">Downloads</span>
+                <h2>Queue</h2>
+            </div>
+            <div class="social-queue-actions">
+                <button id="social-refresh" class="social-button" type="button">Refresh</button>
+                <button id="social-clear" class="social-button social-button-danger" type="button">Clear queue</button>
+            </div>
+        </div>
+
+        <div id="social-loading" class="social-loading">
+            <span></span><span></span><span></span>
+        </div>
+
+        <div id="social-empty" class="social-empty" hidden>
+            <h3>Your queue is empty</h3>
+            <p>Add a link above to start a download.</p>
+        </div>
+
+        <div id="social-items" class="social-items" aria-live="polite"></div>
+    </section>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if has_access %}
+<script src="{{ url_for('static', filename='js/social_downloader.js', v='20260622') }}"></script>
+{% endif %}
+{% endblock %}

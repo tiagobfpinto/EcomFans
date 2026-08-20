@@ -26,6 +26,22 @@
         </div>
     </div>
     {% endif %}
+    {% if feature == 'social_downloader' %}
+    <div class="api-key-banner">
+        <div class="api-key-banner-content">
+            <div class="api-key-icon">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/>
+                </svg>
+            </div>
+            <div class="api-key-text">
+                <h3>Shorts Downloader requires Pro or Ultra</h3>
+                <p>Upgrade to queue watermark-free TikTok, Instagram, and Facebook downloads.</p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 
     <!-- Credits summary -->
     <div class="billing-summary-bar">
@@ -68,12 +84,14 @@
                 <li>{% if plan.avatars_enabled %}Avatar generation{% else %}<span style="opacity:.5;">Avatars locked</span>{% endif %}</li>
                 <li>Script optimizer</li>
                 <li>Brand DNA analysis</li>
+                <li>{% if plan.social_downloader_enabled %}TikTok, Instagram & Facebook downloader{% else %}<span style="opacity:.5;">Shorts downloader locked</span>{% endif %}</li>
                 {% else %}
                 <li>AI Image generation</li>
                 <li>AI Creatives generation</li>
                 <li style="opacity:.45;text-decoration:line-through;">Avatar generation</li>
                 <li>Script optimizer</li>
                 <li>Brand DNA analysis</li>
+                <li style="opacity:.45;text-decoration:line-through;">TikTok, Instagram & Facebook downloader</li>
                 {% endif %}
                 {% if plan.id == 'ultra' %}
                 <li>Priority support</li>

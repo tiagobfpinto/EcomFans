@@ -1,0 +1,594 @@
+{% extends "base.html" %}
+{% block title %}Prompts - EcomFans{% endblock %}
+{% block content %}
+<div class="prompt-menu-page">
+    <div class="dashboard-header prompt-menu-header">
+        <span class="page-eyebrow">Prompt Library</span>
+        <h1>Prompts</h1>
+    </div>
+
+    <section class="prompt-menu-rows" aria-label="Prompt groups">
+        <div class="prompt-menu-row">
+            <div class="prompt-menu-row-main">
+                <h2>Character prompts</h2>
+                {% if character_targets %}
+                <p>{{ character_targets|length }} character{% if character_targets|length != 1 %}s{% endif %} saved.</p>
+                <div class="prompt-menu-chips">
+                    {% for target in character_targets[:6] %}
+                    <span class="prompt-menu-chip">
+                        {% if target.images %}
+                        <img src="{{ url_for('media.prompt_target_image', image_id=target.images[0].id) }}"
+                            alt="{{ target.name }}" loading="lazy" decoding="async">
+                        {% endif %}
+                        {{ target.name }}
+                        <strong>{{ target_prompt_counts.get(target.id, 0) }}</strong>
+                    </span>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p>No characters yet.</p>
+                {% endif %}
+            </div>
+            <button type="button" class="prompt-row-add" onclick="openTargetModal('character')" title="Create character">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                    stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <line x1="12" y1="5" x2="12" y2="19" />
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+            </button>
+        </div>
+
+        <div class="prompt-menu-row">
+            <div class="prompt-menu-row-main">
+                <h2>Product Prompts</h2>
+                {% if products %}
+                <p>{{ products|length }} product{% if products|length != 1 %}s{% endif %} available.</p>
+                <div class="prompt-menu-chips">
+                    {% for product in products[:6] %}
+                    <span class="prompt-menu-chip">
+                        {% if product.images %}
+                        <img src="{{ url_for('media.product_image', image_id=product.images[0].id) }}"
+                            alt="{{ product.name }}" loading="lazy" decoding="async">
+                        {% endif %}
+                        {{ product.name }}
+                        <strong>{{ product_prompt_counts.get(product.id, 0) }}</strong>
+                    </span>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p>No products yet.</p>
+                {% endif %}
+            </div>
+            <button type="button" class="prompt-row-add" onclick="openTargetModal('product')" title="Create product">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                    stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <line x1="12" y1="5" x2="12" y2="19" />
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+            </button>
+        </div>
+
+        <div class="prompt-menu-row">
+            <div class="prompt-menu-row-main">
+                <h2>background prompts</h2>
+                {% if background_targets %}
+                <p>{{ background_targets|length }} background{% if background_targets|length != 1 %}s{% endif %} saved.</p>
+                <div class="prompt-menu-chips">
+                    {% for target in background_targets[:6] %}
+                    <span class="prompt-menu-chip">
+                        {% if target.images %}
+                        <img src="{{ url_for('media.prompt_target_image', image_id=target.images[0].id) }}"
+                            alt="{{ target.name }}" loading="lazy" decoding="async">
+                        {% endif %}
+                        {{ target.name }}
+                        <strong>{{ target_prompt_counts.get(target.id, 0) }}</strong>
+                    </span>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p>No backgrounds yet.</p>
+                {% endif %}
+            </div>
+            <button type="button" class="prompt-row-add" onclick="openTargetModal('background')" title="Create background">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                    stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <line x1="12" y1="5" x2="12" y2="19" />
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+            </button>
+        </div>
+    </section>
+
+    <section class="prompt-recent-section">
+        <div class="prompt-section-title">
+            <h2>Recent prompts</h2>
+            <span>{{ recent_prompts|length }} total</span>
+        </div>
+
+        {% if recent_prompts %}
+        <div class="prompt-recent-grid">
+            {% for prompt in recent_prompts %}
+            <article class="prompt-recent-card">
+                {% if prompt.thumbnails %}
+                <div class="prompt-preview-strip prompt-preview-count-{{ prompt.thumbnails|length }}">
+                    {% for thumbnail in prompt.thumbnails %}
+                    <div class="prompt-preview-image">
+                        <img src="{{ url_for('media.prompt_thumbnail', thumbnail_id=thumbnail.id) }}"
+                            alt="Prompt thumbnail {{ loop.index }}" loading="lazy" decoding="async">
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="prompt-preview-empty" aria-hidden="true">
+                    <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="3" width="18" height="18" rx="2" />
+                        <circle cx="8.5" cy="8.5" r="1.5" />
+                        <path d="M21 15l-5-5L5 21" />
+                    </svg>
+                </div>
+                {% endif %}
+
+                <div class="prompt-recent-body">
+                    <div class="prompt-link-pill">
+                        {% if prompt.target %}
+                            {{ prompt.target.target_type }} / {{ prompt.target.name }}
+                        {% else %}
+                            unlinked
+                        {% endif %}
+                    </div>
+                    <h3>{{ prompt.name }}</h3>
+                    <p>{{ prompt.prompt_text }}</p>
+                    <textarea class="prompt-copy-source" hidden>{{ prompt.prompt_text }}</textarea>
+                </div>
+
+                {% if not prompt.target %}
+                <form method="POST" action="{{ url_for('prompts.link_prompt', prompt_id=prompt.id) }}"
+                    class="prompt-card-link-form">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                    <select name="link_kind" class="prompt-menu-select prompt-card-link-kind"
+                        onchange="updateCardLinkPanels(this)">
+                        <option value="product">Product</option>
+                        <option value="character">Character</option>
+                        <option value="background">Background</option>
+                    </select>
+                    <div class="prompt-card-link-panel" data-card-panel="product">
+                        <select name="product_id" class="prompt-menu-select">
+                            <option value="">Choose product</option>
+                            {% for product in products %}
+                            <option value="{{ product.id }}">{{ product.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="prompt-card-link-panel" data-card-panel="character">
+                        <select name="character_target_id" class="prompt-menu-select">
+                            <option value="">Choose character</option>
+                            {% for target in character_targets %}
+                            <option value="{{ target.id }}">{{ target.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="prompt-card-link-panel" data-card-panel="background">
+                        <select name="background_target_id" class="prompt-menu-select">
+                            <option value="">Choose background</option>
+                            {% for target in background_targets %}
+                            <option value="{{ target.id }}">{{ target.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-sm">Link</button>
+                </form>
+                {% endif %}
+
+                <div class="prompt-recent-actions">
+                    <span>{% if prompt.created_at %}{{ prompt.created_at.strftime('%b %d, %Y') }}{% endif %}</span>
+                    <button type="button" class="btn btn-ghost btn-sm" onclick="copyPromptFromButton(this)">Copy</button>
+                    <form method="POST" action="{{ url_for('prompts.delete_prompt', prompt_id=prompt.id) }}"
+                        class="inline-form">
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                        <button type="submit" class="btn btn-ghost btn-sm btn-danger-ghost"
+                            onclick="return confirm('Delete this saved prompt?')">Delete</button>
+                    </form>
+                </div>
+            </article>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="prompt-recent-empty">
+            <p>No prompts yet.</p>
+        </div>
+        {% endif %}
+    </section>
+</div>
+
+<button type="button" class="prompt-floating-add" onclick="openPromptModal()" title="Create prompt">
+    <svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"
+        stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <line x1="12" y1="5" x2="12" y2="19" />
+        <line x1="5" y1="12" x2="19" y2="12" />
+    </svg>
+</button>
+
+<div class="prompt-overlay" id="prompt-create-overlay" aria-hidden="true">
+    <div class="prompt-overlay-backdrop" onclick="closePromptModal()"></div>
+    <section class="prompt-overlay-panel" role="dialog" aria-modal="true" aria-labelledby="prompt-create-title">
+        <button type="button" class="prompt-overlay-close" onclick="closePromptModal()" title="Close">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+        </button>
+        <h2 id="prompt-create-title">New prompt</h2>
+        <form method="POST" enctype="multipart/form-data" class="prompt-modal-form" id="prompt-create-form">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+
+            <div class="form-group">
+                <label for="prompt-name">Name</label>
+                <input id="prompt-name" type="text" name="prompt_name" maxlength="160" required
+                    placeholder="Jane close-up studio prompt">
+            </div>
+
+            <div class="form-group">
+                <label for="prompt-text">Prompt</label>
+                <textarea id="prompt-text" name="prompt_text" rows="7" maxlength="12000" required
+                    placeholder="Paste or write the prompt."></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="prompt-thumbnails">Pictures</label>
+                <input id="prompt-thumbnails" type="file" name="thumbnails" accept="image/*" multiple>
+                <span class="field-hint">Up to {{ max_thumbnails }} pictures. Stored and shown at {{ prompt_preview_max_edge }}px or less.</span>
+            </div>
+            <div class="prompt-upload-preview-grid" id="prompt-upload-preview-grid" aria-live="polite"></div>
+
+            <div class="prompt-link-box">
+                <div class="form-group">
+                    <label for="prompt-link-kind">Link</label>
+                    <select id="prompt-link-kind" name="link_kind" class="prompt-menu-select" onchange="updatePromptLinkPanels()">
+                        <option value="none">NULL</option>
+                        <option value="product">Product</option>
+                        <option value="character">Character</option>
+                        <option value="background">Background</option>
+                    </select>
+                </div>
+                <div class="form-group prompt-link-panel" data-link-panel="product">
+                    <label for="prompt-product-id">Product</label>
+                    <select id="prompt-product-id" name="product_id" class="prompt-menu-select">
+                        <option value="">Choose product</option>
+                        {% for product in products %}
+                        <option value="{{ product.id }}">{{ product.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group prompt-link-panel" data-link-panel="character">
+                    <label for="prompt-character-target-id">Character</label>
+                    <select id="prompt-character-target-id" name="character_target_id" class="prompt-menu-select">
+                        <option value="">Choose character</option>
+                        {% for target in character_targets %}
+                        <option value="{{ target.id }}">{{ target.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group prompt-link-panel" data-link-panel="background">
+                    <label for="prompt-background-target-id">Background</label>
+                    <select id="prompt-background-target-id" name="background_target_id" class="prompt-menu-select">
+                        <option value="">Choose background</option>
+                        {% for target in background_targets %}
+                        <option value="{{ target.id }}">{{ target.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary" id="prompt-save-btn">Save prompt</button>
+        </form>
+    </section>
+</div>
+
+<div class="prompt-overlay" id="target-create-overlay" aria-hidden="true">
+    <div class="prompt-overlay-backdrop" onclick="closeTargetModal()"></div>
+    <section class="prompt-overlay-panel" role="dialog" aria-modal="true" aria-labelledby="target-create-title">
+        <button type="button" class="prompt-overlay-close" onclick="closeTargetModal()" title="Close">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+        </button>
+        <h2 id="target-create-title">New item</h2>
+        <form method="POST" action="{{ url_for('prompts.create_target') }}" enctype="multipart/form-data"
+            class="prompt-modal-form" id="target-create-form">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="target_type" id="target-create-type" value="character">
+
+            <div class="form-group">
+                <label for="target-name">Name</label>
+                <input id="target-name" type="text" name="name" maxlength="160" required placeholder="Jane">
+            </div>
+
+            <div class="form-group prompt-product-only">
+                <label for="target-context">Product context</label>
+                <textarea id="target-context" name="context" rows="4"
+                    placeholder="Describe the product, audience, features, and creative constraints."></textarea>
+            </div>
+
+            <div class="prompt-product-only prompt-target-grid">
+                <div class="form-group">
+                    <label for="target-price">Price</label>
+                    <input id="target-price" type="text" name="price" maxlength="200" placeholder="$49.90">
+                </div>
+                <div class="form-group">
+                    <label for="target-offer">Offer</label>
+                    <input id="target-offer" type="text" name="offer" maxlength="300" placeholder="Bundle, discount, CTA">
+                </div>
+            </div>
+
+            <div class="form-group prompt-product-only">
+                <label for="target-benefits">Benefits</label>
+                <textarea id="target-benefits" name="benefits" rows="3"
+                    placeholder="Main benefits and outcomes."></textarea>
+            </div>
+
+            <div class="form-group prompt-nonproduct-only">
+                <label for="target-description">Notes</label>
+                <textarea id="target-description" name="description" rows="4"
+                    placeholder="Optional details to remember with this item."></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="target-images">Photos</label>
+                <input id="target-images" type="file" name="images" accept="image/*" multiple>
+                <span class="field-hint" id="target-image-hint">Up to {{ max_target_images }} photos.</span>
+            </div>
+            <div class="prompt-upload-preview-grid" id="target-upload-preview-grid" aria-live="polite"></div>
+
+            <button type="submit" class="btn btn-primary" id="target-save-btn">Save</button>
+        </form>
+    </section>
+</div>
+
+<script>
+    const PROMPT_IMAGE_MAX_EDGE = {{ prompt_preview_max_edge }};
+    const PROMPT_IMAGE_QUALITY = 0.82;
+    const PROMPT_MAX_THUMBNAILS = {{ max_thumbnails }};
+    const TARGET_MAX_IMAGES = {{ max_target_images }};
+    const PRODUCT_MAX_IMAGES = {{ max_product_images }};
+
+    function openPromptModal() {
+        const overlay = document.getElementById('prompt-create-overlay');
+        if (!overlay) return;
+        overlay.classList.add('is-open');
+        overlay.setAttribute('aria-hidden', 'false');
+        updatePromptLinkPanels();
+        setTimeout(() => document.getElementById('prompt-name')?.focus(), 50);
+    }
+
+    function closePromptModal() {
+        const overlay = document.getElementById('prompt-create-overlay');
+        if (!overlay) return;
+        overlay.classList.remove('is-open');
+        overlay.setAttribute('aria-hidden', 'true');
+    }
+
+    function openTargetModal(type) {
+        const overlay = document.getElementById('target-create-overlay');
+        const typeInput = document.getElementById('target-create-type');
+        const title = document.getElementById('target-create-title');
+        const name = document.getElementById('target-name');
+        if (!overlay || !typeInput || !title || !name) return;
+
+        typeInput.value = type;
+        title.textContent = `New ${type}`;
+        name.placeholder = type === 'product' ? 'Magic stick' : (type === 'background' ? 'Rainy neon alley' : 'Jane');
+        document.getElementById('target-image-hint').textContent = type === 'product'
+            ? `Up to ${PRODUCT_MAX_IMAGES} photos.`
+            : `Up to ${TARGET_MAX_IMAGES} photos. Stored at ${PROMPT_IMAGE_MAX_EDGE}px or less.`;
+        updateTargetTypeFields(type);
+        overlay.classList.add('is-open');
+        overlay.setAttribute('aria-hidden', 'false');
+        setTimeout(() => name.focus(), 50);
+    }
+
+    function closeTargetModal() {
+        const overlay = document.getElementById('target-create-overlay');
+        if (!overlay) return;
+        overlay.classList.remove('is-open');
+        overlay.setAttribute('aria-hidden', 'true');
+    }
+
+    function updateTargetTypeFields(type) {
+        const isProduct = type === 'product';
+        document.querySelectorAll('.prompt-product-only').forEach(el => {
+            el.style.display = isProduct ? '' : 'none';
+        });
+        document.querySelectorAll('.prompt-nonproduct-only').forEach(el => {
+            el.style.display = isProduct ? 'none' : '';
+        });
+        const context = document.getElementById('target-context');
+        if (context) context.required = isProduct;
+    }
+
+    function updatePromptLinkPanels() {
+        const select = document.getElementById('prompt-link-kind');
+        const selected = select ? select.value : 'none';
+        document.querySelectorAll('.prompt-link-panel').forEach(panel => {
+            panel.style.display = panel.dataset.linkPanel === selected ? '' : 'none';
+        });
+    }
+
+    function updateCardLinkPanels(select) {
+        const form = select.closest('.prompt-card-link-form');
+        if (!form) return;
+        const selected = select.value || 'product';
+        form.querySelectorAll('.prompt-card-link-panel').forEach(panel => {
+            panel.style.display = panel.dataset.cardPanel === selected ? '' : 'none';
+        });
+    }
+
+    function renderUploadPreviews(input, gridId, maxCount) {
+        const grid = document.getElementById(gridId);
+        if (!grid) return;
+        const files = Array.from(input.files || []);
+        if (files.length > maxCount) {
+            alert(`Upload up to ${maxCount} images.`);
+            input.value = '';
+            grid.innerHTML = '';
+            return;
+        }
+        grid.innerHTML = '';
+        files.forEach((file, index) => {
+            const item = document.createElement('div');
+            item.className = 'prompt-upload-preview';
+            const url = URL.createObjectURL(file);
+            item.innerHTML = `
+                <img src="${url}" alt="Selected image ${index + 1}" loading="lazy">
+                <span>${escapeHtml(file.name)}</span>
+            `;
+            grid.appendChild(item);
+            item.querySelector('img').addEventListener('load', () => URL.revokeObjectURL(url), { once: true });
+        });
+    }
+
+    function loadImageFromFile(file) {
+        return new Promise((resolve, reject) => {
+            const url = URL.createObjectURL(file);
+            const img = new Image();
+            img.onload = () => {
+                URL.revokeObjectURL(url);
+                resolve(img);
+            };
+            img.onerror = () => {
+                URL.revokeObjectURL(url);
+                reject(new Error('Could not read image.'));
+            };
+            img.src = url;
+        });
+    }
+
+    function canvasToBlob(canvas, type, quality) {
+        return new Promise((resolve) => canvas.toBlob(resolve, type, quality));
+    }
+
+    async function resizeImageFile(file) {
+        if (!file.type || !file.type.startsWith('image/')) return file;
+        try {
+            const img = await loadImageFromFile(file);
+            const maxSide = Math.max(img.naturalWidth || img.width, img.naturalHeight || img.height);
+            const scale = maxSide > PROMPT_IMAGE_MAX_EDGE ? PROMPT_IMAGE_MAX_EDGE / maxSide : 1;
+            const width = Math.max(1, Math.round((img.naturalWidth || img.width) * scale));
+            const height = Math.max(1, Math.round((img.naturalHeight || img.height) * scale));
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            canvas.getContext('2d', { alpha: true }).drawImage(img, 0, 0, width, height);
+            const blob = await canvasToBlob(canvas, 'image/webp', PROMPT_IMAGE_QUALITY)
+                || await canvasToBlob(canvas, 'image/jpeg', PROMPT_IMAGE_QUALITY);
+            if (!blob) return file;
+            const extension = blob.type === 'image/jpeg' ? '.jpg' : '.webp';
+            const baseName = file.name.replace(/\.[^.]+$/, '') || 'image';
+            return new File([blob], `${baseName}${extension}`, {
+                type: blob.type || 'image/webp',
+                lastModified: Date.now(),
+            });
+        } catch {
+            return file;
+        }
+    }
+
+    async function optimizeInputFiles(input, maxCount) {
+        const files = Array.from(input?.files || []);
+        if (!files.length || typeof DataTransfer === 'undefined') return;
+        const transfer = new DataTransfer();
+        for (const file of files.slice(0, maxCount)) {
+            transfer.items.add(await resizeImageFile(file));
+        }
+        input.files = transfer.files;
+    }
+
+    async function copyPromptFromButton(button) {
+        const card = button.closest('.prompt-recent-card');
+        const source = card ? card.querySelector('.prompt-copy-source') : null;
+        const text = source ? source.value : '';
+        if (!text) return;
+        try {
+            await navigator.clipboard.writeText(text);
+            const original = button.textContent;
+            button.textContent = 'Copied';
+            setTimeout(() => { button.textContent = original; }, 1000);
+        } catch {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        updatePromptLinkPanels();
+        updateTargetTypeFields('character');
+        document.querySelectorAll('.prompt-card-link-kind').forEach(updateCardLinkPanels);
+
+        const promptInput = document.getElementById('prompt-thumbnails');
+        if (promptInput) {
+            promptInput.addEventListener('change', () => {
+                renderUploadPreviews(promptInput, 'prompt-upload-preview-grid', PROMPT_MAX_THUMBNAILS);
+            });
+        }
+
+        const targetInput = document.getElementById('target-images');
+        if (targetInput) {
+            targetInput.addEventListener('change', () => {
+                const type = document.getElementById('target-create-type')?.value || 'character';
+                renderUploadPreviews(
+                    targetInput,
+                    'target-upload-preview-grid',
+                    type === 'product' ? PRODUCT_MAX_IMAGES : TARGET_MAX_IMAGES,
+                );
+            });
+        }
+
+        const promptForm = document.getElementById('prompt-create-form');
+        if (promptForm) {
+            promptForm.addEventListener('submit', async (event) => {
+                if (promptForm.dataset.optimized === '1') return;
+                event.preventDefault();
+                const submit = document.getElementById('prompt-save-btn');
+                if (submit) {
+                    submit.disabled = true;
+                    submit.textContent = 'Optimizing...';
+                }
+                await optimizeInputFiles(promptInput, PROMPT_MAX_THUMBNAILS);
+                promptForm.dataset.optimized = '1';
+                promptForm.submit();
+            });
+        }
+
+        const targetForm = document.getElementById('target-create-form');
+        if (targetForm) {
+            targetForm.addEventListener('submit', async (event) => {
+                const type = document.getElementById('target-create-type')?.value || 'character';
+                if (targetForm.dataset.optimized === '1' || type === 'product') return;
+                event.preventDefault();
+                const submit = document.getElementById('target-save-btn');
+                if (submit) {
+                    submit.disabled = true;
+                    submit.textContent = 'Optimizing...';
+                }
+                await optimizeInputFiles(targetInput, TARGET_MAX_IMAGES);
+                targetForm.dataset.optimized = '1';
+                targetForm.submit();
+            });
+        }
+    });
+
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+            closePromptModal();
+            closeTargetModal();
+        }
+    });
+</script>
+{% endblock %}

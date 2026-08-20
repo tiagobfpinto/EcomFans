@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block title %}Competitors - EcomFans{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/competitors.css', v='1') }}">
+{% endblock %}
+
+{% block content %}
+<div class="comp-page" id="competitors-page">
+    <header class="comp-header">
+        <div>
+            <span class="comp-eyebrow">Research</span>
+            <h1>Competitors</h1>
+            <p>Track the brands you compete with, collect their ads, and let AI break down their scripts.</p>
+        </div>
+    </header>
+
+    <div id="comp-flash" class="comp-flash" role="status" aria-live="polite" hidden></div>
+
+    <a class="comp-tool-card" href="{{ url_for('competitors.image_extractor_page') }}">
+        <span class="comp-tool-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2"/>
+                <circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
+            </svg>
+        </span>
+        <div class="comp-tool-copy">
+            <h3>Page media extractor</h3>
+            <p>Paste a competitor page's source code and pull every image and video out in the best quality, ready to download.</p>
+        </div>
+        <span class="comp-card-arrow" style="opacity:1;transform:none;">
+            Open
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
+            </svg>
+        </span>
+    </a>
+
+    <section class="comp-add-card">
+        <div class="comp-add-heading">
+            <span class="comp-eyebrow">New competitor</span>
+            <h2>Add a competitor</h2>
+        </div>
+        <form id="comp-add-form" class="comp-add-form" autocomplete="off">
+            <div class="comp-field comp-field-grow">
+                <label for="comp-name">Competitor name</label>
+                <input id="comp-name" name="name" type="text" maxlength="160"
+                    placeholder="e.g. GlowSkin Co." required>
+            </div>
+            <div class="comp-field">
+                <label for="comp-product">Competes with product</label>
+                <select id="comp-product" name="product_id">
+                    <option value="">No product</option>
+                    {% for product in products %}
+                    <option value="{{ product.id }}">{{ product.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button id="comp-add-submit" class="comp-btn comp-btn-primary" type="submit">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+                Add competitor
+            </button>
+        </form>
+    </section>
+
+    <section class="comp-list-section">
+        {% if competitors %}
+        <div class="comp-grid">
+            {% for competitor in competitors %}
+            <a class="comp-card" href="{{ url_for('competitors.competitor_detail_page', competitor_id=competitor.id) }}"
+                data-competitor-id="{{ competitor.id }}">
+                <div class="comp-card-top">
+                    <div class="comp-avatar">{{ competitor.name[0]|upper }}</div>
+                    <button class="comp-icon-btn comp-delete-competitor" type="button"
+                        data-competitor-id="{{ competitor.id }}" data-competitor-name="{{ competitor.name }}"
+                        title="Delete competitor" aria-label="Delete competitor">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="3 6 5 6 21 6"/>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                        </svg>
+                    </button>
+                </div>
+                <h3 class="comp-card-name">{{ competitor.name }}</h3>
+                <div class="comp-card-meta">
+                    {% if competitor.product %}
+                    <span class="comp-chip comp-chip-product" title="Competes with this product">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M6 2L3 6V20A2 2 0 0 0 5 22H19A2 2 0 0 0 21 20V6L18 2Z"/>
+                            <path d="M3 6H21"/>
+                        </svg>
+                        {{ competitor.product.name }}
+                    </span>
+                    {% else %}
+                    <span class="comp-chip comp-chip-muted">No product assigned</span>
+                    {% endif %}
+                </div>
+                <div class="comp-card-footer">
+                    <span class="comp-ad-count">
+                        {{ competitor.ad_count }} ad{{ '' if competitor.ad_count == 1 else 's' }}
+                    </span>
+                    <span class="comp-card-arrow">
+                        View ads
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
+                        </svg>
+                    </span>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="comp-empty">
+            <div class="comp-empty-icon">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>
+                </svg>
+            </div>
+            <h3>No competitors yet</h3>
+            <p>Add your first competitor above, then upload their ads to build a swipe file with AI-generated scripts.</p>
+        </div>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/competitors.js', v='1') }}"></script>
+{% endblock %}

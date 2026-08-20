@@ -51,6 +51,7 @@ def enqueue_worker_job(
     queue_name: str = "default",
     max_attempts: int = 2,
     available_at: datetime | None = None,
+    commit: bool = True,
 ) -> WorkerJob:
     now = utc_now()
     job = WorkerJob(
@@ -63,7 +64,10 @@ def enqueue_worker_job(
         available_at=available_at or now,
     )
     db.session.add(job)
-    db.session.commit()
+    if commit:
+        db.session.commit()
+    else:
+        db.session.flush()
     return job
 
 
@@ -238,4 +242,3 @@ def requeue_stale_running_jobs(stale_after_seconds: int = 3600) -> dict[str, int
 
     db.session.commit()
     return {"requeued": requeued, "failed": failed}
-

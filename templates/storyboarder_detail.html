@@ -1,0 +1,297 @@
+{% extends "base.html" %}
+
+{% block title %}{{ project.name }} - Storyboarder - EcomFans{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/storyboarder.css', v='2') }}">
+{% endblock %}
+
+{% block content %}
+<div class="sb-page sb-detail-page" id="storyboarder-detail" data-project-id="{{ project.id }}"
+    data-frame-count="{{ project.frames|length }}">
+    <a class="sb-back" href="/storyboarder">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+        </svg>
+        Storyboarder
+    </a>
+
+    <header class="sb-detail-header">
+        <div class="sb-detail-title">
+            <span class="sb-eyebrow">Storyboard project</span>
+            <input class="sb-title-input" id="sb-project-title" type="text" maxlength="160" value="{{ project.name }}"
+                aria-label="Project name" data-project-field="name">
+            <div class="sb-detail-meta">
+                <label class="sb-inline-select">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18"/>
+                    </svg>
+                    <span class="sr-only">Product</span>
+                    <select id="sb-detail-product" data-project-field="product_id" required>
+                        {% for product in products %}
+                        <option value="{{ product.id }}" {% if project.product.id == product.id %}selected{% endif %}>{{ product.name }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <span class="sb-count-chip">{{ project.frames|length }} image{{ '' if project.frames|length == 1 else 's' }}</span>
+                <span class="sb-save-state" id="sb-project-save-state" role="status" aria-live="polite">Saved</span>
+            </div>
+        </div>
+        <div class="sb-header-actions">
+            <button class="sb-btn sb-btn-ghost" id="sb-open-import" type="button">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/>
+                    <line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/>
+                    <line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
+                </svg>
+                {{ 'Replace clips' if project.frames else 'Add clips' }}
+            </button>
+            <button class="sb-btn sb-btn-danger" id="sb-delete-project" type="button">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                </svg>
+                Delete
+            </button>
+        </div>
+    </header>
+
+    <div id="sb-flash" class="sb-flash" role="status" aria-live="polite" hidden></div>
+
+    <section class="sb-base-card">
+        <div class="sb-section-heading sb-section-heading-tight">
+            <div>
+                <span class="sb-eyebrow">Shared direction</span>
+                <h2>Base prompt</h2>
+            </div>
+            <span class="sb-field-hint">Included before every copied video prompt</span>
+        </div>
+        <textarea class="sb-textarea sb-base-prompt" id="sb-base-prompt" data-project-field="base_prompt"
+            placeholder="Write the direction shared by every clip…">{{ project.base_prompt or '' }}</textarea>
+        {% if project.prompt_blocks %}
+        <div class="sb-prompt-blocks">
+            <div class="sb-prompt-blocks-heading">
+                <div>
+                    <span class="sb-eyebrow">Variables</span>
+                    <h3>Reusable prompt blocks</h3>
+                </div>
+                <span>{{ project.prompt_blocks|length }} stored</span>
+            </div>
+            <div class="sb-prompt-block-list">
+                {% for name, content in project.prompt_blocks.items() %}
+                <details class="sb-prompt-block">
+                    <summary><code>[{{ name }}]</code><span>View block</span></summary>
+                    <p>{{ content }}</p>
+                </details>
+                {% endfor %}
+            </div>
+            <p class="sb-prompt-block-hint">References are expanded automatically when you copy a prompt. Blocks can reference other blocks.</p>
+        </div>
+        {% endif %}
+    </section>
+
+    <script id="sb-prompt-blocks-data" type="application/json">{{ project.prompt_blocks | tojson }}</script>
+
+    <section class="sb-frames-section">
+        <div class="sb-section-heading">
+            <div>
+                <span class="sb-eyebrow">Sequence</span>
+                <h2>Storyboard images</h2>
+            </div>
+            {% if project.frames %}
+            <p class="sb-section-note">Changes save automatically.</p>
+            {% endif %}
+        </div>
+
+        {% if project.frames %}
+        <div class="sb-canvas-shell" id="sb-storyboard-canvas">
+            <div class="sb-canvas-toolbar" aria-label="Canvas controls">
+                <span class="sb-canvas-help">Drag to pan · Drag nodes to arrange · Ctrl/⌘ + wheel to zoom</span>
+                <div class="sb-canvas-actions">
+                    <button class="sb-canvas-btn" type="button" data-canvas-zoom-out aria-label="Zoom out">−</button>
+                    <span class="sb-canvas-zoom" id="sb-canvas-zoom">100%</span>
+                    <button class="sb-canvas-btn" type="button" data-canvas-zoom-in aria-label="Zoom in">+</button>
+                    <button class="sb-canvas-btn sb-canvas-fit" type="button" data-canvas-fit>Fit</button>
+                </div>
+            </div>
+            <div class="sb-canvas-viewport" id="sb-canvas-viewport" tabindex="0"
+                aria-label="Storyboard canvas. Drag the background to pan and select a clip to inspect it.">
+                <div class="sb-canvas-world" id="sb-canvas-world">
+                    <svg class="sb-canvas-connections" id="sb-canvas-connections" width="5000" height="3000"
+                        viewBox="0 0 5000 3000" aria-hidden="true"></svg>
+                    {% for frame in project.frames %}
+                    <article class="sb-frame-node" data-frame-node data-frame-id="{{ frame.id }}"
+                        data-sort-order="{{ frame.sort_order }}" tabindex="0" role="button"
+                        aria-label="Open clip {{ frame.sort_order }}: {{ frame.label or 'Untitled clip' }}"
+                        style="left: {{ 90 + (loop.index0 % 4) * 350 }}px; top: {{ 90 + ((loop.index0 / 4)|int) * 350 }}px;">
+                        <span class="sb-node-port sb-node-port-in" aria-hidden="true"></span>
+                        <span class="sb-node-port sb-node-port-out" aria-hidden="true"></span>
+                        <div class="sb-frame-media">
+                            <img class="sb-frame-image{% if not frame.thumbnail_url %} is-empty{% endif %}"
+                                {% if frame.thumbnail_url %}src="{{ frame.thumbnail_url }}"{% endif %}
+                                alt="Thumbnail for storyboard image {{ frame.sort_order }}" loading="lazy">
+                            <div class="sb-frame-placeholder" {% if frame.thumbnail_url %}hidden{% endif %} aria-hidden="true">
+                                <svg width="31" height="31" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+                                    stroke-linecap="round" stroke-linejoin="round">
+                                    <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/>
+                                    <polyline points="21 15 16 10 5 21"/>
+                                </svg>
+                                <span>Add thumbnail</span>
+                            </div>
+                            <span class="sb-frame-number">{{ frame.sort_order }}</span>
+                            <label class="sb-thumbnail-action" title="Upload thumbnail">
+                                <input class="sb-thumbnail-input" type="file" accept="image/*" hidden>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                    stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/>
+                                    <line x1="12" y1="3" x2="12" y2="15"/>
+                                </svg>
+                                <span>Thumbnail</span>
+                            </label>
+                            <div class="sb-thumbnail-loading" hidden><span class="sb-spinner"></span>Uploading</div>
+                        </div>
+                        <div class="sb-node-body">
+                            <span class="sb-frame-kicker">Clip {{ frame.sort_order }}</span>
+                            <h3 class="sb-node-title">{{ frame.label or 'Untitled clip' }}</h3>
+                            <div class="sb-node-meta">
+                                {% if frame.timestamp %}<span>{{ frame.timestamp }}</span>{% endif %}
+                                {% if frame.clip_type %}<span>{{ frame.clip_type|replace('_', ' ') }}</span>{% endif %}
+                            </div>
+                            <div class="sb-node-content-tags">
+                                {% if frame.transform_prompt %}<span>Text → image</span>{% endif %}
+                                {% if frame.video_prompt %}<span>Image → video</span>{% endif %}
+                                {% if frame.voiceover %}<span>Voiceover</span>{% endif %}
+                                {% if frame.photo %}<span>Reference</span>{% endif %}
+                            </div>
+                        </div>
+                    </article>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <aside class="sb-node-inspector" id="sb-node-inspector" hidden aria-label="Clip inspector">
+                <div class="sb-inspector-header">
+                    <div>
+                        <span class="sb-eyebrow">Selected node</span>
+                        <h3 id="sb-inspector-title">Clip details</h3>
+                    </div>
+                    <button class="sb-icon-btn" type="button" data-close-inspector aria-label="Close inspector">
+                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                        </svg>
+                    </button>
+                </div>
+                {% for frame in project.frames %}
+                <section class="sb-frame-inspector" data-frame-inspector="{{ frame.id }}" data-frame-id="{{ frame.id }}" hidden>
+                    <div class="sb-inspector-state-row">
+                        <span>Storyboard image {{ frame.sort_order }}</span>
+                        <span class="sb-save-state sb-frame-save-state" role="status" aria-live="polite">Saved</span>
+                    </div>
+                    {% if frame.label %}
+                    <label class="sb-field">
+                        <span>Label</span>
+                        <input type="text" value="{{ frame.label }}" data-frame-field="label">
+                    </label>
+                    {% endif %}
+                    <div class="sb-inspector-meta-grid">
+                        {% if frame.clip_type %}
+                        <label class="sb-field">
+                            <span>Type</span>
+                            <input type="text" value="{{ frame.clip_type }}" data-frame-field="clip_type">
+                        </label>
+                        {% endif %}
+                        {% if frame.timestamp %}
+                        <label class="sb-field">
+                            <span>Timestamp</span>
+                            <input type="text" value="{{ frame.timestamp }}" data-frame-field="timestamp">
+                        </label>
+                        {% endif %}
+                    </div>
+                    {% if frame.photo %}
+                    <div class="sb-inspector-prompt">
+                        <div class="sb-inspector-field-heading"><span>Photo / reference</span><button class="sb-field-copy" type="button" data-copy-field="photo">Copy</button></div>
+                        <textarea data-frame-field="photo" rows="2">{{ frame.photo }}</textarea>
+                    </div>
+                    {% endif %}
+                    {% if frame.transform_prompt %}
+                    <div class="sb-inspector-prompt">
+                        <div class="sb-inspector-field-heading"><span>Text-to-image prompt</span><button class="sb-field-copy" type="button" data-copy-field="transform_prompt">Copy</button></div>
+                        <textarea data-frame-field="transform_prompt" rows="7">{{ frame.transform_prompt }}</textarea>
+                    </div>
+                    {% endif %}
+                    {% if frame.voiceover %}
+                    <div class="sb-inspector-prompt">
+                        <div class="sb-inspector-field-heading"><span>Voiceover</span><button class="sb-field-copy" type="button" data-copy-field="voiceover">Copy</button></div>
+                        <textarea data-frame-field="voiceover" rows="4">{{ frame.voiceover }}</textarea>
+                    </div>
+                    {% endif %}
+                    {% if frame.video_prompt %}
+                    <div class="sb-inspector-prompt">
+                        <div class="sb-inspector-field-heading"><span>Image-to-video prompt</span><button class="sb-field-copy" type="button" data-copy-field="video_prompt" data-include-base-prompt>Copy + base</button></div>
+                        <textarea data-frame-field="video_prompt" rows="8">{{ frame.video_prompt }}</textarea>
+                    </div>
+                    {% endif %}
+                </section>
+                {% endfor %}
+            </aside>
+        </div>
+        {% else %}
+        <div class="sb-empty sb-empty-detail">
+            <div class="sb-empty-icon">
+                <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"
+                    stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+                    <line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 12 15 15"/>
+                </svg>
+            </div>
+            <h3>Add your clip script</h3>
+            <p>Paste text with sequential <code>CLIP 1</code>, <code>CLIP 2</code> blocks to create one storyboard image per clip.</p>
+            <button class="sb-btn sb-btn-primary" type="button" data-open-import>Add clip text</button>
+        </div>
+        {% endif %}
+    </section>
+</div>
+
+<div class="sb-modal" id="sb-import-modal" hidden>
+    <div class="sb-modal-backdrop" data-close-import></div>
+    <section class="sb-modal-dialog sb-modal-dialog-lg" role="dialog" aria-modal="true" aria-labelledby="sb-import-title">
+        <button class="sb-icon-btn sb-modal-close" type="button" data-close-import aria-label="Close">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+        </button>
+        <div class="sb-modal-heading">
+            <span class="sb-eyebrow">Create storyboard</span>
+            <h2 id="sb-import-title">Turn your clip text into storyboard images</h2>
+            <p>Add the shared base prompt, then paste sequential clips using the same format as the example below. No file upload needed.</p>
+        </div>
+        <form class="sb-form" id="sb-import-form">
+            <label class="sb-field sb-import-field">
+                <span>Base prompt</span>
+                <textarea class="sb-textarea" id="sb-import-base-prompt" rows="4"
+                    placeholder="Direction shared by every generated clip…">{{ project.base_prompt or '' }}</textarea>
+            </label>
+            <label class="sb-field sb-import-field">
+                <span>Clip text</span>
+                <textarea class="sb-textarea sb-clips-text" id="sb-import-clips-text" rows="15"
+                    placeholder="CLIP 1 — 0:00–0:06&#10;&#10;Dialogue: &quot;Your dialogue here.&quot;&#10;&#10;Top: Describe the action in the top half.&#10;&#10;Bottom: Describe the action in the bottom half.&#10;&#10;Text to image prompt: Optional still-image prompt.&#10;&#10;Image to video prompt: Optional animation prompt.&#10;&#10;CLIP 2 — 0:06–0:12&#10;&#10;Dialogue: &quot;The next line.&quot;&#10;&#10;Top: …&#10;&#10;Bottom: …"></textarea>
+                <small>Each clip needs a timestamp and at least one supported field: <code>Dialogue</code>, <code>Top</code>, <code>Bottom</code>, <code>Text to image prompt</code>, or <code>Image to video prompt</code>. Declare reusable blocks outside clips as <code>NAME — usage note</code>, then reference them as <code>[NAME]</code>.</small>
+            </label>
+            <p class="sb-form-error" id="sb-import-error" role="alert" hidden></p>
+            <div class="sb-modal-actions">
+                <button class="sb-btn sb-btn-ghost" type="button" data-close-import>Not now</button>
+                <button class="sb-btn sb-btn-primary" id="sb-import-submit" type="submit">Create storyboard</button>
+            </div>
+        </form>
+    </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/storyboarder.js', v='2') }}"></script>
+{% endblock %}

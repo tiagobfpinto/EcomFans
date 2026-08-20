@@ -1,55 +1,168 @@
 {% extends "base.html" %}
-{% block title %}Sign In — EcomFans{% endblock %}
+{% block title %}Sign In - EcomFans{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/login.css', v='1') }}">
+{% endblock %}
 {% block content %}
-<div class="auth-container">
-    <div class="auth-card">
-        <div class="auth-header">
-            <div class="auth-logo">
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                    stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                    <circle cx="8.5" cy="8.5" r="1.5" />
-                    <polyline points="21 15 16 10 5 21" />
+<div class="login-page">
+    <section class="login-showcase" aria-label="EcomFans overview">
+        <a class="login-brand" href="{{ url_for('landing.landing_page') }}" aria-label="EcomFans home">
+            <span class="login-brand-mark">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="4"/>
+                    <path d="M7 15.5 10.5 12l2.5 2.5L17 10l2 2"/>
+                    <circle cx="8.5" cy="8.5" r="1.25"/>
                 </svg>
-            </div>
-            <h1>Welcome back</h1>
-            <p>Sign in to continue to EcomFans</p>
-        </div>
-        <form method="POST" action="{{ url_for('auth.login') }}" class="auth-form">
-            <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
-            <div class="form-group">
-                <label for="username">Username</label>
-                <input type="text" id="username" name="username" placeholder="Enter your username" required
-                    autocomplete="username">
-            </div>
-            <div class="form-group">
-                <label for="password">Password</label>
-                <div class="password-field">
-                    <input type="password" id="password" name="password" placeholder="Enter your password" required
-                        autocomplete="current-password">
-                    <button type="button" class="password-toggle" onclick="togglePassword('password', this)" aria-label="Toggle password visibility">
-                        <svg class="eye-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+            </span>
+            <span>EcomFans</span>
+        </a>
+
+        <div class="login-showcase-copy">
+            <span class="login-eyebrow">
+                <span></span>
+                Built for ecommerce operators
+            </span>
+            <h1>Turn better creative into <em>better growth.</em></h1>
+            <p>Research, create, launch and understand what is working from one focused workspace.</p>
+
+            <div class="login-feature-grid">
+                <article>
+                    <span class="login-feature-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 3 4 7v5c0 4.4 3.4 8.3 8 9 4.6-.7 8-4.6 8-9V7l-8-4Z"/>
+                            <path d="m9 12 2 2 4-4"/>
                         </svg>
-                    </button>
-                </div>
+                    </span>
+                    <div>
+                        <strong>Creative workflow</strong>
+                        <small>From inspiration to production</small>
+                    </div>
+                </article>
+                <article>
+                    <span class="login-feature-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M4 19V9"/><path d="M10 19V5"/><path d="M16 19v-7"/><path d="M22 19H2"/>
+                        </svg>
+                    </span>
+                    <div>
+                        <strong>Clear performance</strong>
+                        <small>Know what deserves more spend</small>
+                    </div>
+                </article>
             </div>
-            <button type="submit" class="btn btn-primary btn-full">Sign In</button>
-        </form>
-        <div class="auth-footer">
-            <p>Don't have an account? <a href="{{ url_for('auth.register') }}">Create one</a></p>
-            <p style="margin-top:8px;"><a href="{{ url_for('auth.forgot_password') }}">Forgot password?</a></p>
         </div>
-    </div>
+
+        <div class="login-showcase-footer">
+            <span>Creative intelligence for modern brands</span>
+            <span class="login-status"><i></i> All systems operational</span>
+        </div>
+    </section>
+
+    <section class="login-form-side">
+        <div class="login-mobile-brand">
+            <span class="login-brand-mark">
+                <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="4"/>
+                    <path d="M7 15.5 10.5 12l2.5 2.5L17 10l2 2"/>
+                    <circle cx="8.5" cy="8.5" r="1.25"/>
+                </svg>
+            </span>
+            <strong>EcomFans</strong>
+        </div>
+
+        <div class="login-form-wrap">
+            <div class="login-heading">
+                <span class="login-heading-kicker">Welcome back</span>
+                <h2>Sign in to your account</h2>
+                <p>Enter your details to continue to your workspace.</p>
+            </div>
+
+            <form method="POST" action="{{ url_for('auth.login') }}" class="login-form">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+
+                <label class="login-field" for="username">
+                    <span>Username</span>
+                    <span class="login-input">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M20 21a8 8 0 0 0-16 0"/>
+                            <circle cx="12" cy="7" r="4"/>
+                        </svg>
+                        <input type="text" id="username" name="username" placeholder="Enter your username"
+                            value="{{ request.form.get('username', '') }}" required autocomplete="username" autofocus>
+                    </span>
+                </label>
+
+                <div class="login-field">
+                    <span class="login-label-row">
+                        <label for="password">Password</label>
+                        <a href="{{ url_for('auth.forgot_password') }}">Forgot password?</a>
+                    </span>
+                    <span class="login-input">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <rect x="4" y="10" width="16" height="11" rx="3"/>
+                            <path d="M8 10V7a4 4 0 0 1 8 0v3"/>
+                        </svg>
+                        <input type="password" id="password" name="password" placeholder="Enter your password"
+                            required autocomplete="current-password">
+                        <button type="button" class="login-password-toggle" id="login-password-toggle"
+                            aria-label="Show password" aria-pressed="false">
+                            <svg class="login-eye-open" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/>
+                                <circle cx="12" cy="12" r="2.5"/>
+                            </svg>
+                            <svg class="login-eye-closed" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="m3 3 18 18"/><path d="M10.6 6.2A10.4 10.4 0 0 1 12 6c6.5 0 10 6 10 6a13.8 13.8 0 0 1-2.1 2.8"/>
+                                <path d="M6.6 6.7C3.6 8.5 2 12 2 12s3.5 6 10 6a10.3 10.3 0 0 0 4.1-.8"/>
+                            </svg>
+                        </button>
+                    </span>
+                </div>
+
+                <button type="submit" class="login-submit">
+                    <span>Sign in</span>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M5 12h14"/><path d="m13 6 6 6-6 6"/>
+                    </svg>
+                </button>
+            </form>
+
+            <div class="login-create-account">
+                <span>New to EcomFans?</span>
+                <a href="{{ url_for('auth.register') }}">Create an account</a>
+            </div>
+
+            <p class="login-legal">
+                By continuing, you agree to our
+                <a href="{{ url_for('landing.terms_page') }}">Terms</a>
+                and
+                <a href="{{ url_for('landing.privacy_page') }}">Privacy Policy</a>.
+            </p>
+        </div>
+    </section>
 </div>
 {% endblock %}
 {% block scripts %}
 <script>
-function togglePassword(inputId, btn) {
-    const input = document.getElementById(inputId);
-    const isHidden = input.type === 'password';
-    input.type = isHidden ? 'text' : 'password';
-    btn.querySelector('.eye-icon').style.opacity = isHidden ? '0.4' : '1';
-}
+(() => {
+    const button = document.getElementById('login-password-toggle');
+    const input = document.getElementById('password');
+    if (!button || !input) return;
+
+    button.addEventListener('click', () => {
+        const shouldShow = input.type === 'password';
+        input.type = shouldShow ? 'text' : 'password';
+        button.setAttribute('aria-pressed', String(shouldShow));
+        button.setAttribute('aria-label', shouldShow ? 'Hide password' : 'Show password');
+    });
+})();
 </script>
 {% endblock %}

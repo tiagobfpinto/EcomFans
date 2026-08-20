@@ -17,7 +17,7 @@ from flask import (
 from ai_service import openai_remove_background_with_meta, remove_background_local
 from auth import login_required
 from billing_service import get_effective_api_key, record_api_request_event
-from db import Product, ProductImage, User, db
+from db import Product, ProductImage, StoryboardProject, User, db
 from media_storage import delete_storage_file, save_product_image
 
 products_bp = Blueprint("products", __name__)
@@ -264,6 +264,17 @@ def delete_product_image(product_id, image_id):
 def delete_product(product_id):
     user = _get_user()
     product = Product.query.filter_by(id=product_id, user_id=user.id).first_or_404()
+    storyboard_count = StoryboardProject.query.filter_by(
+        product_id=product.id, user_id=user.id
+    ).count()
+    if storyboard_count:
+        project_word = "project" if storyboard_count == 1 else "projects"
+        flash(
+            f"This product is used by {storyboard_count} Storyboarder {project_word}. "
+            "Delete or reassign those projects first.",
+            "error",
+        )
+        return redirect(url_for("products.products_page"))
     storage_paths = [img.storage_path for img in product.images if img.storage_path]
     try:
         db.session.delete(product)

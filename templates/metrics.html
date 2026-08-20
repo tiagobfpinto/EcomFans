@@ -1,0 +1,252 @@
+{% extends "base.html" %}
+{% block title %}Metrics - EcomFans{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/metrics.css', v='1') }}">
+{% endblock %}
+{% block content %}
+<div class="metrics-page"
+    data-latest-date="{{ latest_date }}"
+    data-default-upload-date="{{ default_upload_date }}">
+    <header class="metrics-header">
+        <div>
+            <span class="page-eyebrow">Performance</span>
+            <h1>Metrics</h1>
+            <p>Upload daily Meta Ads snapshots and track performance over time.</p>
+        </div>
+        <button class="metrics-upload-toggle" type="button" id="metrics-upload-toggle">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M4 20h16"/>
+            </svg>
+            Import file
+        </button>
+    </header>
+
+    <section class="metrics-upload-card" id="metrics-upload-card" hidden>
+        <div class="metrics-upload-copy">
+            <span class="metrics-section-kicker">Daily snapshot</span>
+            <h2>Import Meta Ads metrics</h2>
+            <p>Upload a Markdown table or a Meta Ads CSV export. Existing data is only replaced after confirmation.</p>
+        </div>
+        <form id="metrics-upload-form" class="metrics-upload-form" enctype="multipart/form-data">
+            <label>
+                <span>Metric date</span>
+                <input type="date" name="metric_date" id="metrics-upload-date"
+                    value="{{ default_upload_date }}" max="{{ max_upload_date }}" required>
+                <small id="metrics-date-hint">Completed day represented by the Markdown snapshot.</small>
+            </label>
+            <label class="metrics-file-field" id="metrics-file-field">
+                <input type="file" name="file" id="metrics-file-input"
+                    accept=".md,.csv,text/markdown,text/csv,text/plain" required>
+                <span class="metrics-file-icon">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                        <polyline points="14 2 14 8 20 8"/>
+                    </svg>
+                </span>
+                <span>
+                    <strong id="metrics-file-name">Choose a .md or .csv file</strong>
+                    <small>UTF-8, maximum 2 MB</small>
+                </span>
+            </label>
+            <button type="submit" class="metrics-import-button" id="metrics-import-button">
+                Import snapshot
+            </button>
+        </form>
+        <div class="metrics-import-status" id="metrics-import-status" hidden></div>
+    </section>
+
+    <section class="metrics-toolbar">
+        <div class="metrics-presets" aria-label="Date range presets">
+            <button type="button" data-days="1" class="active">Day</button>
+            <button type="button" data-days="7">Last 7 days</button>
+            <button type="button" data-days="14">Last 14 days</button>
+            <button type="button" data-days="30">Last 30 days</button>
+        </div>
+        <div class="metrics-date-range">
+            <label>
+                <span>From</span>
+                <input type="date" id="metrics-start-date">
+            </label>
+            <span class="metrics-date-arrow">to</span>
+            <label>
+                <span>To</span>
+                <input type="date" id="metrics-end-date">
+            </label>
+            <button type="button" id="metrics-apply-range">Apply</button>
+        </div>
+    </section>
+
+    <div class="metrics-notice metrics-notice-warning" id="metrics-missing-warning" hidden>
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M10.3 2.9 1.8 17a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 2.9a2 2 0 0 0-3.4 0z"/>
+            <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+        <div>
+            <strong>Incomplete date range</strong>
+            <p id="metrics-missing-copy"></p>
+        </div>
+    </div>
+
+    <div class="metrics-notice metrics-notice-info" id="metrics-coverage-warning" hidden>
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/>
+            <line x1="12" y1="8" x2="12.01" y2="8"/>
+        </svg>
+        <div>
+            <strong>Partial ad detail</strong>
+            <p id="metrics-coverage-copy"></p>
+        </div>
+    </div>
+
+    <section class="metrics-kpi-grid" aria-label="Key performance indicators">
+        <article class="metrics-kpi-card metrics-kpi-primary">
+            <span>Amount spent</span>
+            <strong id="kpi-spend">€0.00</strong>
+            <small>Reported total</small>
+        </article>
+        <article class="metrics-kpi-card">
+            <span>Purchases</span>
+            <strong id="kpi-purchases">0</strong>
+            <small>Reported total</small>
+        </article>
+        <article class="metrics-kpi-card">
+            <span>Cost per purchase</span>
+            <strong id="kpi-cpp">€0.00</strong>
+            <small>Spend / purchases</small>
+        </article>
+        <article class="metrics-kpi-card">
+            <span>Purchase ROAS</span>
+            <strong id="kpi-roas">0.00</strong>
+            <small>Spend weighted</small>
+        </article>
+        <article class="metrics-kpi-card">
+            <span>Adds to cart</span>
+            <strong id="kpi-atc">0</strong>
+            <small>Reported total</small>
+        </article>
+        <article class="metrics-kpi-card">
+            <span>CTR</span>
+            <strong id="kpi-ctr">0.00%</strong>
+            <small>Reconstructed aggregate</small>
+        </article>
+    </section>
+
+    <section class="metrics-panel metrics-chart-panel">
+        <div class="metrics-panel-header">
+            <div>
+                <span class="metrics-section-kicker" id="metrics-chart-kicker">Daily trend</span>
+                <h2 id="metrics-chart-title">Performance over time</h2>
+            </div>
+            <div class="metrics-chart-controls">
+                <div class="metrics-chart-switcher" role="group" aria-label="Chart view">
+                    <button type="button" class="active" data-chart-view="time">Over time</button>
+                    <button type="button" data-chart-view="creative">By creative</button>
+                </div>
+                <div class="metrics-chart-switcher" role="group" aria-label="Chart metric">
+                    <button type="button" class="active" data-chart-metric="spend">Spend</button>
+                    <button type="button" data-chart-metric="purchases">Purchases</button>
+                    <button type="button" data-chart-metric="roas">ROAS</button>
+                </div>
+            </div>
+        </div>
+        <div class="metrics-chart-wrap" id="metrics-chart-wrap">
+            <svg id="metrics-chart" viewBox="0 0 900 300" role="img" aria-label="Metrics chart"></svg>
+        </div>
+    </section>
+
+    <section class="metrics-panel metrics-table-panel">
+        <div class="metrics-panel-header metrics-table-header">
+            <div>
+                <span class="metrics-section-kicker">Ad performance</span>
+                <h2>Ads breakdown</h2>
+                <p id="metrics-table-coverage">0 ads</p>
+            </div>
+            <label class="metrics-search">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
+                <input type="search" id="metrics-ad-search" placeholder="Search ads">
+            </label>
+        </div>
+        <div class="metrics-table-scroll">
+            <table class="metrics-table">
+                <thead>
+                    <tr>
+                        <th><button type="button" data-sort="ad_name">Ad <span></span></button></th>
+                        <th><button type="button" data-sort="spend">Spend <span></span></button></th>
+                        <th><button type="button" data-sort="cpm">CPM <span></span></button></th>
+                        <th><button type="button" data-sort="cpc">CPC <span></span></button></th>
+                        <th><button type="button" data-sort="ctr">CTR <span></span></button></th>
+                        <th><button type="button" data-sort="adds_to_cart">Adds to Cart <span></span></button></th>
+                        <th><button type="button" data-sort="purchases">Purchases <span></span></button></th>
+                        <th><button type="button" data-sort="cost_per_purchase">Cost / Purchase <span></span></button></th>
+                        <th><button type="button" data-sort="roas">ROAS <span></span></button></th>
+                        <th title="Estimated, weighted by reconstructed impressions">
+                            <button type="button" data-sort="frequency">Freq. ~ <span></span></button>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody id="metrics-table-body"></tbody>
+            </table>
+        </div>
+        <div class="metrics-empty" id="metrics-empty" hidden>
+            <div class="metrics-empty-icon">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
+                    <line x1="4" y1="20" x2="4" y2="10"/>
+                    <line x1="10" y1="20" x2="10" y2="4"/>
+                    <line x1="16" y1="20" x2="16" y2="13"/>
+                </svg>
+            </div>
+            <h3>No metrics for this range</h3>
+            <p>Import a daily Markdown snapshot or choose a different date range.</p>
+        </div>
+    </section>
+
+    <footer class="metrics-import-meta" id="metrics-import-meta">
+        {% if latest_import %}
+        Last import: <strong>{{ latest_import.filename }}</strong> for
+        {{ latest_import.metric_date.strftime('%b %d, %Y') }}
+        {% else %}
+        No snapshots imported yet.
+        {% endif %}
+    </footer>
+</div>
+
+<div class="metrics-confirm-overlay" id="metrics-replace-overlay" hidden>
+    <div class="metrics-confirm-dialog" role="dialog" aria-modal="true"
+        aria-labelledby="metrics-replace-title" aria-describedby="metrics-replace-copy">
+        <div class="metrics-confirm-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M10.3 2.9 1.8 17a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 2.9a2 2 0 0 0-3.4 0z"/>
+                <line x1="12" y1="9" x2="12" y2="13"/>
+                <line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+        </div>
+        <div class="metrics-confirm-content">
+            <span class="metrics-section-kicker">Existing snapshot</span>
+            <h2 id="metrics-replace-title">Replace metrics for this day?</h2>
+            <p id="metrics-replace-copy"></p>
+            <div class="metrics-confirm-details">
+                <div>
+                    <span>Existing file</span>
+                    <strong id="metrics-existing-file">-</strong>
+                </div>
+                <div>
+                    <span>New file</span>
+                    <strong id="metrics-incoming-file">-</strong>
+                </div>
+            </div>
+            <p class="metrics-confirm-warning">
+                This replaces every ad metric currently stored for the selected date.
+            </p>
+        </div>
+        <div class="metrics-confirm-actions">
+            <button type="button" class="metrics-confirm-cancel" id="metrics-replace-cancel">Keep existing data</button>
+            <button type="button" class="metrics-confirm-replace" id="metrics-replace-confirm">Replace data</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/metrics.js', v='1') }}"></script>
+{% endblock %}

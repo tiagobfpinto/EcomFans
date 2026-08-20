@@ -4,8 +4,9 @@ import secrets
 from datetime import timedelta
 from functools import wraps
 
-from flask import Blueprint, flash, redirect, render_template, request, session, url_for
+from flask import Blueprint, flash, jsonify, redirect, render_template, request, session, url_for
 from sqlalchemy import or_
+from sqlalchemy.exc import SQLAlchemyError
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from billing_config import BILLING_CYCLE_DAYS
@@ -41,6 +42,22 @@ def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if "user_id" not in session:
+            return redirect(url_for("auth.login"))
+        try:
+            current_user = db.session.get(User, session["user_id"])
+        except SQLAlchemyError:
+            db.session.rollback()
+            session.clear()
+            message = "Database is not ready. Run migrations and try again."
+            if request.is_json or "application/json" in (request.headers.get("Accept") or "").lower():
+                return jsonify({"error": message}), 503
+            flash(message, "error")
+            return redirect(url_for("auth.login"))
+        if current_user is None:
+            session.clear()
+            if request.is_json or "application/json" in (request.headers.get("Accept") or "").lower():
+                return jsonify({"error": "Session expired. Please log in again."}), 401
+            flash("Your session expired. Please sign in again.", "error")
             return redirect(url_for("auth.login"))
         return f(*args, **kwargs)
     return decorated_function

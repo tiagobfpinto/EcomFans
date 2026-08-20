@@ -5,7 +5,7 @@
     <div class="dashboard-header">
         <span class="page-eyebrow">AI Generation</span>
         <h1>Script Optimizer</h1>
-        <p>Upload a video, transcribe speech to text, and return only the script.</p>
+        <p>Upload multiple videos, queue their transcriptions, and work with every script in one place.</p>
     </div>
 
     {% if not has_openai_key %}
@@ -27,111 +27,523 @@
     {% endif %}
 
     <div class="prompt-section">
-        <h2>Upload Video</h2>
+        <h2>Upload Videos</h2>
         <div class="prompt-card script-opt-card">
             <label class="upload-drop-zone script-upload-zone">
-                <input type="file" id="script-video-input" accept="video/*,audio/*" style="display:none"
-                    onchange="setSelectedVideo(this)">
+                <input type="file" id="script-video-input" accept="video/*,audio/*" multiple style="display:none"
+                    onchange="queueSelectedVideos(this)">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
                     stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
                     <polyline points="17 8 12 3 7 8" />
                     <line x1="12" y1="3" x2="12" y2="15" />
                 </svg>
-                <span id="script-upload-label">Click to select video file</span>
+                <span id="script-upload-label">Click to select video or audio files</span>
+                <small>Select several files at once or add more to the queue later.</small>
             </label>
             <p class="field-hint" style="margin-top: 10px;">
-                Max file size: {{ max_upload_mb }}MB. Processing runs in background workers and file is deleted after job completion.
+                Max file size: {{ max_upload_mb }}MB per file. Large files are converted to speech-only audio and transcribed in smaller chunks. Processing runs in background workers and each upload is deleted after completion.
             </p>
             <div class="prompt-controls">
-                <button id="script-transcribe-btn" class="btn btn-accent" onclick="transcribeVideo()" {% if not has_openai_key %}disabled{% endif %}>
+                <span id="script-selection-summary" class="field-hint">No files selected.</span>
+                <button id="script-transcribe-btn" class="btn btn-accent" onclick="transcribeQueue()" disabled>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                         stroke-linecap="round" stroke-linejoin="round">
                         <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
                     </svg>
-                    <span>Transcribe</span>
+                    <span>Transcribe queue</span>
                 </button>
             </div>
         </div>
     </div>
 
-    <div id="script-loading" class="loading-state" style="display:none;">
-        <div class="spinner"></div>
-        <p id="script-loading-text">Transcribing video speech...</p>
+    <div class="prompt-section">
+        <div class="script-queue-heading">
+            <div>
+                <h2>Transcription Queue</h2>
+                <p id="script-queue-summary" class="field-hint">Add files to build your queue.</p>
+            </div>
+            <button id="script-clear-finished-btn" class="btn btn-ghost btn-sm" onclick="clearFinishedQueue()"
+                style="display:none">Clear finished</button>
+        </div>
+        <div id="script-queue-empty" class="prompt-card script-queue-empty">
+            Your selected videos will appear here as a grid.
+        </div>
+        <div id="script-queue-grid" class="script-queue-grid" aria-live="polite"></div>
     </div>
 
     <div class="prompt-section">
-        <h2>Transcript</h2>
-        <div class="prompt-card script-result-card">
-            <textarea id="script-transcript-output" rows="12" readonly
-                placeholder="Transcript text will appear here..."></textarea>
-            <div class="prompt-controls">
-                <button id="script-copy-btn" class="btn btn-ghost" onclick="copyTranscript()" disabled>Copy Text</button>
-            </div>
+        <h2>Saved Scripts</h2>
+        <div id="script-saved-list" class="script-saved-list">
+            {% if not saved_scripts %}
+            <p id="script-saved-empty" class="field-hint">No saved scripts yet.</p>
+            {% endif %}
         </div>
     </div>
 </div>
 
 <style>
     .script-opt-card {
-        max-width: 760px;
+        max-width: 920px;
     }
 
     .script-upload-zone {
         margin-top: 6px;
+        min-height: 112px;
+        flex-direction: column;
+        text-align: center;
     }
 
-    .script-result-card textarea {
-        min-height: 260px;
+    .script-upload-zone small {
+        color: var(--text-muted);
+        font-size: 0.75rem;
+    }
+
+    .script-queue-heading {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 14px;
+    }
+
+    .script-queue-heading h2 {
+        margin-bottom: 4px;
+    }
+
+    .script-queue-empty {
+        color: var(--text-muted);
+        text-align: center;
+        padding: 36px 20px;
+    }
+
+    .script-queue-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 16px;
+    }
+
+    .script-queue-card {
+        min-width: 0;
+        overflow: hidden;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        background: var(--bg-secondary);
+        box-shadow: var(--shadow-sm);
+        display: flex;
+        flex-direction: column;
+    }
+
+    .script-queue-card-media {
+        position: relative;
+        aspect-ratio: 16 / 9;
+        overflow: hidden;
+        background: var(--bg-tertiary);
+    }
+
+    .script-queue-card-media img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .script-queue-card-placeholder {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        color: var(--text-muted);
+        font-size: 0.78rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+    }
+
+    .script-queue-status-badge {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        padding: 5px 9px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-full);
+        background: rgba(10, 10, 20, 0.82);
+        color: var(--text-secondary);
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        backdrop-filter: blur(8px);
+    }
+
+    .script-queue-status-badge.status-uploading,
+    .script-queue-status-badge.status-waiting,
+    .script-queue-status-badge.status-queued {
+        border-color: rgba(251, 191, 36, 0.35);
+        background: rgba(43, 34, 12, 0.9);
+        color: var(--warning);
+    }
+
+    .script-queue-status-badge.status-running {
+        border-color: rgba(124, 109, 232, 0.4);
+        background: rgba(35, 29, 75, 0.9);
+        color: var(--accent-light);
+    }
+
+    .script-queue-status-badge.status-completed {
+        border-color: rgba(32, 212, 160, 0.32);
+        background: rgba(10, 48, 42, 0.9);
+        color: var(--success);
+    }
+
+    .script-queue-status-badge.status-failed {
+        border-color: rgba(248, 113, 113, 0.35);
+        background: rgba(55, 20, 28, 0.92);
+        color: var(--error);
+    }
+
+    .script-queue-card-body {
+        min-width: 0;
+        padding: 15px;
+        display: flex;
+        flex: 1;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .script-queue-card-title {
+        margin: 0;
+        overflow: hidden;
+        color: var(--text-primary);
+        font-size: 0.95rem;
+        font-weight: 650;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .script-queue-card-meta,
+    .script-queue-card-status {
+        margin: 0;
+        color: var(--text-muted);
+        font-size: 0.78rem;
+        line-height: 1.45;
+    }
+
+    .script-queue-card-status.status-failed {
+        color: var(--error);
+    }
+
+    .script-queue-progress {
+        height: 3px;
+        overflow: hidden;
+        border-radius: var(--radius-full);
+        background: var(--bg-tertiary);
+    }
+
+    .script-queue-progress::after {
+        content: '';
+        display: block;
+        width: 42%;
+        height: 100%;
+        border-radius: inherit;
+        background: var(--gradient-accent);
+        animation: script-queue-progress 1.2s ease-in-out infinite;
+    }
+
+    @keyframes script-queue-progress {
+        from { transform: translateX(-110%); }
+        to { transform: translateX(350%); }
+    }
+
+    .script-queue-transcript {
+        width: 100%;
+        min-height: 150px;
+        padding: 10px 11px;
+        resize: vertical;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        outline: none;
+        background: var(--bg-tertiary);
+        color: var(--text-primary);
+        font: inherit;
+        font-size: 0.82rem;
+        line-height: 1.5;
+    }
+
+    .script-queue-title-input {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        outline: none;
+        background: var(--bg-tertiary);
+        color: var(--text-primary);
+    }
+
+    .script-queue-title-input:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    .script-queue-card-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: auto;
+        padding-top: 2px;
+    }
+
+    .script-queue-card-actions .btn {
+        flex: 1 1 auto;
+    }
+
+    .script-saved-list {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+        gap: 14px;
+    }
+
+    .script-saved-card {
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        overflow: hidden;
+        background: rgba(255, 255, 255, 0.03);
+        display: flex;
+        flex-direction: column;
+    }
+
+    .script-saved-card-thumb {
+        width: 100%;
+        aspect-ratio: 16 / 9;
+        object-fit: cover;
+        background: rgba(0, 0, 0, 0.4);
+    }
+
+    .script-saved-card-thumb.placeholder {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: rgba(255, 255, 255, 0.4);
+        font-size: 13px;
+    }
+
+    .script-saved-card-body {
+        padding: 12px 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        flex: 1;
+    }
+
+    .script-saved-card-title {
+        font-weight: 600;
+        word-break: break-word;
+    }
+
+    .script-saved-card-preview {
+        font-size: 13px;
+        color: rgba(255, 255, 255, 0.65);
+        line-height: 1.4;
+        max-height: 5.6em;
+        overflow: hidden;
+    }
+
+    .script-saved-card-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: auto;
+    }
+
+    @media (max-width: 640px) {
+        .script-queue-heading {
+            align-items: flex-start;
+            flex-direction: column;
+        }
+
+        .script-queue-grid {
+            grid-template-columns: 1fr;
+        }
     }
 </style>
 
 <script>
-    let selectedVideoFile = null;
+    const videoQueue = new Map();
+    let queueSequence = 0;
+    let isStartingQueue = false;
     const MAX_UPLOAD_BYTES = {{ max_upload_mb|int }} * 1024 * 1024;
     const JOB_POLL_INTERVAL_MS = 1800;
-    const JOB_POLL_TIMEOUT_MS = 20 * 60 * 1000;
+    const JOB_POLL_TIMEOUT_MS = 2 * 60 * 60 * 1000;
+    const HAS_OPENAI_KEY = {{ has_openai_key|tojson }};
+    const INITIAL_SAVED_SCRIPTS = {{ saved_scripts|tojson }};
+    const ACTIVE_QUEUE_STATUSES = new Set(['uploading', 'waiting', 'queued', 'running']);
 
     function getScriptCsrfToken() {
         const meta = document.querySelector('meta[name="csrf-token"]');
         return meta ? (meta.getAttribute('content') || '').trim() : '';
     }
 
-    function setSelectedVideo(input) {
-        const label = document.getElementById('script-upload-label');
-        selectedVideoFile = (input.files && input.files[0]) ? input.files[0] : null;
-        if (!selectedVideoFile) {
-            label.textContent = 'Click to select video file';
-            return;
+    function queueSelectedVideos(input) {
+        const files = Array.from(input.files || []);
+        let rejectedCount = 0;
+        let duplicateCount = 0;
+
+        files.forEach((file) => {
+            if (!isSupportedMediaFile(file) || file.size <= 0 || file.size > MAX_UPLOAD_BYTES) {
+                rejectedCount += 1;
+                return;
+            }
+
+            const fingerprint = `${file.name}:${file.size}:${file.lastModified}`;
+            if (Array.from(videoQueue.values()).some(item => item.fingerprint === fingerprint)) {
+                duplicateCount += 1;
+                return;
+            }
+
+            const item = {
+                id: `media-${Date.now()}-${++queueSequence}`,
+                fingerprint,
+                file,
+                status: 'ready',
+                statusText: 'Ready to add to the transcription queue.',
+                jobId: null,
+                transcript: '',
+                thumbnailBlob: null,
+                thumbnailUrl: null,
+                saveTitle: '',
+                saveState: 'idle',
+            };
+            videoQueue.set(item.id, item);
+
+            captureFirstFrame(file).then(({ blob, url }) => {
+                if (!videoQueue.has(item.id)) {
+                    URL.revokeObjectURL(url);
+                    return;
+                }
+                item.thumbnailBlob = blob;
+                item.thumbnailUrl = url;
+                refreshQueueItem(item);
+            }).catch(() => { /* Audio files and unsupported codecs use a placeholder. */ });
+        });
+
+        input.value = '';
+        renderQueue();
+        if (rejectedCount) {
+            showScriptFlash(
+                `${rejectedCount} file${rejectedCount === 1 ? '' : 's'} skipped. Use non-empty video/audio files up to {{ max_upload_mb }}MB each.`,
+                'error'
+            );
         }
-        label.textContent = `${selectedVideoFile.name} (${formatBytes(selectedVideoFile.size)})`;
+        if (duplicateCount) {
+            showScriptFlash(`${duplicateCount} duplicate file${duplicateCount === 1 ? '' : 's'} already in the queue.`, 'error');
+        }
     }
 
-    async function transcribeVideo() {
-        if (!selectedVideoFile) {
-            showScriptFlash('Please select a video file.', 'error');
-            return;
-        }
-        if (selectedVideoFile.size > MAX_UPLOAD_BYTES) {
-            showScriptFlash(`Video is too large. Max allowed is {{ max_upload_mb }}MB.`, 'error');
+    function isSupportedMediaFile(file) {
+        const mime = (file.type || '').toLowerCase();
+        if (mime) return mime.startsWith('video/') || mime.startsWith('audio/');
+        return /\.(mp4|mov|m4v|webm|avi|mkv|mpeg|mpg|mp3|m4a|wav|ogg|aac|flac)$/i.test(file.name || '');
+    }
+
+    function captureFirstFrame(file) {
+        return new Promise((resolve, reject) => {
+            if (!file || !file.type || !file.type.startsWith('video/')) {
+                reject(new Error('Not a video file.'));
+                return;
+            }
+            const video = document.createElement('video');
+            video.preload = 'auto';
+            video.muted = true;
+            video.playsInline = true;
+            const objectUrl = URL.createObjectURL(file);
+            video.src = objectUrl;
+
+            const cleanup = () => {
+                URL.revokeObjectURL(objectUrl);
+                video.removeAttribute('src');
+                video.load();
+            };
+
+            let settled = false;
+            const fail = (err) => {
+                if (settled) return;
+                settled = true;
+                cleanup();
+                reject(err);
+            };
+
+            const drawFrame = () => {
+                if (settled) return;
+                try {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = video.videoWidth || 640;
+                    canvas.height = video.videoHeight || 360;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    canvas.toBlob((blob) => {
+                        if (settled) return;
+                        settled = true;
+                        cleanup();
+                        if (!blob) {
+                            reject(new Error('Could not capture frame.'));
+                            return;
+                        }
+                        resolve({ blob, url: URL.createObjectURL(blob) });
+                    }, 'image/jpeg', 0.85);
+                } catch (err) {
+                    fail(err);
+                }
+            };
+
+            video.addEventListener('error', () => fail(new Error('Could not read video.')), { once: true });
+            video.addEventListener('loadeddata', () => {
+                const target = video.duration && video.duration > 0.1 ? 0.1 : 0;
+                if (target > 0) {
+                    video.addEventListener('seeked', drawFrame, { once: true });
+                    try {
+                        video.currentTime = target;
+                    } catch (err) {
+                        fail(err);
+                    }
+                } else {
+                    drawFrame();
+                }
+            }, { once: true });
+        });
+    }
+
+    async function transcribeQueue() {
+        if (isStartingQueue || !HAS_OPENAI_KEY) return;
+        if (!Array.from(videoQueue.values()).some(item => item.status === 'ready')) {
+            showScriptFlash('Add at least one video to the queue.', 'error');
             return;
         }
 
-        const transcribeBtn = document.getElementById('script-transcribe-btn');
-        const loading = document.getElementById('script-loading');
-        const loadingText = document.getElementById('script-loading-text');
-        const output = document.getElementById('script-transcript-output');
-        const copyBtn = document.getElementById('script-copy-btn');
+        isStartingQueue = true;
+        updateQueueControls();
+        try {
+            let nextItem = Array.from(videoQueue.values()).find(item => item.status === 'ready');
+            while (nextItem) {
+                await enqueueQueueItem(nextItem);
+                nextItem = Array.from(videoQueue.values()).find(item => item.status === 'ready');
+            }
+        } finally {
+            isStartingQueue = false;
+            updateQueueControls();
+        }
+    }
 
-        transcribeBtn.disabled = true;
-        loading.style.display = 'flex';
-        loadingText.textContent = 'Uploading and queuing transcription...';
-        output.value = '';
-        copyBtn.disabled = true;
+    async function enqueueQueueItem(item) {
+        item.status = 'uploading';
+        item.statusText = 'Uploading video...';
+        item.transcript = '';
+        item.jobId = null;
+        item.saveState = 'idle';
+        refreshQueueItem(item);
 
         try {
             const form = new FormData();
-            form.append('video', selectedVideoFile);
+            form.append('video', item.file);
             const csrfToken = getScriptCsrfToken();
             if (csrfToken) {
                 form.append('_csrf_token', csrfToken);
@@ -143,69 +555,90 @@
                 body: form,
             });
             const data = await resp.json();
+            if (resp.status === 429) {
+                const retryAfter = Math.min(60, Math.max(1, Number(data.retry_after_seconds) || 5));
+                item.status = 'waiting';
+                item.statusText = `Upload queue paused by the rate limit. Retrying automatically in ${retryAfter}s.`;
+                refreshQueueItem(item);
+                await sleep(retryAfter * 1000);
+                item.status = 'ready';
+                item.statusText = 'Ready to retry upload.';
+                refreshQueueItem(item);
+                return;
+            }
             if (!resp.ok) {
                 const msg = data.error === 'no_openai_key'
                     ? 'OpenAI API key is not configured on the platform.'
                     : (data.error || 'Transcription failed.');
-                showScriptFlash(msg, 'error');
-                return;
+                throw new Error(msg);
             }
 
             const jobId = Number(data.job_id || 0);
             if (!jobId) {
-                showScriptFlash('Transcription job was not created.', 'error');
-                return;
+                throw new Error('Transcription job was not created.');
             }
 
-            const result = await pollTranscriptionJob(jobId, loadingText);
-            output.value = result.text || '';
-            copyBtn.disabled = !(output.value && output.value.trim());
-            showScriptFlash('Transcript ready.', 'success');
+            item.jobId = jobId;
+            item.status = data.status === 'running' ? 'running' : 'queued';
+            item.statusText = item.status === 'running'
+                ? 'Worker is transcribing speech...'
+                : 'Queued and waiting for an available worker.';
+            refreshQueueItem(item);
+            void monitorTranscriptionJob(item);
         } catch (err) {
-            showScriptFlash(err?.message || 'Network error while transcribing.', 'error');
-        } finally {
-            transcribeBtn.disabled = false;
-            loading.style.display = 'none';
+            item.status = 'failed';
+            item.statusText = err?.message || 'Network error while adding this file to the queue.';
+            refreshQueueItem(item);
         }
     }
 
-    async function pollTranscriptionJob(jobId, loadingTextEl) {
+    async function monitorTranscriptionJob(item) {
         const startedAt = Date.now();
-        while ((Date.now() - startedAt) < JOB_POLL_TIMEOUT_MS) {
-            const resp = await fetch(`/script-optimizer/transcribe/jobs/${jobId}`);
-            const data = await resp.json();
-            if (!resp.ok) {
-                throw new Error(data.error || 'Could not fetch transcription job status.');
-            }
-
-            if (data.status === 'completed') {
-                return data;
-            }
-            if (data.status === 'failed') {
-                throw new Error(data.error || 'Transcription failed.');
-            }
-
-            if (loadingTextEl) {
-                if (data.status === 'queued') {
-                    loadingTextEl.textContent = 'Queued... waiting for an available worker.';
-                } else if (data.status === 'running') {
-                    loadingTextEl.textContent = 'Worker is transcribing speech...';
-                } else {
-                    loadingTextEl.textContent = 'Processing transcription...';
+        try {
+            while ((Date.now() - startedAt) < JOB_POLL_TIMEOUT_MS) {
+                const resp = await fetch(`/script-optimizer/transcribe/jobs/${item.jobId}`);
+                const data = await resp.json();
+                if (!resp.ok) {
+                    throw new Error(data.error || 'Could not fetch transcription job status.');
                 }
+
+                if (data.status === 'completed') {
+                    item.status = 'completed';
+                    item.statusText = 'Transcript ready.';
+                    item.transcript = data.text || '';
+                    refreshQueueItem(item);
+                    return;
+                }
+                if (data.status === 'failed') {
+                    throw new Error(data.error || 'Transcription failed.');
+                }
+
+                item.status = data.status === 'running' ? 'running' : 'queued';
+                if (data.status === 'queued') {
+                    item.statusText = 'Queued and waiting for an available worker.';
+                } else if (data.status === 'running') {
+                    item.statusText = 'Worker is transcribing speech...';
+                } else {
+                    item.statusText = 'Processing transcription...';
+                }
+                refreshQueueItem(item);
+                await sleep(JOB_POLL_INTERVAL_MS);
             }
-            await sleep(JOB_POLL_INTERVAL_MS);
+            throw new Error('Transcription timed out. Please try again.');
+        } catch (err) {
+            item.status = 'failed';
+            item.statusText = err?.message || 'Transcription failed.';
+            refreshQueueItem(item);
         }
-        throw new Error('Transcription timed out. Please try again.');
     }
 
     function sleep(ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
 
-    async function copyTranscript() {
-        const output = document.getElementById('script-transcript-output');
-        const text = (output.value || '').trim();
+    async function copyQueueTranscript(itemId) {
+        const item = videoQueue.get(itemId);
+        const text = (item?.transcript || '').trim();
         if (!text) return;
         try {
             await navigator.clipboard.writeText(text);
@@ -214,6 +647,360 @@
             showScriptFlash('Copy failed.', 'error');
         }
     }
+
+    async function saveQueueScript(itemId) {
+        const item = videoQueue.get(itemId);
+        const text = (item?.transcript || '').trim();
+        if (!text) {
+            showScriptFlash('Nothing to save.', 'error');
+            return;
+        }
+        const card = document.querySelector(`.script-queue-card[data-queue-id="${itemId}"]`);
+        const titleInput = card?.querySelector('.script-queue-title-input');
+        item.saveTitle = (titleInput?.value || item.saveTitle || '').trim();
+        item.saveState = 'saving';
+        refreshQueueItem(item);
+
+        try {
+            const form = new FormData();
+            form.append('transcript', text);
+            if (item.saveTitle) {
+                form.append('title', item.saveTitle);
+            }
+            if (item.file?.name) {
+                form.append('source_filename', item.file.name);
+            }
+            if (item.thumbnailBlob) {
+                form.append('thumbnail', item.thumbnailBlob, 'first_frame.jpg');
+            }
+            const csrfToken = getScriptCsrfToken();
+            if (csrfToken) {
+                form.append('_csrf_token', csrfToken);
+            }
+
+            const resp = await fetch('/script-optimizer/scripts', {
+                method: 'POST',
+                headers: csrfToken ? { 'X-CSRF-Token': csrfToken } : {},
+                body: form,
+            });
+            const data = await resp.json();
+            if (!resp.ok) {
+                throw new Error(data.error || 'Could not save script.');
+            }
+            prependSavedScript(data.script);
+            item.saveState = 'saved';
+            refreshQueueItem(item);
+            showScriptFlash('Script saved.', 'success');
+        } catch (err) {
+            showScriptFlash(err?.message || 'Network error while saving.', 'error');
+            item.saveState = 'idle';
+            refreshQueueItem(item);
+        }
+    }
+
+    function renderQueue() {
+        const grid = document.getElementById('script-queue-grid');
+        const empty = document.getElementById('script-queue-empty');
+        grid.replaceChildren(...Array.from(videoQueue.values()).map(renderQueueCard));
+        empty.style.display = videoQueue.size ? 'none' : 'block';
+        updateQueueControls();
+    }
+
+    function refreshQueueItem(item) {
+        const current = document.querySelector(`.script-queue-card[data-queue-id="${item.id}"]`);
+        if (current) {
+            current.replaceWith(renderQueueCard(item));
+        } else {
+            renderQueue();
+            return;
+        }
+        updateQueueControls();
+    }
+
+    function renderQueueCard(item) {
+        const card = document.createElement('article');
+        card.className = 'script-queue-card';
+        card.dataset.queueId = item.id;
+
+        const media = document.createElement('div');
+        media.className = 'script-queue-card-media';
+        if (item.thumbnailUrl) {
+            const img = document.createElement('img');
+            img.src = item.thumbnailUrl;
+            img.alt = '';
+            media.appendChild(img);
+        } else {
+            const placeholder = document.createElement('div');
+            placeholder.className = 'script-queue-card-placeholder';
+            placeholder.innerHTML = item.file.type.startsWith('audio/')
+                ? '<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg><span>Audio</span>'
+                : '<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="5" width="15" height="14" rx="2"/><path d="m18 10 4-2v8l-4-2z"/></svg><span>Video</span>';
+            media.appendChild(placeholder);
+        }
+
+        const badge = document.createElement('span');
+        badge.className = `script-queue-status-badge status-${item.status}`;
+        badge.textContent = queueStatusLabel(item);
+        media.appendChild(badge);
+        card.appendChild(media);
+
+        const body = document.createElement('div');
+        body.className = 'script-queue-card-body';
+
+        const title = document.createElement('h3');
+        title.className = 'script-queue-card-title';
+        title.title = item.file.name;
+        title.textContent = item.file.name;
+        body.appendChild(title);
+
+        const meta = document.createElement('p');
+        meta.className = 'script-queue-card-meta';
+        meta.textContent = formatBytes(item.file.size);
+        body.appendChild(meta);
+
+        const status = document.createElement('p');
+        status.className = `script-queue-card-status status-${item.status}`;
+        status.textContent = item.statusText;
+        body.appendChild(status);
+
+        if (ACTIVE_QUEUE_STATUSES.has(item.status)) {
+            const progress = document.createElement('div');
+            progress.className = 'script-queue-progress';
+            progress.setAttribute('aria-hidden', 'true');
+            body.appendChild(progress);
+        }
+
+        if (item.status === 'completed') {
+            const transcript = document.createElement('textarea');
+            transcript.className = 'script-queue-transcript';
+            transcript.readOnly = true;
+            transcript.value = item.transcript;
+            transcript.setAttribute('aria-label', `Transcript for ${item.file.name}`);
+            body.appendChild(transcript);
+
+            const saveTitle = document.createElement('input');
+            saveTitle.className = 'script-queue-title-input';
+            saveTitle.type = 'text';
+            saveTitle.maxLength = 200;
+            saveTitle.placeholder = 'Script title (optional)';
+            saveTitle.value = item.saveTitle;
+            saveTitle.disabled = item.saveState === 'saving' || item.saveState === 'saved';
+            saveTitle.addEventListener('input', () => { item.saveTitle = saveTitle.value; });
+            body.appendChild(saveTitle);
+        }
+
+        const actions = document.createElement('div');
+        actions.className = 'script-queue-card-actions';
+        if (item.status === 'ready') {
+            actions.appendChild(makeQueueButton('Remove', 'btn btn-ghost btn-sm btn-danger-hover', () => removeQueueItem(item.id)));
+        } else if (item.status === 'failed') {
+            actions.appendChild(makeQueueButton('Retry', 'btn btn-accent btn-sm', () => retryQueueItem(item.id)));
+            actions.appendChild(makeQueueButton('Remove', 'btn btn-ghost btn-sm btn-danger-hover', () => removeQueueItem(item.id)));
+        } else if (item.status === 'completed') {
+            actions.appendChild(makeQueueButton('Copy', 'btn btn-ghost btn-sm', () => copyQueueTranscript(item.id), !item.transcript.trim()));
+            const saveLabel = item.saveState === 'saving' ? 'Saving...' : (item.saveState === 'saved' ? 'Saved' : 'Save script');
+            actions.appendChild(makeQueueButton(saveLabel, 'btn btn-accent btn-sm', () => saveQueueScript(item.id), item.saveState !== 'idle' || !item.transcript.trim()));
+            actions.appendChild(makeQueueButton('Remove', 'btn btn-ghost btn-sm btn-danger-hover', () => removeQueueItem(item.id)));
+        }
+        if (actions.childElementCount) body.appendChild(actions);
+
+        card.appendChild(body);
+        return card;
+    }
+
+    function makeQueueButton(label, className, onClick, disabled = false) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = className;
+        button.textContent = label;
+        button.disabled = disabled;
+        button.addEventListener('click', onClick);
+        return button;
+    }
+
+    function queueStatusLabel(item) {
+        if (item.status === 'completed' && item.saveState === 'saved') return 'Saved';
+        return {
+            ready: 'Ready',
+            uploading: 'Uploading',
+            waiting: 'Waiting',
+            queued: 'Queued',
+            running: 'Transcribing',
+            completed: 'Complete',
+            failed: 'Failed',
+        }[item.status] || 'Processing';
+    }
+
+    function retryQueueItem(itemId) {
+        const item = videoQueue.get(itemId);
+        if (!item || item.status !== 'failed') return;
+        item.status = 'ready';
+        item.statusText = 'Ready to retry.';
+        refreshQueueItem(item);
+        void transcribeQueue();
+    }
+
+    function removeQueueItem(itemId) {
+        const item = videoQueue.get(itemId);
+        if (!item || ACTIVE_QUEUE_STATUSES.has(item.status)) return;
+        if (item.thumbnailUrl) URL.revokeObjectURL(item.thumbnailUrl);
+        videoQueue.delete(itemId);
+        renderQueue();
+    }
+
+    function clearFinishedQueue() {
+        Array.from(videoQueue.values()).forEach((item) => {
+            if (!['completed', 'failed'].includes(item.status)) return;
+            if (item.thumbnailUrl) URL.revokeObjectURL(item.thumbnailUrl);
+            videoQueue.delete(item.id);
+        });
+        renderQueue();
+    }
+
+    function updateQueueControls() {
+        const items = Array.from(videoQueue.values());
+        const count = statusName => items.filter(item => item.status === statusName).length;
+        const readyCount = count('ready');
+        const activeCount = items.filter(item => ACTIVE_QUEUE_STATUSES.has(item.status)).length;
+        const finishedCount = count('completed') + count('failed');
+        const transcribeBtn = document.getElementById('script-transcribe-btn');
+        const buttonLabel = transcribeBtn.querySelector('span');
+        const selectionSummary = document.getElementById('script-selection-summary');
+        const queueSummary = document.getElementById('script-queue-summary');
+        const uploadLabel = document.getElementById('script-upload-label');
+        const clearButton = document.getElementById('script-clear-finished-btn');
+
+        transcribeBtn.disabled = !HAS_OPENAI_KEY || !readyCount || isStartingQueue;
+        buttonLabel.textContent = isStartingQueue
+            ? 'Adding to queue...'
+            : (readyCount ? `Transcribe ${readyCount} ${readyCount === 1 ? 'file' : 'files'}` : 'Transcribe queue');
+        selectionSummary.textContent = items.length
+            ? `${items.length} ${items.length === 1 ? 'file' : 'files'} in the grid${activeCount ? ` · ${activeCount} processing` : ''}.`
+            : 'No files selected.';
+        uploadLabel.textContent = items.length ? 'Add more video or audio files' : 'Click to select video or audio files';
+        clearButton.style.display = finishedCount ? '' : 'none';
+
+        if (!items.length) {
+            queueSummary.textContent = 'Add files to build your queue.';
+            return;
+        }
+        const parts = [];
+        if (readyCount) parts.push(`${readyCount} ready`);
+        if (count('uploading')) parts.push(`${count('uploading')} uploading`);
+        if (count('waiting')) parts.push(`${count('waiting')} waiting`);
+        if (count('queued')) parts.push(`${count('queued')} queued`);
+        if (count('running')) parts.push(`${count('running')} transcribing`);
+        if (count('completed')) parts.push(`${count('completed')} complete`);
+        if (count('failed')) parts.push(`${count('failed')} failed`);
+        queueSummary.textContent = `${items.length} ${items.length === 1 ? 'file' : 'files'} · ${parts.join(' · ')}`;
+    }
+
+    function renderSavedScriptCard(script) {
+        const card = document.createElement('div');
+        card.className = 'script-saved-card';
+        card.dataset.scriptId = script.id;
+
+        if (script.thumbnail_url) {
+            const img = document.createElement('img');
+            img.className = 'script-saved-card-thumb';
+            img.src = script.thumbnail_url;
+            img.alt = script.title || 'Script thumbnail';
+            card.appendChild(img);
+        } else {
+            const ph = document.createElement('div');
+            ph.className = 'script-saved-card-thumb placeholder';
+            ph.textContent = 'No thumbnail';
+            card.appendChild(ph);
+        }
+
+        const body = document.createElement('div');
+        body.className = 'script-saved-card-body';
+
+        const title = document.createElement('div');
+        title.className = 'script-saved-card-title';
+        title.textContent = script.title || 'Untitled script';
+        body.appendChild(title);
+
+        const preview = document.createElement('div');
+        preview.className = 'script-saved-card-preview';
+        preview.textContent = script.transcript || '';
+        body.appendChild(preview);
+
+        const actions = document.createElement('div');
+        actions.className = 'script-saved-card-actions';
+
+        const copyBtn = document.createElement('button');
+        copyBtn.className = 'btn btn-ghost';
+        copyBtn.textContent = 'Copy';
+        copyBtn.onclick = () => copySavedScript(script.transcript || '');
+        actions.appendChild(copyBtn);
+
+        const delBtn = document.createElement('button');
+        delBtn.className = 'btn btn-ghost';
+        delBtn.textContent = 'Delete';
+        delBtn.onclick = () => deleteSavedScript(script.id);
+        actions.appendChild(delBtn);
+
+        body.appendChild(actions);
+        card.appendChild(body);
+        return card;
+    }
+
+    function prependSavedScript(script) {
+        const list = document.getElementById('script-saved-list');
+        const empty = document.getElementById('script-saved-empty');
+        if (empty) empty.remove();
+        list.prepend(renderSavedScriptCard(script));
+    }
+
+    async function copySavedScript(text) {
+        if (!text) return;
+        try {
+            await navigator.clipboard.writeText(text);
+            showScriptFlash('Script copied.', 'success');
+        } catch (err) {
+            showScriptFlash('Copy failed.', 'error');
+        }
+    }
+
+    async function deleteSavedScript(scriptId) {
+        if (!confirm('Delete this saved script?')) return;
+        try {
+            const csrfToken = getScriptCsrfToken();
+            const resp = await fetch(`/script-optimizer/scripts/${scriptId}`, {
+                method: 'DELETE',
+                headers: csrfToken ? { 'X-CSRF-Token': csrfToken } : {},
+            });
+            const data = await resp.json();
+            if (!resp.ok) {
+                showScriptFlash(data.error || 'Could not delete script.', 'error');
+                return;
+            }
+            const card = document.querySelector(`.script-saved-card[data-script-id="${scriptId}"]`);
+            if (card) card.remove();
+            const list = document.getElementById('script-saved-list');
+            if (list && !list.querySelector('.script-saved-card')) {
+                const p = document.createElement('p');
+                p.id = 'script-saved-empty';
+                p.className = 'field-hint';
+                p.textContent = 'No saved scripts yet.';
+                list.appendChild(p);
+            }
+            showScriptFlash('Script deleted.', 'success');
+        } catch (err) {
+            showScriptFlash(err?.message || 'Network error while deleting.', 'error');
+        }
+    }
+
+    function renderInitialSavedScripts() {
+        const list = document.getElementById('script-saved-list');
+        if (!list || !Array.isArray(INITIAL_SAVED_SCRIPTS)) return;
+        INITIAL_SAVED_SCRIPTS.forEach((script) => {
+            list.appendChild(renderSavedScriptCard(script));
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', renderInitialSavedScripts);
 
     function formatBytes(bytes) {
         if (!Number.isFinite(bytes) || bytes <= 0) return '0 B';

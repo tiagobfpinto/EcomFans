@@ -10,7 +10,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css', v='4') }}">
+    {% block head %}{% endblock %}
 </head>
 
 <body>
@@ -39,6 +40,25 @@
                 </svg>
                 <span>Dashboard</span>
             </a>
+            <a href="{{ url_for('notes.notes_page') }}"
+                class="nav-item {% if request.path.startswith('/notes') %}active{% endif %}">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 4h16v16H4z"/><path d="M8 9h8M8 13h5M8 17h7"/>
+                </svg>
+                <span>Notes</span>
+            </a>
+            <a href="{{ url_for('metrics.metrics_page') }}"
+                class="nav-item {% if request.path.startswith('/metrics') %}active{% endif %}">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="4" y1="20" x2="4" y2="10"/>
+                    <line x1="10" y1="20" x2="10" y2="4"/>
+                    <line x1="16" y1="20" x2="16" y2="13"/>
+                    <line x1="22" y1="20" x2="2" y2="20"/>
+                </svg>
+                <span>Metrics</span>
+            </a>
             <a href="{{ url_for('brand_dna.brand_dna_page') }}"
                 class="nav-item {% if request.path == '/brand-dna' %}active{% endif %}">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
@@ -59,7 +79,58 @@
                 </svg>
                 <span>Products</span>
             </a>
+            <a href="{{ url_for('product_images.product_images_page') }}"
+                class="nav-item {% if request.path.startswith('/product-images') %}active{% endif %}">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2"/>
+                    <circle cx="8.5" cy="8.5" r="1.5"/>
+                    <path d="M21 15l-5-5L5 21"/>
+                    <path d="M14 3l1.2 2.4L18 6.6l-2.8 1.2L14 10l-1.2-2.2L10 6.6l2.8-1.2L14 3z"/>
+                </svg>
+                <span>Product images</span>
+            </a>
+            <a href="{{ url_for('competitors.competitors_page') }}"
+                class="nav-item {% if request.path.startswith('/competitors') %}active{% endif %}">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="9"/>
+                    <circle cx="12" cy="12" r="5"/>
+                    <circle cx="12" cy="12" r="1"/>
+                </svg>
+                <span>Competitors</span>
+            </a>
+            <a href="{{ url_for('landing_builder.landing_builder_page') }}"
+                class="nav-item {% if request.path == '/landing-builder' %}active{% endif %}">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2"/>
+                    <path d="M3 9h18"/>
+                    <path d="M9 21V9"/>
+                </svg>
+                <span>Landing Builder</span>
+            </a>
             <span class="nav-label" style="margin-top:6px;">AI Generation</span>
+            <a href="{{ url_for('storyboarder.storyboarder_page') }}"
+                class="nav-item {% if request.path.startswith('/storyboarder') %}active{% endif %}">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="4" width="18" height="16" rx="2"/>
+                    <path d="M3 10h18M9 4v16M15 10v10"/>
+                </svg>
+                <span>Storyboarder</span>
+            </a>
+            <a href="{{ url_for('prompts.prompts_page') }}"
+                class="nav-item {% if request.path.startswith('/prompts') %}active{% endif %}">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 19.5V4a2 2 0 0 1 2-2h11" />
+                    <path d="M8 2v20" />
+                    <path d="M20 7v13a2 2 0 0 1-2 2H6" />
+                    <path d="M15 7h5" />
+                </svg>
+                <span>Prompts</span>
+            </a>
             <a href="{{ url_for('ai_image.ai_image_page') }}"
                 class="nav-item {% if request.path == '/ai-image' %}active{% endif %}">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
@@ -102,6 +173,19 @@
                     <circle cx="9" cy="9" r="1" />
                 </svg>
                 <span>Script Optimizer</span>
+            </a>
+            <span class="nav-label" style="margin-top:6px;">Premium</span>
+            <a href="{{ url_for('social_downloader.social_downloader_page') }}"
+                class="nav-item {% if request.path.startswith('/social-downloader') %}active{% endif %}">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 3v12"/>
+                    <path d="m7 10 5 5 5-5"/>
+                    <path d="M5 21h14"/>
+                    <path d="M5 3h4"/><path d="M15 3h4"/>
+                </svg>
+                <span>Shorts Downloader</span>
+                <span style="margin-left:auto;padding:2px 6px;border-radius:999px;background:var(--accent-subtle);color:var(--accent-light);font-size:.58rem;font-weight:800;letter-spacing:.06em;">PRO</span>
             </a>
             <span class="nav-label" style="margin-top:6px;">Billing</span>
             <a href="{{ url_for('billing.upgrade_page') }}"
