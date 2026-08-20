@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dlqueue"
+version = "0.1.0"
+description = "Reusable, framework-agnostic download queue for TikTok, Instagram, and Facebook."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+keywords = ["tiktok", "instagram", "facebook", "download", "queue", "yt-dlp"]
+dependencies = [
+    "yt-dlp>=2024.1.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["dlqueue*"]
