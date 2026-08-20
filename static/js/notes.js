@@ -276,17 +276,17 @@
             const common = {
                 id: makeId(), type: type, x: point.x, y: point.y,
                 width: 180, height: 110, rotation: 0,
-                fill: "#ddd8fb", stroke: "#7463df", stroke_width: 2, opacity: 1,
+                fill: "#E9DDD3", stroke: "#895A3A", stroke_width: 2, opacity: 1,
             };
             if (type === "ellipse") {
                 common.width = 150;
-                common.fill = "#d9f4eb";
-                common.stroke = "#20a980";
+                common.fill = "#E0EEE7";
+                common.stroke = "#2F7253";
             } else if (type === "line" || type === "arrow") {
                 common.width = 180;
                 common.height = 0;
                 common.fill = "transparent";
-                common.stroke = "#4e485d";
+                common.stroke = "#635C54";
                 common.stroke_width = 3;
             } else if (type === "sticky") {
                 common.width = 180;
@@ -294,14 +294,14 @@
                 common.fill = "#f7d96c";
                 common.stroke = "#e2bd36";
                 common.stroke_width = 1;
-                Object.assign(common, { text: "New note", font_size: 22, font_weight: 500, text_align: "left", text_color: "#292338" });
+                Object.assign(common, { text: "New note", font_size: 22, font_weight: 500, text_align: "left", text_color: "#292622" });
             } else if (type === "text") {
                 common.width = 220;
                 common.height = 100;
                 common.fill = "transparent";
                 common.stroke = "transparent";
                 common.stroke_width = 0;
-                Object.assign(common, { text: "Add text", font_size: 28, font_weight: 600, text_align: "left", text_color: "#292338" });
+                Object.assign(common, { text: "Add text", font_size: 28, font_weight: 600, text_align: "left", text_color: "#292622" });
             }
             return common;
         }

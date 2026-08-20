@@ -1,13 +1,13 @@
 .social-downloader {
-    --sd-panel: #0d111d;
-    --sd-panel-soft: #111827;
-    --sd-border: #243044;
-    --sd-border-soft: #1c2637;
-    --sd-text: #f8fafc;
-    --sd-muted: #8ea0ba;
-    --sd-accent: #7c5cff;
-    --sd-danger: #ff5c7a;
-    --sd-success: #31d08b;
+    --sd-panel: #FCFBF8;
+    --sd-panel-soft: #E8E3DC;
+    --sd-border: #D8D0C6;
+    --sd-border-soft: #D8D0C6;
+    --sd-text: #292622;
+    --sd-muted: #746C64;
+    --sd-accent: #895A3A;
+    --sd-danger: #A8443B;
+    --sd-success: #2F7253;
     max-width: 1120px;
     margin: 0 auto;
     padding: 4px 0 48px;
@@ -45,7 +45,7 @@
 
 .social-premium-pill,
 .social-eyebrow {
-    color: #9fb2d1;
+    color: #635C54;
     font-size: 0.68rem;
     font-weight: 800;
     letter-spacing: 0.11em;
@@ -58,7 +58,7 @@
     padding: 5px 9px;
     border: 1px solid var(--sd-border);
     border-radius: 8px;
-    background: #0a0f1b;
+    background: #F3F1ED;
 }
 
 .social-platforms {
@@ -71,8 +71,8 @@
     padding: 7px 10px;
     border: 1px solid var(--sd-border);
     border-radius: 8px;
-    background: #0a0f1b;
-    color: #c8d3e6;
+    background: #F3F1ED;
+    color: #635C54;
     font-size: 0.78rem;
     font-weight: 700;
 }
@@ -109,7 +109,7 @@
 }
 
 .social-limit strong {
-    color: #d8e2f3;
+    color: #292622;
 }
 
 .social-limit.is-over,
@@ -126,8 +126,8 @@
     border: 1px solid var(--sd-border);
     border-radius: 10px;
     outline: none;
-    background: #080d17;
-    color: #e2e8f0;
+    background: #F3F1ED;
+    color: #292622;
     font: 500 0.86rem/1.65 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
@@ -136,7 +136,7 @@
 }
 
 #social-urls::placeholder {
-    color: #59677e;
+    color: #746C64;
 }
 
 .social-composer-footer {
@@ -154,8 +154,8 @@
     padding: 0 13px;
     border: 1px solid var(--sd-border);
     border-radius: 9px;
-    background: #141c2b;
-    color: #dbe6f7;
+    background: #FCFBF8;
+    color: #292622;
     font-size: 0.82rem;
     font-weight: 800;
     line-height: 1;
@@ -167,16 +167,16 @@
 .social-upgrade-button:hover,
 #social-submit:hover:not(:disabled),
 .social-item-action:hover {
-    border-color: #43516d;
-    background: #192235;
+    border-color: #BBAE9F;
+    background: #FCFBF8;
     color: #fff;
 }
 
 #social-submit,
 .social-upgrade-button,
 .social-item-action-primary {
-    border-color: #6c5ce7;
-    background: #5b46d6;
+    border-color: #895A3A;
+    background: #895A3A;
     color: #fff;
 }
 
@@ -184,14 +184,14 @@
 .social-item-action-danger {
     border-color: rgba(255, 92, 122, 0.38);
     background: rgba(255, 92, 122, 0.08);
-    color: #ff9aaa;
+    color: #A8443B;
 }
 
 .social-button-danger:hover,
 .social-item-action-danger:hover {
     border-color: rgba(255, 92, 122, 0.7);
     background: rgba(255, 92, 122, 0.14);
-    color: #ffd4dc;
+    color: #F6E3E0;
 }
 
 #social-submit:disabled,
@@ -265,20 +265,20 @@
     padding: 13px 14px;
     border: 1px solid var(--sd-border-soft);
     border-radius: 12px;
-    background: #090f1c;
+    background: #F3F1ED;
     box-shadow: inset 0 0 0 0 transparent;
     transition: border-color 120ms ease, background 120ms ease, box-shadow 120ms ease;
 }
 
 .social-item.is-downloaded {
     border-color: rgba(49, 208, 139, 0.48);
-    background: linear-gradient(90deg, rgba(49, 208, 139, 0.14), #090f1c 46%);
+    background: linear-gradient(90deg, rgba(49, 208, 139, 0.14), #F3F1ED 46%);
     box-shadow: inset 4px 0 0 var(--sd-success);
 }
 
 .social-item-downloading {
     border-color: rgba(96, 165, 250, 0.38);
-    box-shadow: inset 4px 0 0 #60a5fa;
+    box-shadow: inset 4px 0 0 #4D6870;
 }
 
 .social-item-failed {
@@ -293,8 +293,8 @@
     place-items: center;
     border: 1px solid var(--sd-border-soft);
     border-radius: 10px;
-    background: #101729;
-    color: #c8d3e6;
+    background: #FCFBF8;
+    color: #635C54;
     font-size: 0.72rem;
     font-weight: 900;
     letter-spacing: 0.04em;
@@ -303,7 +303,7 @@
 .social-item.is-downloaded .social-platform-badge {
     border-color: rgba(49, 208, 139, 0.45);
     background: rgba(49, 208, 139, 0.14);
-    color: #8af0bf;
+    color: #2F7253;
 }
 
 .social-item-main {
@@ -331,8 +331,8 @@
     flex: 0 0 auto;
     padding: 4px 7px;
     border-radius: 999px;
-    background: #121a29;
-    color: #9fb2d1;
+    background: #FCFBF8;
+    color: #635C54;
     font-size: 0.62rem;
     font-weight: 900;
     letter-spacing: 0.055em;
@@ -341,22 +341,22 @@
 
 .social-status-success {
     background: rgba(49, 208, 139, 0.11);
-    color: #60e5aa;
+    color: #2F7253;
 }
 
 .social-status-downloaded {
     background: rgba(49, 208, 139, 0.18);
-    color: #8af0bf;
+    color: #2F7253;
 }
 
 .social-status-failed {
     background: rgba(255, 92, 122, 0.12);
-    color: #ff9aaa;
+    color: #A8443B;
 }
 
 .social-status-downloading {
     background: rgba(96, 165, 250, 0.12);
-    color: #93c5fd;
+    color: #4D6870;
 }
 
 .social-item-meta,
@@ -373,7 +373,7 @@
 }
 
 .social-item-error {
-    color: #ff9aaa;
+    color: #A8443B;
 }
 
 .social-item-actions {
@@ -384,7 +384,7 @@
 .social-item.is-downloaded .social-item-action-primary {
     border-color: rgba(49, 208, 139, 0.6);
     background: rgba(49, 208, 139, 0.18);
-    color: #c8ffe4;
+    color: #E0EEE7;
 }
 
 .social-item.is-downloaded .social-item-action-primary:hover {
@@ -403,7 +403,7 @@
     width: 7px;
     height: 7px;
     border-radius: 50%;
-    background: #65748d;
+    background: #746C64;
     animation: social-bounce 1s infinite alternate;
 }
 
@@ -432,20 +432,20 @@
     border: 1px solid rgba(96, 165, 250, 0.22);
     border-radius: 10px;
     background: rgba(96, 165, 250, 0.08);
-    color: #bfdbfe;
+    color: #E2EAEC;
     font-size: 0.82rem;
 }
 
 .social-flash.is-error {
     border-color: rgba(255, 92, 122, 0.3);
     background: rgba(255, 92, 122, 0.08);
-    color: #ffc2cd;
+    color: #F6E3E0;
 }
 
 .social-flash.is-success {
     border-color: rgba(49, 208, 139, 0.25);
     background: rgba(49, 208, 139, 0.08);
-    color: #b4f5d7;
+    color: #E0EEE7;
 }
 
 .social-lock-card {
@@ -489,8 +489,8 @@
     padding: 7px 10px;
     border: 1px solid var(--sd-border);
     border-radius: 8px;
-    background: #0a0f1b;
-    color: #c8d3e6;
+    background: #F3F1ED;
+    color: #635C54;
     font-size: 0.76rem;
 }
 

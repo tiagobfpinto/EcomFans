@@ -10,8 +10,9 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css', v='4') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css', v='5') }}">
     {% block head %}{% endblock %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/editorial-theme.css', v='1') }}">
 </head>
 
 <body>
@@ -194,7 +195,7 @@
                     <path d="M5 3h4"/><path d="M15 3h4"/>
                 </svg>
                 <span>Shorts Downloader</span>
-                <span style="margin-left:auto;padding:2px 6px;border-radius:999px;background:var(--accent-subtle);color:var(--accent-light);font-size:.58rem;font-weight:800;letter-spacing:.06em;">PRO</span>
+                <span style="margin-left:auto;padding:2px 6px;border-radius:999px;background:var(--accent-subtle);color:var(--accent-strong);font-size:.58rem;font-weight:800;letter-spacing:.06em;">PRO</span>
             </a>
             <span class="nav-label" style="margin-top:6px;">Billing</span>
             <a href="{{ url_for('billing.upgrade_page') }}"

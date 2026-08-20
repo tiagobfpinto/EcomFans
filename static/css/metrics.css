@@ -40,7 +40,7 @@
 .metrics-date-range button {
     border: 0;
     border-radius: var(--radius-sm);
-    background: var(--gradient-accent);
+    background: var(--accent);
     color: #fff;
     font: inherit;
     font-size: 0.82rem;
@@ -54,7 +54,7 @@
     align-items: center;
     gap: 8px;
     padding: 11px 15px;
-    box-shadow: var(--shadow-accent);
+    box-shadow: var(--shadow-sm);
 }
 
 .metrics-upload-toggle:hover,
@@ -68,7 +68,7 @@
 .metrics-toolbar,
 .metrics-kpi-card {
     border: 1px solid var(--border);
-    background: linear-gradient(145deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.018));
+    background: var(--surface);
     box-shadow: var(--shadow-sm);
 }
 
@@ -90,7 +90,7 @@
 }
 
 .metrics-section-kicker {
-    color: var(--accent-light);
+    color: var(--accent-strong);
     font-size: 0.67rem;
     font-weight: 700;
     letter-spacing: 0.1em;
@@ -136,7 +136,7 @@
 .metrics-date-range input:focus,
 .metrics-search:focus-within {
     border-color: var(--accent);
-    box-shadow: 0 0 0 3px var(--accent-glow);
+    box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
 .metrics-file-field {
@@ -167,7 +167,7 @@
 }
 
 .metrics-file-icon {
-    color: var(--accent-light);
+    color: var(--accent-strong);
     line-height: 0;
 }
 
@@ -251,8 +251,8 @@
 .metrics-presets button.active,
 .metrics-chart-switcher button.active {
     background: var(--accent-subtle);
-    color: var(--accent-light);
-    box-shadow: inset 0 0 0 1px rgba(124, 109, 232, 0.22);
+    color: var(--accent-strong);
+    box-shadow: inset 0 0 0 1px rgba(137, 90, 58, 0.22);
 }
 
 .metrics-date-range {
@@ -314,9 +314,9 @@
 }
 
 .metrics-notice-info {
-    color: var(--accent-light);
+    color: var(--accent-strong);
     background: var(--accent-subtle);
-    border: 1px solid rgba(124, 109, 232, 0.2);
+    border: 1px solid rgba(137, 90, 58, 0.2);
 }
 
 .metrics-kpi-grid {
@@ -345,8 +345,8 @@
 }
 
 .metrics-kpi-primary {
-    border-color: rgba(124, 109, 232, 0.35);
-    background: linear-gradient(145deg, rgba(124, 109, 232, 0.14), rgba(124, 109, 232, 0.035));
+    border-color: rgba(137, 90, 58, 0.35);
+    background: var(--accent-subtle);
 }
 
 .metrics-kpi-card > span,
@@ -410,21 +410,21 @@
 }
 
 .metrics-chart-area {
-    fill: url("#metrics-area-gradient");
+    fill: var(--accent-subtle);
 }
 
 .metrics-chart-line {
     fill: none;
-    stroke: var(--accent-light);
+    stroke: var(--accent-strong);
     stroke-width: 3;
     stroke-linecap: round;
     stroke-linejoin: round;
-    filter: drop-shadow(0 3px 8px var(--accent-glow-strong));
+    filter: none;
 }
 
 .metrics-chart-point {
     fill: var(--bg-primary);
-    stroke: var(--accent-light);
+    stroke: var(--accent-strong);
     stroke-width: 2.5;
 }
 
@@ -435,7 +435,7 @@
 }
 
 .metrics-chart-bar {
-    fill: var(--accent-light);
+    fill: var(--accent-strong);
     opacity: 0.82;
     transition: opacity 0.15s ease;
 }
@@ -505,7 +505,7 @@
     text-align: left;
     position: sticky;
     left: 0;
-    background: #0d0d1a;
+    background: #FCFBF8;
     z-index: 1;
 }
 
@@ -527,7 +527,7 @@
 
 .metrics-table th button:hover,
 .metrics-table th button.active {
-    color: var(--accent-light);
+    color: var(--accent-strong);
 }
 
 .metrics-table td {
@@ -541,7 +541,7 @@
 }
 
 .metrics-table tbody tr:hover td {
-    background: rgba(124, 109, 232, 0.035);
+    background: rgba(137, 90, 58, 0.035);
 }
 
 .metrics-table tbody tr:last-child td {
@@ -565,7 +565,7 @@
     margin: 0 auto 13px;
     border-radius: 14px;
     background: var(--accent-subtle);
-    color: var(--accent-light);
+    color: var(--accent-strong);
 }
 
 .metrics-empty h3 {
@@ -610,9 +610,7 @@
     overflow: hidden;
     border: 1px solid rgba(251, 191, 36, 0.2);
     border-radius: 18px;
-    background:
-        radial-gradient(circle at 90% 0%, rgba(251, 191, 36, 0.08), transparent 32%),
-        var(--bg-secondary);
+    background: var(--surface);
     box-shadow: var(--shadow-lg);
     animation: metrics-confirm-in 0.18s ease-out;
 }
