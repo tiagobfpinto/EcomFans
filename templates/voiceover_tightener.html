@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% block title %}Voiceover Tightener - EcomFans{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/voiceover_tightener.css', v='20260821') }}">
+{% endblock %}
+{% block content %}
+<div class="vt-page" id="voiceover-tightener"
+    data-max-upload-mb="{{ max_upload_mb }}"
+    data-max-duration-minutes="{{ max_duration_minutes }}">
+    <script type="application/json" id="vt-preset-data">{{ preset_defaults|tojson }}</script>
+
+    <header class="vt-header">
+        <div>
+            <span class="vt-eyebrow">Audio workflow</span>
+            <h1>Voiceover Tightener</h1>
+            <p>Remove dead air and bring phrases together without changing pitch, speed, or vocal character.</p>
+        </div>
+        <span class="vt-local-pill">Local processing</span>
+    </header>
+
+    <div class="vt-flash" id="vt-flash" role="status" aria-live="polite" hidden></div>
+
+    <section class="vt-composer" aria-labelledby="vt-upload-heading">
+        <div class="vt-section-heading">
+            <div>
+                <span class="vt-step">01</span>
+                <h2 id="vt-upload-heading">Add your voiceover</h2>
+            </div>
+            <span class="vt-limit">MP3 · {{ max_upload_mb }} MB · {{ max_duration_minutes }} min</span>
+        </div>
+
+        <label class="vt-dropzone" id="vt-dropzone">
+            <input type="file" class="vt-file-input" id="vt-audio-input" accept="audio/mpeg,.mp3">
+            <span class="vt-drop-icon" aria-hidden="true">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M5 20h14"/>
+                </svg>
+            </span>
+            <strong id="vt-file-label">Drop an MP3 here or choose a file</strong>
+            <small id="vt-file-meta">The original stays intact and remains available in your history.</small>
+        </label>
+
+        <div class="vt-config-grid">
+            <div class="vt-preset-panel">
+                <div class="vt-section-heading vt-section-heading-compact">
+                    <div>
+                        <span class="vt-step">02</span>
+                        <h2>Choose the pace</h2>
+                    </div>
+                    <span class="vt-custom-badge" id="vt-custom-badge" hidden>Customized</span>
+                </div>
+                <div class="vt-presets" role="radiogroup" aria-label="Pace preset">
+                    <button type="button" class="vt-preset" data-preset="natural" role="radio" aria-checked="false">
+                        <strong>Natural</strong><span>Calm and spacious</span>
+                    </button>
+                    <button type="button" class="vt-preset is-active" data-preset="dynamic" role="radio" aria-checked="true">
+                        <strong>Dynamic</strong><span>Ads, UGC and Reels</span>
+                    </button>
+                    <button type="button" class="vt-preset" data-preset="aggressive" role="radio" aria-checked="false">
+                        <strong>Aggressive</strong><span>Fast direct response</span>
+                    </button>
+                </div>
+                <div class="vt-summary" id="vt-settings-summary"></div>
+            </div>
+
+            <details class="vt-advanced" id="vt-advanced">
+                <summary>
+                    <span><span class="vt-step">03</span> Advanced controls</span>
+                    <small>Fine-tune detection, gaps and protection</small>
+                </summary>
+                <div class="vt-fields">
+                    <label class="vt-field">
+                        <span>Pause sensitivity</span>
+                        <select data-setting="sensitivity">
+                            <option value="auto">Automatic</option><option value="low">Low</option>
+                            <option value="medium">Medium</option><option value="high">High</option>
+                        </select>
+                    </label>
+                    <label class="vt-field"><span>Minimum editable pause <em>ms</em></span><input type="number" min="80" max="2000" data-setting="min_pause_ms"></label>
+                    <label class="vt-field"><span>Within-sentence gap <em>ms</em></span><input type="number" min="0" max="500" data-setting="within_sentence_gap_ms"></label>
+                    <label class="vt-field"><span>Sentence gap <em>ms</em></span><input type="number" min="0" max="1000" data-setting="sentence_gap_ms"></label>
+                    <label class="vt-field"><span>Overlap <em>ms</em></span><input type="number" min="0" max="80" data-setting="overlap_ms"></label>
+                    <label class="vt-field"><span>Transition smoothness <em>%</em></span><input type="number" min="0" max="100" data-setting="transition_smoothness"></label>
+                    <label class="vt-field"><span>Pre-speech protection <em>ms</em></span><input type="number" min="0" max="150" data-setting="pre_speech_ms"></label>
+                    <label class="vt-field"><span>Post-speech protection <em>ms</em></span><input type="number" min="0" max="200" data-setting="post_speech_ms"></label>
+                    <label class="vt-field">
+                        <span>Breath handling</span>
+                        <select data-setting="breath_handling">
+                            <option value="keep">Keep</option><option value="shorten">Shorten</option><option value="remove">Remove</option>
+                        </select>
+                    </label>
+                    <label class="vt-field"><span>Head silence <em>ms</em></span><input type="number" min="0" max="1000" data-setting="head_silence_ms"></label>
+                    <label class="vt-field"><span>Tail silence <em>ms</em></span><input type="number" min="0" max="1000" data-setting="tail_silence_ms"></label>
+                    <div class="vt-toggle-stack">
+                        <label class="vt-toggle"><input type="checkbox" data-setting="protect_word_endings"><span>Protect word endings</span></label>
+                        <label class="vt-toggle"><input type="checkbox" data-setting="preserve_intentional_pauses"><span>Preserve intentional long pauses</span></label>
+                        <label class="vt-toggle"><input type="checkbox" data-setting="preserve_original_quality"><span>Preserve original quality</span></label>
+                    </div>
+                </div>
+                <p class="vt-quality-note">MP3 edits require re-encoding. Quality preservation keeps the original sample rate and channels and exports with LAME V0; it is not bit-perfect.</p>
+            </details>
+        </div>
+
+        <div class="vt-submit-row">
+            <div>
+                <strong id="vt-ready-title">Choose an MP3 to continue</strong>
+                <span id="vt-ready-copy">Dynamic is selected by default.</span>
+            </div>
+            <button type="button" class="vt-primary" id="vt-process" disabled>
+                <span class="vt-spinner" aria-hidden="true"></span>
+                <span class="vt-process-label">Tighten voiceover</span>
+            </button>
+        </div>
+    </section>
+
+    <section class="vt-history" aria-labelledby="vt-history-heading">
+        <div class="vt-history-heading">
+            <div><span class="vt-eyebrow">Your files</span><h2 id="vt-history-heading">Processing history</h2></div>
+            <button type="button" class="vt-secondary" id="vt-refresh">Refresh</button>
+        </div>
+        <div class="vt-history-loading" id="vt-loading">Loading voiceovers…</div>
+        <div class="vt-empty" id="vt-empty" hidden>
+            <strong>No tightened voiceovers yet</strong>
+            <p>Your first result will appear here with the original and edited audio.</p>
+        </div>
+        <div class="vt-items" id="vt-items"></div>
+        <button type="button" class="vt-load-more" id="vt-load-more" hidden>Load more</button>
+    </section>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/voiceover_tightener.js', v='20260821') }}"></script>
+{% endblock %}

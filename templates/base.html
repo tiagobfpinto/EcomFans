@@ -184,6 +184,14 @@
                 </svg>
                 <span>Script Optimizer</span>
             </a>
+            <a href="{{ url_for('voiceover_tightener.voiceover_tightener_page') }}"
+                class="nav-item {% if request.path.startswith('/voiceover-tightener') %}active{% endif %}">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 12v3"/><path d="M8 8v11"/><path d="M12 4v16"/><path d="M16 7v10"/><path d="M20 10v5"/>
+                </svg>
+                <span>Voiceover Tightener</span>
+            </a>
             <span class="nav-label" style="margin-top:6px;">Premium</span>
             <a href="{{ url_for('social_downloader.social_downloader_page') }}"
                 class="nav-item {% if request.path.startswith('/social-downloader') %}active{% endif %}">

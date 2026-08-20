@@ -48,6 +48,7 @@ from script_optimizer import script_optimizer_bp
 from scraper import scraper_bp
 from social_downloader import social_downloader_bp
 from storyboarder import storyboarder_bp
+from voiceover_tightener import voiceover_tightener_bp
 from utils_crypto import encrypt_api_key
 from worker_runtime import run_worker_pool
 
@@ -124,6 +125,8 @@ def _match_rate_limit(path: str, method: str) -> tuple[int, int] | None:
     normalized_method = method.upper()
     if normalized_method == "GET" and path.startswith("/script-optimizer/transcribe/jobs/"):
         return 120, 60
+    if normalized_method == "GET" and path == "/voiceover-tightener/items":
+        return 120, 60
 
     rules = {
         ("/login", "POST"): (10, 60),
@@ -140,6 +143,7 @@ def _match_rate_limit(path: str, method: str) -> tuple[int, int] | None:
         ("/ai-creatives/generate", "POST"): (8, 60),
         ("/ai-creatives/inspirations", "POST"): (16, 60),
         ("/script-optimizer/transcribe", "POST"): (6, 60),
+        ("/voiceover-tightener/items", "POST"): (6, 60),
         ("/brand-dna/analyze", "POST"): (5, 60),
         ("/billing/account", "GET"): (60, 3600),
         ("/billing/usage", "GET"): (60, 3600),
@@ -164,6 +168,7 @@ def _prefers_json_response() -> bool:
             "/storyboarder/",
             "/brand-dna/",
             "/funnels",
+            "/voiceover-tightener",
         )
     ):
         return True
@@ -198,6 +203,17 @@ app.config["MAX_CONTENT_LENGTH"] = (
 )
 app.config["SCRIPT_TRANSCRIBE_MAX_UPLOAD_BYTES"] = (
     max(25, int(os.getenv("SCRIPT_TRANSCRIBE_MAX_UPLOAD_MB", "500"))) * 1024 * 1024
+)
+app.config["VOICEOVER_TIGHTENER_MAX_UPLOAD_BYTES"] = (
+    max(1, int(os.getenv("VOICEOVER_TIGHTENER_MAX_UPLOAD_MB", "100")))
+    * 1024
+    * 1024
+)
+app.config["VOICEOVER_TIGHTENER_MAX_DURATION_SECONDS"] = max(
+    60, int(os.getenv("VOICEOVER_TIGHTENER_MAX_DURATION_SECONDS", "3600"))
+)
+app.config["VOICEOVER_TIGHTENER_FFMPEG_TIMEOUT_SECONDS"] = max(
+    30, int(os.getenv("VOICEOVER_TIGHTENER_FFMPEG_TIMEOUT_SECONDS", "1800"))
 )
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SECURE"] = _is_truthy(
@@ -311,6 +327,7 @@ app.register_blueprint(notes_bp)
 app.register_blueprint(social_downloader_bp)
 app.register_blueprint(storyboarder_bp)
 app.register_blueprint(funnels_bp)
+app.register_blueprint(voiceover_tightener_bp)
 
 
 @app.before_request
@@ -323,6 +340,10 @@ def apply_request_guardrails():
     if request.path == "/script-optimizer/transcribe" and request.method == "POST":
         request.max_content_length = (
             app.config["SCRIPT_TRANSCRIBE_MAX_UPLOAD_BYTES"] + 2 * 1024 * 1024
+        )
+    elif request.path == "/voiceover-tightener/items" and request.method == "POST":
+        request.max_content_length = (
+            app.config["VOICEOVER_TIGHTENER_MAX_UPLOAD_BYTES"] + 2 * 1024 * 1024
         )
 
     session.permanent = True
@@ -385,6 +406,8 @@ def add_security_headers(response):
 def handle_request_too_large(_error):
     if request.path == "/script-optimizer/transcribe":
         max_bytes = app.config.get("SCRIPT_TRANSCRIBE_MAX_UPLOAD_BYTES", 0)
+    elif request.path == "/voiceover-tightener/items":
+        max_bytes = app.config.get("VOICEOVER_TIGHTENER_MAX_UPLOAD_BYTES", 0)
     else:
         max_bytes = request.max_content_length or 0
     max_mb = int(max_bytes / (1024 * 1024))
