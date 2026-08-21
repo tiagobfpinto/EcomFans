@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 560" width="900" height="560" role="img" aria-label="Preview of the Korean root cover advertorial page template">
+  <rect width="900" height="560" fill="#fdfaf4"/>
+  <rect x="580" width="320" height="560" fill="#f3ebdc"/>
+
+  <!-- mock article column -->
+  <rect x="64" y="60" width="152" height="30" rx="15" fill="#a94c33"/>
+  <rect x="82" y="70" width="116" height="10" rx="5" fill="#ffffff" opacity="0.85"/>
+
+  <rect x="64" y="118" width="440" height="22" rx="4" fill="#1c1b19"/>
+  <rect x="64" y="152" width="470" height="22" rx="4" fill="#1c1b19"/>
+  <rect x="64" y="186" width="296" height="22" rx="4" fill="#1c1b19"/>
+
+  <rect x="64" y="230" width="420" height="10" rx="5" fill="#b0aba1"/>
+  <rect x="64" y="250" width="372" height="10" rx="5" fill="#b0aba1"/>
+
+  <line x1="64" y1="286" x2="504" y2="286" stroke="#e3ddd1" stroke-width="2"/>
+
+  <g>
+    <rect x="64" y="306" width="100" height="66" rx="4" fill="#ffffff" stroke="#e3ddd1" stroke-width="2"/>
+    <rect x="88" y="330" width="52" height="16" rx="4" fill="#1c1b19"/>
+    <rect x="176" y="306" width="100" height="66" rx="4" fill="#ffffff" stroke="#e3ddd1" stroke-width="2"/>
+    <rect x="200" y="330" width="52" height="16" rx="4" fill="#1c1b19"/>
+    <rect x="288" y="306" width="100" height="66" rx="4" fill="#ffffff" stroke="#e3ddd1" stroke-width="2"/>
+    <rect x="312" y="330" width="52" height="16" rx="4" fill="#1c1b19"/>
+    <rect x="400" y="306" width="100" height="66" rx="4" fill="#fdf1ec" stroke="#a94c33" stroke-width="2"/>
+    <rect x="424" y="330" width="52" height="16" rx="4" fill="#a94c33"/>
+  </g>
+
+  <rect x="70" y="410" width="436" height="52" rx="4" fill="#1c1b19"/>
+  <rect x="64" y="402" width="436" height="52" rx="4" fill="#e8b34a" stroke="#1c1b19" stroke-width="3"/>
+  <rect x="188" y="422" width="188" height="12" rx="6" fill="#1c1b19" opacity="0.75"/>
+
+  <rect x="64" y="486" width="330" height="9" rx="4.5" fill="#c9c3b8"/>
+  <rect x="64" y="506" width="270" height="9" rx="4.5" fill="#c9c3b8"/>
+
+  <!-- product -->
+  <ellipse cx="740" cy="442" rx="58" ry="10" fill="#5b4b38" opacity="0.14"/>
+  <g transform="translate(740 290) scale(0.62) rotate(-7)">
+    <rect x="-52" y="-160" width="104" height="380" rx="16" fill="#f5efe2" stroke="#d8ccb5" stroke-width="2"/>
+    <rect x="-34" y="-140" width="14" height="326" rx="7" fill="#ffffff" opacity="0.7"/>
+    <rect x="-42" y="-66" width="84" height="152" rx="5" fill="#ffffff" opacity="0.6"/>
+    <rect x="-52" y="130" width="104" height="11" fill="#c9a24a"/>
+    <path d="M-52 141 L52 141 L52 204 Q52 220 36 220 L-36 220 Q-52 220 -52 204 Z" fill="#1f1b18"/>
+    <path d="M-46 -160 L46 -160 L41 -180 L-41 -180 Z" fill="#cbbfa9"/>
+    <rect x="-43" y="-188" width="86" height="9" rx="3" fill="#a2967f"/>
+    <rect x="-35" y="-234" width="70" height="48" rx="7" fill="#332a25"/>
+    <g fill="#332a25">
+      <path d="M-31.5 -230 L-27.5 -278 L-23.5 -230 Z"/>
+      <path d="M-20.5 -230 L-16.5 -282 L-12.5 -230 Z"/>
+      <path d="M-9.5 -230 L-5.5 -284 L-1.5 -230 Z"/>
+      <path d="M1.5 -230 L5.5 -284 L9.5 -230 Z"/>
+      <path d="M12.5 -230 L16.5 -282 L20.5 -230 Z"/>
+      <path d="M23.5 -230 L27.5 -278 L31.5 -230 Z"/>
+    </g>
+  </g>
+</svg>

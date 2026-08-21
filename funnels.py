@@ -39,6 +39,20 @@ PAGE_TEMPLATES = {
         "thumbnail": "assets/hair-roots-hero.webp",
         "features": ("Inline text editing", "Image replacement", "CTA and color settings"),
     },
+    "listicle-korean": {
+        "name": "Korean Root Cover Advertorial",
+        "description": (
+            "An investigative advertorial that names two villains in permanent color, "
+            "then lands on the Korean root stick as the in-between fix."
+        ),
+        "thumbnail": "assets/template-thumbnail.svg",
+        "features": (
+            "Inline text editing",
+            "Image replacement",
+            "Editorial diagrams",
+            "CTA and color settings",
+        ),
+    },
 }
 PAGE_TYPES = {template_id: item["name"] for template_id, item in PAGE_TEMPLATES.items()}
 PAGE_STATUSES = {"draft", "published"}
