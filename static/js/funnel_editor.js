@@ -7,11 +7,11 @@
     const bootstrap = JSON.parse(document.getElementById("fn-editor-bootstrap").textContent || "{}");
     const page = bootstrap.page || {};
     const defaultTemplate = bootstrap.default_template || "";
+    const hostMessageScope = "ecomfans:funnel-template";
     const funnelId = Number(root.dataset.funnelId);
     const pageId = Number(root.dataset.pageId);
 
     const titleInput = document.getElementById("fn-editor-title");
-    const typeInput = document.getElementById("fn-editor-type");
     const slugInput = document.getElementById("fn-editor-slug");
     const statusInput = document.getElementById("fn-editor-status");
     const htmlSource = document.getElementById("fn-html-source");
@@ -129,6 +129,11 @@
         if (!documentNode || !documentNode.documentElement) return htmlSource.value;
         const clone = documentNode.documentElement.cloneNode(true);
         clone.querySelector("#fn-visual-editor-style")?.remove();
+        clone.classList.remove("template-editor-enabled");
+        clone.querySelector("body")?.classList.remove("template-editor-enabled", "is-editing");
+        clone.querySelectorAll("dialog[open]").forEach(function (node) {
+            node.removeAttribute("open");
+        });
         clone.querySelectorAll("[contenteditable]").forEach(function (node) {
             node.removeAttribute("contenteditable");
             node.removeAttribute("spellcheck");
@@ -158,6 +163,14 @@
             return;
         }
         if (!documentNode || !documentNode.documentElement) return;
+
+        if (documentNode.documentElement.hasAttribute("data-page-template")) {
+            visualFrame.contentWindow?.postMessage(
+                { scope: hostMessageScope, action: "enable" },
+                "*"
+            );
+            return;
+        }
 
         const style = documentNode.createElement("style");
         style.id = "fn-visual-editor-style";
@@ -202,6 +215,13 @@
 
     function renderVisual() {
         visualChanged = false;
+        const hasNativeTemplateEditor = /data-page-template\s*=/.test(htmlSource.value);
+        visualFrame.setAttribute(
+            "sandbox",
+            hasNativeTemplateEditor
+                ? "allow-same-origin allow-scripts allow-modals"
+                : "allow-same-origin"
+        );
         visualFrame.removeEventListener("load", enhanceVisualEditor);
         visualFrame.addEventListener("load", enhanceVisualEditor, { once: true });
         visualFrame.srcdoc = htmlSource.value;
@@ -257,7 +277,6 @@
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
                         title: title,
-                        page_type: typeInput.value,
                         slug: slug,
                         status: statusInput.value,
                         html_content: htmlSource.value,
@@ -292,7 +311,7 @@
         }
     }
 
-    [titleInput, typeInput, statusInput].forEach(function (input) {
+    [titleInput, statusInput].forEach(function (input) {
         input.addEventListener("input", function () {
             if (input === statusInput) updatePublishUI();
             markDirty();
@@ -334,13 +353,17 @@
         });
     });
 
-    document.getElementById("fn-reset-template").addEventListener("click", function () {
-        if (!window.confirm("Reset this page to ex.html? Your current HTML will be replaced after you save.")) return;
+    function resetTemplate(skipConfirmation) {
+        if (!skipConfirmation && !window.confirm("Reset this page to the original Listicle template? Your current content will be replaced after you save.")) return;
         htmlSource.value = defaultTemplate;
         updateCodeSize();
         renderVisual();
         markDirty();
         showFlash("Template reset. Save to keep this change.", false);
+    }
+
+    document.getElementById("fn-reset-template").addEventListener("click", function () {
+        resetTemplate(false);
     });
 
     document.getElementById("fn-copy-url").addEventListener("click", async function () {
@@ -354,6 +377,40 @@
     });
 
     saveButton.addEventListener("click", savePage);
+
+    window.addEventListener("message", async function (event) {
+        if (event.source !== visualFrame.contentWindow || event.data?.scope !== hostMessageScope) return;
+        if (event.data.action === "ready") {
+            visualFrame.contentWindow?.postMessage(
+                { scope: hostMessageScope, action: "enable" },
+                "*"
+            );
+            return;
+        }
+        if (event.data.action === "change") {
+            visualChanged = true;
+            markDirty();
+            return;
+        }
+        if (event.data.action === "reset") {
+            resetTemplate(true);
+            return;
+        }
+        if (event.data.action === "save") {
+            visualChanged = true;
+            markDirty();
+            const saved = await savePage();
+            visualFrame.contentWindow?.postMessage(
+                {
+                    scope: hostMessageScope,
+                    action: saved ? "saved" : "save-error",
+                    message: saved ? "" : "The page could not be saved. Check the editor message.",
+                },
+                "*"
+            );
+        }
+    });
+
     previewButton.addEventListener("click", async function () {
         const previewWindow = window.open("about:blank", "_blank");
         const saved = await savePage();

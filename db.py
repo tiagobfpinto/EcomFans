@@ -1024,7 +1024,7 @@ class FunnelPage(db.Model):
         nullable=False,
     )
     title = db.Column(db.String(200), nullable=False)
-    page_type = db.Column(db.String(30), nullable=False, default="advertorial")
+    page_type = db.Column(db.String(30), nullable=False, default="listicle")
     slug = db.Column(db.String(180), nullable=False)
     html_content = db.Column(db.Text, nullable=False)
     status = db.Column(db.String(20), nullable=False, default="draft")

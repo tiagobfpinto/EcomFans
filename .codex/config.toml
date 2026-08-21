@@ -1,0 +1,8 @@
+[mcp_servers.magic]
+command = "npx"
+args = [
+    "-y",
+    "@21st-dev/magic-mcp",
+    "-s",
+    "user",
+]

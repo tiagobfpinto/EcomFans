@@ -3,7 +3,17 @@
     "allow": [
       "Bash(python -c \"from app import app; print\\(''App imports OK''\\)\")",
       "Bash(\"/c/Users/Tiago/AppData/Local/Programs/Python/Python310/python.exe\" -m pip install -r requirements.txt)",
-      "mcp__stitch__list_projects"
-    ]
+      "mcp__stitch__list_projects",
+      "Bash(find d:/projetos/EcomFans/__pycache__ -name landing_builder*)",
+      "mcp__stitch__create_project",
+      "Edit",
+      "Write",
+      "Bash(npm:*)",
+      "Bash(git:*)",
+      "Bash(ls:*)",
+      "Bash(cat:*)",
+      "Bash(python -m pytest tests/test_image_harvest.py tests/test_competitors.py -q)"
+    ],
+    "defaultMode": "bypassPermissions"
   }
 }

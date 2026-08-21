@@ -3,7 +3,7 @@
 {% block title %}{{ funnel.name }} - Funnels - EcomFans{% endblock %}
 
 {% block head %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/funnels.css', v='2') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/funnels.css', v='3') }}">
 {% endblock %}
 
 {% block content %}
@@ -60,14 +60,18 @@
     <section class="fn-section">
         <div class="fn-section-heading">
             <div><span class="fn-eyebrow">Pages</span><h2>Funnel pages</h2></div>
-            <span>Default template: <strong>ex.html</strong></span>
+            <span>{{ page_templates|length }} page template{{ '' if page_templates|length == 1 else 's' }} available</span>
         </div>
 
         <div class="fn-page-list">
             {% for page in funnel.pages %}
             <article class="fn-page-card" data-page-id="{{ page.id }}" data-page-title="{{ page.title }}">
                 <a class="fn-page-preview" href="{{ url_for('funnels.page_editor', funnel_id=funnel.id, page_id=page.id) }}">
+                    {% if page.template_thumbnail_url %}
+                    <img class="fn-page-template-image" src="{{ page.template_thumbnail_url }}" alt="{{ page.template_name }} template preview" loading="lazy">
+                    {% else %}
                     <div class="fn-page-mock" aria-hidden="true"><span></span><b></b><i></i><i></i><i></i></div>
+                    {% endif %}
                     <span class="fn-type-badge">{{ page.page_type_label }}</span>
                     <span class="fn-status-badge {{ page.status }}"><i></i>{{ page.status|capitalize }}</span>
                 </a>
@@ -99,7 +103,7 @@
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 2h9l5 5v15H6z"/><path d="M14 2v6h6M9 13h8M9 17h6"/></svg>
             </div>
             <h2>Add the first page to this funnel</h2>
-            <p>Choose a page type and URL slug. It will start with the <strong>ex.html</strong> template.</p>
+            <p>Choose a page template, give it a title and publish it when the content is ready.</p>
             <button class="fn-btn fn-btn-primary" type="button" data-open-page-modal>Create page</button>
         </div>
     </section>
@@ -107,29 +111,44 @@
 
 <div class="fn-modal" id="fn-page-modal" hidden>
     <div class="fn-modal-backdrop" data-close-modal></div>
-    <section class="fn-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="fn-page-modal-title">
+    <section class="fn-modal-dialog fn-template-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="fn-page-modal-title">
         <button class="fn-icon-btn fn-modal-close" type="button" data-close-modal aria-label="Close">
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 6 12 12M18 6 6 18"/></svg>
         </button>
         <span class="fn-eyebrow">New funnel page</span>
         <h2 id="fn-page-modal-title">Create a page</h2>
-        <p>Every new page starts with <strong>ex.html</strong>. You can edit the content before publishing.</p>
+        <p>Choose the starting layout. Each template keeps its own purpose-built visual editor.</p>
         <form id="fn-page-form" autocomplete="off">
+            <fieldset class="fn-template-picker">
+                <legend>Choose a template</legend>
+                {% for template in page_templates %}
+                <label class="fn-template-option">
+                    <input type="radio" name="template_id" value="{{ template.id }}" {% if loop.first %}checked{% endif %}>
+                    <span class="fn-template-preview">
+                        <img src="{{ template.thumbnail_url }}" alt="{{ template.name }} template preview" loading="lazy">
+                        <b>Available</b>
+                    </span>
+                    <span class="fn-template-copy">
+                        <small>Page template</small>
+                        <strong>{{ template.name }}</strong>
+                        <span>{{ template.description }}</span>
+                        <i>{% for feature in template.features %}<em>{{ feature }}</em>{% endfor %}</i>
+                    </span>
+                    <span class="fn-template-check" aria-hidden="true">✓</span>
+                </label>
+                {% endfor %}
+            </fieldset>
+            <div class="fn-page-create-fields">
             <label class="fn-field">
                 <span>Page title</span>
                 <input id="fn-page-title" type="text" maxlength="200" placeholder="e.g. 5 reasons to try our product" required>
-            </label>
-            <label class="fn-field">
-                <span>Page type</span>
-                <select id="fn-page-type">
-                    {% for value, label in page_types.items() %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
-                </select>
             </label>
             <label class="fn-field">
                 <span>URL slug</span>
                 <div class="fn-slug-field"><b>/</b><input id="fn-page-slug" type="text" maxlength="180" placeholder="my-page" required></div>
                 <small>Use a unique path, for example <strong>/5-reasons</strong>.</small>
             </label>
+            </div>
             <p class="fn-form-error" id="fn-page-error" role="alert" hidden></p>
             <div class="fn-modal-actions">
                 <button class="fn-btn fn-btn-ghost" type="button" data-close-modal>Cancel</button>
@@ -141,5 +160,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/funnels.js', v='1') }}"></script>
+<script src="{{ url_for('static', filename='js/funnels.js', v='2') }}"></script>
 {% endblock %}

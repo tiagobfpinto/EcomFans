@@ -12,6 +12,7 @@ from flask import (
     redirect,
     render_template,
     request,
+    send_from_directory,
     session,
     url_for,
 )
@@ -23,22 +24,25 @@ from db import Funnel, FunnelPage, db
 
 funnels_bp = Blueprint("funnels", __name__)
 
-DEFAULT_TEMPLATE_PATH = Path(__file__).with_name("ex.html")
+PAGE_TEMPLATES_ROOT = Path(__file__).with_name("pages-templates")
+DEFAULT_PAGE_TEMPLATE_ID = "listicle"
 MAX_FUNNEL_NAME_CHARS = 160
 MAX_DESCRIPTION_CHARS = 2000
 MAX_PAGE_TITLE_CHARS = 200
 MAX_SLUG_CHARS = 180
 MAX_HTML_BYTES = 2 * 1024 * 1024
 
-PAGE_TYPES = {
-    "advertorial": "Advertorial",
-    "listicle": "Listicle",
-    "landing": "Landing page",
-    "product": "Product page",
-    "quiz": "Quiz",
-    "custom": "Custom",
+PAGE_TEMPLATES = {
+    "listicle": {
+        "name": "Listicle",
+        "description": "A long-form editorial page built around reasons, proof, FAQs and a focused offer.",
+        "thumbnail": "assets/hair-roots-hero.webp",
+        "features": ("Inline text editing", "Image replacement", "CTA and color settings"),
+    },
 }
+PAGE_TYPES = {template_id: item["name"] for template_id, item in PAGE_TEMPLATES.items()}
 PAGE_STATUSES = {"draft", "published"}
+_TEMPLATE_ASSET_RE = re.compile(r"assets/[A-Za-z0-9._/-]+")
 
 # A published page lives directly at /<slug>. These prefixes belong to the app
 # and cannot be claimed by a funnel page.
@@ -79,11 +83,82 @@ RESERVED_SLUG_PREFIXES = {
 }
 
 
-def default_template_html() -> str:
+def _template_directory(template_id: str) -> Path:
+    if template_id not in PAGE_TEMPLATES:
+        raise ValueError("Select an available page template.")
+    return PAGE_TEMPLATES_ROOT / template_id
+
+
+def _template_file(template_id: str, filename: str) -> str:
+    path = _template_directory(template_id) / filename
     try:
-        return DEFAULT_TEMPLATE_PATH.read_text(encoding="utf-8")
+        return path.read_text(encoding="utf-8")
     except OSError as exc:
-        raise RuntimeError("The default funnel template ex.html is unavailable.") from exc
+        raise RuntimeError(f'The page template "{template_id}" is unavailable.') from exc
+
+
+def _template_asset_url(template_id: str, asset_path: str) -> str:
+    template_dir = _template_directory(template_id).resolve()
+    asset = (template_dir / asset_path).resolve()
+    try:
+        asset.relative_to(template_dir)
+    except ValueError as exc:
+        raise RuntimeError("The page template contains an invalid asset path.") from exc
+    if not asset.is_file():
+        raise RuntimeError(f'The page template asset "{asset_path}" is unavailable.')
+    return f"/funnels/templates/{template_id}/assets/{asset_path.removeprefix('assets/')}"
+
+
+def _inline_template_assets(template_id: str, source: str) -> str:
+    return _TEMPLATE_ASSET_RE.sub(
+        lambda match: _template_asset_url(template_id, match.group(0)), source
+    )
+
+
+def page_template_html(template_id: str = DEFAULT_PAGE_TEMPLATE_ID) -> str:
+    html = _template_file(template_id, "index.html")
+    css = _inline_template_assets(template_id, _template_file(template_id, "styles.css"))
+    javascript = _inline_template_assets(template_id, _template_file(template_id, "app.js"))
+    html = _inline_template_assets(template_id, html)
+    stylesheet_tag = '<link rel="stylesheet" href="styles.css" />'
+    script_tag = '<script src="app.js"></script>'
+    if stylesheet_tag not in html or script_tag not in html:
+        raise RuntimeError(f'The page template "{template_id}" has an invalid entry file.')
+    html = html.replace(
+        stylesheet_tag,
+        f'<style data-template-bundle="styles.css">\n{css}\n</style>',
+        1,
+    )
+    html = html.replace(
+        script_tag,
+        f'<script data-template-bundle="app.js">\n{javascript}\n</script>',
+        1,
+    )
+    return html
+
+
+def default_template_html() -> str:
+    """Backward-compatible alias for the default catalog template."""
+    return page_template_html(DEFAULT_PAGE_TEMPLATE_ID)
+
+
+def _serialize_page_template(template_id: str) -> dict:
+    template = PAGE_TEMPLATES[template_id]
+    return {
+        "id": template_id,
+        "name": template["name"],
+        "description": template["description"],
+        "features": list(template["features"]),
+        "thumbnail_url": url_for(
+            "funnels.page_template_asset",
+            template_id=template_id,
+            filename=template["thumbnail"].removeprefix("assets/"),
+        ),
+    }
+
+
+def _available_page_templates() -> list[dict]:
+    return [_serialize_page_template(template_id) for template_id in PAGE_TEMPLATES]
 
 
 def normalize_slug(value: object) -> str:
@@ -131,12 +206,24 @@ def _get_page(funnel_id: int, page_id: int) -> FunnelPage | None:
 
 
 def _serialize_page(page: FunnelPage, *, include_html: bool = False) -> dict:
+    template_id = page.page_type if page.page_type in PAGE_TEMPLATES else None
+    template_thumbnail_url = None
+    if template_id:
+        thumbnail = PAGE_TEMPLATES[template_id]["thumbnail"].removeprefix("assets/")
+        template_thumbnail_url = url_for(
+            "funnels.page_template_asset",
+            template_id=template_id,
+            filename=thumbnail,
+        )
     payload = {
         "id": page.id,
         "funnel_id": page.funnel_id,
         "title": page.title,
         "page_type": page.page_type,
         "page_type_label": PAGE_TYPES.get(page.page_type, "Custom"),
+        "template_id": template_id,
+        "template_name": PAGE_TEMPLATES.get(template_id, {}).get("name", "Legacy page"),
+        "template_thumbnail_url": template_thumbnail_url,
         "slug": page.slug,
         "path": f"/{page.slug}",
         "status": page.status,
@@ -176,8 +263,12 @@ def _validate_title(value: object) -> str:
 def _validate_page_type(value: object) -> str:
     page_type = str(value or "").strip().lower()
     if page_type not in PAGE_TYPES:
-        raise ValueError("Select a valid page type.")
+        raise ValueError("Select an available page template.")
     return page_type
+
+
+def _validate_template_id(value: object) -> str:
+    return _validate_page_type(value)
 
 
 def _validate_html(value: object) -> str:
@@ -257,7 +348,18 @@ def funnel_detail_page(funnel_id: int):
     return render_template(
         "funnel_detail.html",
         funnel=_serialize_funnel(funnel, include_pages=True),
-        page_types=PAGE_TYPES,
+        page_templates=_available_page_templates(),
+    )
+
+
+@funnels_bp.route("/funnels/templates/<template_id>/assets/<path:filename>")
+def page_template_asset(template_id: str, filename: str):
+    if template_id not in PAGE_TEMPLATES:
+        abort(404)
+    return send_from_directory(
+        _template_directory(template_id) / "assets",
+        filename,
+        max_age=3600,
     )
 
 
@@ -306,13 +408,15 @@ def create_page(funnel_id: int):
     if not funnel:
         return jsonify({"error": "Funnel not found."}), 404
     payload = _request_payload()
-    if set(payload) - {"title", "page_type", "slug"}:
+    if set(payload) - {"title", "template_id", "slug"}:
         return jsonify({"error": "Unknown page field."}), 400
     try:
         title = _validate_title(payload.get("title"))
-        page_type = _validate_page_type(payload.get("page_type") or "advertorial")
+        template_id = _validate_template_id(
+            payload.get("template_id") or DEFAULT_PAGE_TEMPLATE_ID
+        )
         slug = normalize_slug(payload.get("slug"))
-        html_content = _validate_html(default_template_html())
+        html_content = _validate_html(page_template_html(template_id))
     except (ValueError, RuntimeError) as exc:
         return jsonify({"error": str(exc)}), 400
     if _slug_in_use(slug):
@@ -327,7 +431,7 @@ def create_page(funnel_id: int):
     page = FunnelPage(
         funnel_id=funnel.id,
         title=title,
-        page_type=page_type,
+        page_type=template_id,
         slug=slug,
         html_content=html_content,
         status="draft",
@@ -351,12 +455,13 @@ def page_editor(funnel_id: int, page_id: int):
     page = _get_page(funnel_id, page_id) if funnel else None
     if not funnel or not page:
         abort(404)
+    template_id = page.page_type if page.page_type in PAGE_TEMPLATES else DEFAULT_PAGE_TEMPLATE_ID
     return render_template(
         "funnel_editor.html",
         funnel=_serialize_funnel(funnel),
         page=_serialize_page(page, include_html=True),
-        page_types=PAGE_TYPES,
-        default_template=default_template_html(),
+        page_template=_serialize_page_template(template_id),
+        default_template=page_template_html(template_id),
     )
 
 
