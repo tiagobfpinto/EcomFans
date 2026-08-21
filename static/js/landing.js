@@ -1,151 +1,77 @@
-/* ============================================================
-   EcomFans — Landing Page JS
-   ============================================================ */
+/* EcomFans landing — sticky nav, mobile drawer, one restrained scroll reveal. */
 (function () {
   'use strict';
 
-  /* ── Nav scroll effect ────────────────────────────────────── */
-  const nav = document.getElementById('lpNav');
+  var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ── Nav: hairline + blur once the page has moved ───────────── */
+  var nav = document.getElementById('nav');
   if (nav) {
-    const onScroll = () => {
-      nav.classList.toggle('scrolled', window.scrollY > 20);
+    var onScroll = function () {
+      nav.classList.toggle('is-stuck', window.scrollY > 8);
     };
-    window.addEventListener('scroll', onScroll, { passive: true });
     onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
   }
 
-  /* ── Mobile nav burger ────────────────────────────────────── */
-  const burger = document.getElementById('navBurger');
-  const mobileMenu = document.getElementById('navMobile');
-  if (burger && mobileMenu) {
-    burger.addEventListener('click', () => {
-      const open = burger.classList.toggle('open');
-      mobileMenu.classList.toggle('open', open);
-      burger.setAttribute('aria-expanded', open);
-    });
-    // Close on link click
-    mobileMenu.querySelectorAll('a').forEach(link => {
-      link.addEventListener('click', () => {
-        burger.classList.remove('open');
-        mobileMenu.classList.remove('open');
-      });
-    });
-  }
-
-  /* ── Smooth scroll for anchor links ──────────────────────── */
-  document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-    anchor.addEventListener('click', function (e) {
-      const target = document.querySelector(this.getAttribute('href'));
-      if (target) {
-        e.preventDefault();
-        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-    });
-  });
-
-  /* ── Scroll reveal ────────────────────────────────────────── */
-  const revealEls = () => {
-    document.querySelectorAll('.workflow-step, .feature-card, .testi-card, .price-card, .wf-node, .variant-card, .demo-variant-card').forEach(el => {
-      el.classList.add('reveal');
-    });
-  };
-
-  const observer = new IntersectionObserver(
-    (entries) => {
-      entries.forEach((entry, i) => {
-        if (entry.isIntersecting) {
-          setTimeout(() => {
-            entry.target.classList.add('visible');
-          }, (entry.target.dataset.revealDelay || 0) * 1000);
-          observer.unobserve(entry.target);
-        }
-      });
-    },
-    { threshold: 0.1, rootMargin: '0px 0px -40px 0px' }
-  );
-
-  revealEls();
-  document.querySelectorAll('.reveal').forEach((el, i) => {
-    // stagger siblings
-    const parent = el.parentElement;
-    const siblings = Array.from(parent.querySelectorAll('.reveal'));
-    const idx = siblings.indexOf(el);
-    el.style.transitionDelay = `${idx * 0.08}s`;
-    observer.observe(el);
-  });
-
-  /* ── Pricing toggle ───────────────────────────────────────── */
-  const ptSwitch = document.getElementById('ptSwitch');
-  const ptMonthly = document.getElementById('ptMonthly');
-  const ptYearly = document.getElementById('ptYearly');
-  const priceValues = document.querySelectorAll('.price-value');
-
-  let isYearly = false;
-
-  const updatePrices = () => {
-    priceValues.forEach(el => {
-      const val = isYearly ? el.dataset.yearly : el.dataset.monthly;
-      if (val) {
-        // Animate number change
-        animateNumber(el, parseInt(el.textContent, 10), parseInt(val, 10));
-      }
-    });
-    ptSwitch.classList.toggle('on', isYearly);
-    ptMonthly.classList.toggle('ptoggle-label--active', !isYearly);
-    ptYearly.classList.toggle('ptoggle-label--active', isYearly);
-  };
-
-  const animateNumber = (el, from, to) => {
-    const duration = 300;
-    const start = performance.now();
-    const step = (now) => {
-      const t = Math.min((now - start) / duration, 1);
-      const eased = 1 - Math.pow(1 - t, 3);
-      el.textContent = Math.round(from + (to - from) * eased);
-      if (t < 1) requestAnimationFrame(step);
+  /* ── Mobile drawer ──────────────────────────────────────────── */
+  var burger = document.getElementById('navBurger');
+  var drawer = document.getElementById('navDrawer');
+  if (burger && drawer) {
+    var setDrawer = function (open) {
+      drawer.classList.toggle('is-open', open);
+      burger.setAttribute('aria-expanded', String(open));
+      burger.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
     };
-    requestAnimationFrame(step);
-  };
-
-  if (ptSwitch) {
-    ptSwitch.addEventListener('click', () => {
-      isYearly = !isYearly;
-      updatePrices();
+    burger.addEventListener('click', function () {
+      setDrawer(!drawer.classList.contains('is-open'));
     });
-  }
-  if (ptMonthly) {
-    ptMonthly.addEventListener('click', () => {
-      if (isYearly) { isYearly = false; updatePrices(); }
+    drawer.addEventListener('click', function (e) {
+      if (e.target.closest('a')) setDrawer(false);
     });
-  }
-  if (ptYearly) {
-    ptYearly.addEventListener('click', () => {
-      if (!isYearly) { isYearly = true; updatePrices(); }
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && drawer.classList.contains('is-open')) {
+        setDrawer(false);
+        burger.focus();
+      }
     });
   }
 
-  /* ── Hero flow animation: stagger variant cards ───────────── */
-  document.querySelectorAll('.variant-card').forEach((card, i) => {
-    card.style.setProperty('--delay', `${i * 0.1}s`);
-  });
+  /* ── Reveal on scroll ───────────────────────────────────────── */
+  var revealed = document.querySelectorAll('.rise, .close');
 
-  /* ── Active nav link highlight on scroll ──────────────────── */
-  const sections = ['hero', 'workflow', 'features', 'demo', 'pricing'].map(id => document.getElementById(id)).filter(Boolean);
-  const navLinks = document.querySelectorAll('.lp-nav__links a');
+  if (reduced || !('IntersectionObserver' in window)) {
+    revealed.forEach(function (el) { el.classList.add('is-seen'); });
+  } else {
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (!entry.isIntersecting) return;
+        entry.target.classList.add('is-seen');
+        io.unobserve(entry.target);
+      });
+    }, { rootMargin: '0px 0px -12% 0px', threshold: 0.12 });
 
-  const highlightNav = () => {
-    let current = '';
-    sections.forEach(section => {
-      const offset = section.getBoundingClientRect().top;
-      if (offset <= 120) current = section.id;
-    });
-    navLinks.forEach(link => {
-      const href = link.getAttribute('href');
-      link.style.color = (href === `#${current}`) ? 'var(--text-0)' : '';
-      link.style.background = (href === `#${current}`) ? 'var(--bg-3)' : '';
-    });
-  };
+    revealed.forEach(function (el) { io.observe(el); });
+  }
 
-  window.addEventListener('scroll', highlightNav, { passive: true });
+  /* ── Mark the section you're reading ────────────────────────── */
+  var links = Array.prototype.slice.call(document.querySelectorAll('.nav__links a'));
+  var sections = links
+    .map(function (link) { return document.querySelector(link.getAttribute('href')); })
+    .filter(Boolean);
 
+  if (sections.length) {
+    var highlight = function () {
+      var line = window.scrollY + window.innerHeight * 0.3;
+      var current = -1;
+      sections.forEach(function (section, i) {
+        if (section.offsetTop <= line) current = i;
+      });
+      links.forEach(function (link, i) {
+        link.classList.toggle('is-active', i === current);
+      });
+    };
+    highlight();
+    window.addEventListener('scroll', highlight, { passive: true });
+  }
 })();
