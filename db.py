@@ -728,6 +728,59 @@ class SocialDownload(db.Model):
     )
 
 
+class VoiceoverTightening(db.Model):
+    __tablename__ = "voiceover_tightenings"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    worker_job_id = db.Column(
+        db.Integer, db.ForeignKey("worker_jobs.id"), nullable=True
+    )
+    status = db.Column(db.String(20), nullable=False, default="queued")
+    original_filename = db.Column(db.String(255), nullable=False)
+    original_storage_path = db.Column(db.String(500), nullable=False)
+    output_storage_path = db.Column(db.String(500), nullable=True)
+    original_file_size_bytes = db.Column(db.BigInteger, nullable=False)
+    output_file_size_bytes = db.Column(db.BigInteger, nullable=True)
+    preset = db.Column(db.String(20), nullable=False, default="dynamic")
+    settings_json = db.Column(db.Text, nullable=False)
+    original_duration_ms = db.Column(db.BigInteger, nullable=True)
+    output_duration_ms = db.Column(db.BigInteger, nullable=True)
+    removed_duration_ms = db.Column(db.BigInteger, nullable=True)
+    pauses_shortened = db.Column(db.Integer, nullable=True)
+    overlaps_applied = db.Column(db.Integer, nullable=True)
+    warnings_json = db.Column(db.Text, nullable=True)
+    error = db.Column(db.Text, nullable=True)
+    created_at = db.Column(
+        db.DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at = db.Column(
+        db.DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+    finished_at = db.Column(db.DateTime(timezone=True), nullable=True)
+
+    worker_job = db.relationship("WorkerJob", lazy=True)
+
+    __table_args__ = (
+        db.Index(
+            "ix_voiceover_tightenings_user_created",
+            "user_id",
+            "created_at",
+        ),
+        db.Index(
+            "ix_voiceover_tightenings_user_status",
+            "user_id",
+            "status",
+        ),
+        db.Index(
+            "ix_voiceover_tightenings_worker_job_id", "worker_job_id"
+        ),
+    )
+
+
 class SavedScript(db.Model):
     __tablename__ = "saved_scripts"
 

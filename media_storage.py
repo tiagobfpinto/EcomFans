@@ -81,6 +81,48 @@ def prepare_social_download_directory(user_id: int, download_id: int) -> Path:
     return directory
 
 
+def prepare_voiceover_tightening_directory(
+    user_id: int, tightening_id: int
+) -> Path:
+    relative_dir = (
+        Path("users")
+        / str(user_id)
+        / "voiceover_tightening"
+        / str(tightening_id)
+    )
+    directory = _resolve_under_root(relative_dir.as_posix())
+    directory.mkdir(parents=True, exist_ok=True)
+    return directory
+
+
+def save_voiceover_upload(
+    user_id: int, tightening_id: int, file_storage
+) -> tuple[str, int]:
+    relative_path = (
+        Path("users")
+        / str(user_id)
+        / "voiceover_tightening"
+        / str(tightening_id)
+        / "original.mp3"
+    )
+    absolute_path = _resolve_under_root(relative_path.as_posix())
+    absolute_path.parent.mkdir(parents=True, exist_ok=True)
+    tmp_path = absolute_path.with_name(
+        f"{absolute_path.name}.{os.getpid()}.{secrets.token_hex(4)}.tmp"
+    )
+    try:
+        file_storage.save(tmp_path)
+        file_size = tmp_path.stat().st_size
+        os.replace(tmp_path, absolute_path)
+    except Exception:
+        try:
+            tmp_path.unlink()
+        except OSError:
+            pass
+        raise
+    return relative_path.as_posix(), file_size
+
+
 def save_competitor_ad_video(
     user_id: int,
     competitor_id: int,

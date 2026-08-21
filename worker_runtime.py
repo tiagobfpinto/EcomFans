@@ -77,7 +77,9 @@ from worker_tasks import (
     JOB_TYPE_LACY_GENERATE,
     JOB_TYPE_SOCIAL_DOWNLOAD,
     JOB_TYPE_SCRIPT_TRANSCRIBE,
+    JOB_TYPE_VOICEOVER_TIGHTEN,
 )
+from voiceover_worker import run_voiceover_tightening_job
 
 
 # OpenAI accepts transcription uploads up to 25 MB. Keep a little headroom for
@@ -1827,6 +1829,8 @@ def _run_job(job_id: int, user_id: int | None, job_type: str, payload: dict[str,
         return _run_competitor_ad_transcribe(job_id, user_id, payload)
     if job_type == JOB_TYPE_COMPETITOR_AD_ANALYZE:
         return _run_competitor_ad_analyze(job_id, user_id, payload)
+    if job_type == JOB_TYPE_VOICEOVER_TIGHTEN:
+        return run_voiceover_tightening_job(job_id, user_id, payload)
     raise RuntimeError(f"Unsupported worker job type: {job_type}")
 
 
@@ -1862,6 +1866,7 @@ def _worker_loop(
                         JOB_TYPE_SOCIAL_DOWNLOAD,
                         JOB_TYPE_COMPETITOR_AD_TRANSCRIBE,
                         JOB_TYPE_COMPETITOR_AD_ANALYZE,
+                        JOB_TYPE_VOICEOVER_TIGHTEN,
                     },
                 )
                 if not claimed:
