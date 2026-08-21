@@ -78,6 +78,7 @@ RESERVED_SLUG_PREFIXES = {
     "billing",
     "brand-dna",
     "competitors",
+    "cookies",
     "credits-store",
     "dashboard",
     "download",
@@ -595,14 +596,20 @@ def delete_page(funnel_id: int, page_id: int):
 def _html_response(page: FunnelPage, *, preview: bool) -> Response:
     response = Response(page.html_content, content_type="text/html; charset=utf-8")
     response.headers["X-Frame-Options"] = "SAMEORIGIN"
+    # These pages are HTML the customer authored, served from our own domain.
+    # The `sandbox` directive is what makes that safe: it drops the document into
+    # an opaque origin, so its scripts cannot read our session cookie or call our
+    # API as the signed-in user. Scripts stay enabled because landing pages need
+    # their own pixels, but only over https and without eval.
     response.headers["Content-Security-Policy"] = (
         "sandbox allow-forms allow-modals allow-popups "
         "allow-popups-to-escape-sandbox allow-scripts; "
-        "default-src 'none'; img-src * data: blob:; media-src * data: blob:; "
-        "style-src * 'unsafe-inline'; font-src * data:; "
-        "script-src * 'unsafe-inline' 'unsafe-eval' blob:; connect-src *; "
-        "frame-src *; form-action *"
+        "default-src 'none'; img-src https: data: blob:; media-src https: data: blob:; "
+        "style-src https: 'unsafe-inline'; font-src https: data:; "
+        "script-src https: 'unsafe-inline' blob:; connect-src https:; "
+        "frame-src https:; form-action https:"
     )
+    response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["Cache-Control"] = "no-store" if preview else "no-cache"
     if preview:
         response.headers["X-Robots-Tag"] = "noindex, nofollow"

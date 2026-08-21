@@ -15,6 +15,7 @@ from media_storage import (
     prepare_prompt_thumbnail_image,
     save_storyboard_thumbnail,
 )
+from security import is_allowed_upload_image, upload_image_type_error
 
 
 storyboarder_bp = Blueprint("storyboarder", __name__)
@@ -886,8 +887,8 @@ def upload_storyboard_thumbnail(frame_id: int):
         or mimetypes.guess_type(upload.filename)[0]
         or "application/octet-stream"
     ).split(";", 1)[0].strip().lower()
-    if not mime_type.startswith("image/"):
-        return jsonify({"error": "Only image files are supported."}), 400
+    if not is_allowed_upload_image(mime_type):
+        return jsonify({"error": upload_image_type_error()}), 400
 
     raw_bytes = upload.stream.read(MAX_THUMBNAIL_BYTES + 1)
     if len(raw_bytes) > MAX_THUMBNAIL_BYTES:

@@ -25,6 +25,7 @@ from media_storage import (
 from usage_pricing import normalize_model_name
 from worker_queue import enqueue_worker_job, get_worker_job_for_user, job_payload, serialize_worker_job
 from worker_tasks import JOB_TYPE_CREATIVES_GENERATE
+from security import is_allowed_upload_image, upload_image_type_error
 
 ai_creatives_bp = Blueprint("ai_creatives", __name__)
 
@@ -159,8 +160,8 @@ def upload_inspirations():
         name = img.get("name", "")
         if not b64:
             continue
-        if not mime.startswith("image/"):
-            return jsonify({"error": "Only image inspirations are supported."}), 400
+        if not is_allowed_upload_image(mime):
+            return jsonify({"error": upload_image_type_error()}), 400
         try:
             image_bytes = base64.b64decode(b64, validate=True)
         except Exception:

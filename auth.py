@@ -1,5 +1,6 @@
 import logging
 import os
+import re
 import secrets
 from datetime import timedelta
 from functools import wraps
@@ -53,7 +54,7 @@ def login_required(f):
                 return jsonify({"error": message}), 503
             flash(message, "error")
             return redirect(url_for("auth.login"))
-        if current_user is None:
+        if current_user is None or not _session_epoch_matches(current_user):
             session.clear()
             if request.is_json or "application/json" in (request.headers.get("Accept") or "").lower():
                 return jsonify({"error": "Session expired. Please log in again."}), 401
@@ -63,12 +64,48 @@ def login_required(f):
     return decorated_function
 
 
+def _session_epoch_matches(user: User) -> bool:
+    """A session is only valid for the password it was issued under.
+
+    Sessions live in a signed cookie, so there is no server-side store to delete
+    from. Stamping the user's epoch into the cookie and comparing it here gives
+    us revocation: bumping the epoch retires every cookie issued before it.
+    """
+    return session.get("session_epoch") == (user.session_epoch or 1)
+
+
+def _start_session(user: User) -> None:
+    session.clear()
+    session["user_id"] = user.id
+    session["username"] = user.username
+    session["session_epoch"] = user.session_epoch or 1
+
+
+def _invalidate_other_sessions(user: User) -> None:
+    """Retire every session issued before this moment. Caller must commit."""
+    user.session_epoch = (user.session_epoch or 1) + 1
+
+
 # ── helpers ─────────────────────────────────────────────────────────────────
+
+_EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s.]+(\.[^@\s.]+)+$")
+MAX_USERNAME_CHARS = 64
+MAX_EMAIL_CHARS = 254
+MAX_PASSWORD_CHARS = 1024
+
+
+def _email_valid(email: str) -> bool:
+    return bool(email) and len(email) <= MAX_EMAIL_CHARS and bool(_EMAIL_RE.match(email))
+
 
 def _password_valid(password: str) -> tuple[bool, str]:
     """Return (is_valid, error_message). Empty error_message means valid."""
     if len(password) < 8:
         return False, "Password must be at least 8 characters."
+    # werkzeug hashes the whole string; an unbounded password is a cheap way to
+    # burn CPU on every login attempt.
+    if len(password) > MAX_PASSWORD_CHARS:
+        return False, "Password must be 1024 characters or fewer."
     has_digit = any(c.isdigit() for c in password)
     has_special = any(not c.isalnum() and not c.isspace() for c in password)
     if not (has_digit or has_special):
@@ -174,12 +211,20 @@ def register():
 
     if request.method == "POST":
         username = request.form.get("username", "").strip()
-        email = request.form.get("email", "").strip()
+        email = request.form.get("email", "").strip().lower()
         password = request.form.get("password", "")
         confirm = request.form.get("confirm_password", "")
 
         if not username or not email or not password:
             flash("All fields are required.", "error")
+            return render_template("register.html")
+
+        if len(username) > MAX_USERNAME_CHARS:
+            flash(f"Username must be {MAX_USERNAME_CHARS} characters or fewer.", "error")
+            return render_template("register.html")
+
+        if not _email_valid(email):
+            flash("Enter a valid email address.", "error")
             return render_template("register.html")
 
         if password != confirm:
@@ -213,9 +258,7 @@ def register():
             db.session.commit()
 
             logger.info("New user registered: id=%s", user.id)
-            session.clear()
-            session["user_id"] = user.id
-            session["username"] = username
+            _start_session(user)
             flash("Account created successfully!", "success")
             return redirect(url_for("main.dashboard"))
 
@@ -262,9 +305,7 @@ def login():
                 except Exception:
                     db.session.rollback()
 
-                session.clear()
-                session["user_id"] = user.id
-                session["username"] = user.username
+                _start_session(user)
                 logger.info("Login success: user_id=%s", user.id)
                 flash("Welcome back!", "success")
                 return redirect(url_for("main.dashboard"))
@@ -389,6 +430,8 @@ def reset_password(token: str):
         fresh_user.reset_token_expires_at = None
         fresh_user.failed_login_attempts = 0
         fresh_user.locked_until = None
+        # Whoever triggered this reset may not be the only one holding a session.
+        _invalidate_other_sessions(fresh_user)
         try:
             db.session.commit()
             logger.info("Password reset completed for user_id=%s", fresh_user.id)
@@ -429,8 +472,12 @@ def change_password():
             return render_template("change_password.html")
 
         user.password_hash = generate_password_hash(new_pw)
+        _invalidate_other_sessions(user)
         try:
             db.session.commit()
+            # Re-stamp this browser so the user is not logged out of the tab
+            # they just changed their password in.
+            session["session_epoch"] = user.session_epoch
             logger.info("Password changed for user_id=%s", user.id)
             flash("Password changed successfully.", "success")
             return redirect(url_for("main.dashboard"))

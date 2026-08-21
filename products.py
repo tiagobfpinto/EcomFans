@@ -19,6 +19,7 @@ from auth import login_required
 from billing_service import get_effective_api_key, record_api_request_event
 from db import Product, ProductImage, StoryboardProject, User, db
 from media_storage import delete_storage_file, save_product_image
+from security import is_allowed_upload_image, upload_image_type_error
 
 products_bp = Blueprint("products", __name__)
 MAX_PRODUCT_IMAGES = 4
@@ -71,8 +72,8 @@ def products_page():
                 or mimetypes.guess_type(file.filename)[0]
                 or "application/octet-stream"
             )
-            if not mime_type.startswith("image/"):
-                flash("Only image files are allowed for product context.", "error")
+            if not is_allowed_upload_image(mime_type):
+                flash(upload_image_type_error(), "error")
                 return redirect(url_for("products.products_page"))
 
             image_bytes = file.read()
@@ -186,8 +187,8 @@ def edit_product(product_id):
             or mimetypes.guess_type(file.filename)[0]
             or "application/octet-stream"
         )
-        if not mime_type.startswith("image/"):
-            flash("Only image files are allowed.", "error")
+        if not is_allowed_upload_image(mime_type):
+            flash(upload_image_type_error(), "error")
             return redirect(redirect_url)
         image_bytes = file.read()
         if not image_bytes:
@@ -301,8 +302,8 @@ def remove_product_background():
         or mimetypes.guess_type(image_file.filename)[0]
         or "application/octet-stream"
     )
-    if not mime_type.startswith("image/"):
-        return jsonify({"error": "Only image files are supported."}), 400
+    if not is_allowed_upload_image(mime_type):
+        return jsonify({"error": upload_image_type_error()}), 400
 
     image_bytes = image_file.read()
     if not image_bytes:

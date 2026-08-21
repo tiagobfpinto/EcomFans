@@ -8,6 +8,14 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}" />
+  <style>
+    .legal-page table { width: 100%; margin: 18px 0 26px; border-collapse: collapse; font-size: .92rem; }
+    .legal-page th, .legal-page td { padding: 10px 12px; border: 1px solid rgba(128,128,128,.28); text-align: left; vertical-align: top; }
+    .legal-page th { font-weight: 700; }
+    .legal-table-wrap { overflow-x: auto; }
+    .legal-todo { display: block; margin: 20px 0 28px; padding: 14px 16px; border-left: 4px solid #c0392b; background: rgba(192,57,43,.07); font-size: .9rem; line-height: 1.6; }
+    .legal-todo strong { color: #c0392b; }
+  </style>
 </head>
 <body>
 
@@ -33,53 +41,127 @@
 
   <main class="legal-page">
     <h1>Privacy Policy</h1>
-    <p class="legal-meta">Last updated: March 2026</p>
+    <p class="legal-meta">Last updated: 21 August 2026</p>
 
-    <p>EcomFans ("we", "our", "us") respects your privacy. This Privacy Policy explains what data we collect, how we use it, and your rights regarding it.</p>
+    <p class="legal-todo"><strong>Before publishing:</strong> replace every <code>[BRACKETED]</code> value below with your real details — legal entity name, registered address, contact email and, if you are outside the EU, your Article 27 representative. A privacy policy that names no controller is not a valid one, and the bracketed placeholders are visible to anyone who reads this page. Have a qualified lawyer review the final text for your jurisdiction; this document is a thorough starting point, not legal advice.</p>
 
-    <h2>1. Information We Collect</h2>
+    <h2>1. Who we are</h2>
+    <p>EcomFans ("we", "our", "us") is a software service that helps online sellers produce marketing creatives using AI. For the purposes of the EU General Data Protection Regulation (GDPR) and the UK GDPR, the <strong>data controller</strong> for the personal data described in this policy is:</p>
     <ul>
-      <li><strong>Account data:</strong> email address, hashed password, and plan information you provide at registration.</li>
-      <li><strong>Usage data:</strong> pages visited, features used, credit consumption, and timestamps.</li>
-      <li><strong>Payment data:</strong> billing is processed by Stripe. We do not store full card numbers. We receive confirmation of payment status and subscription state from Stripe.</li>
-      <li><strong>Uploaded content:</strong> product images, ad creatives, and audio files you upload to use our AI features. These are stored to serve the generated results back to you.</li>
-      <li><strong>Optional API keys:</strong> if you provide your own AI API keys, they are encrypted at rest using AES-256 (Fernet).</li>
+      <li><strong>Legal entity:</strong> [LEGAL ENTITY NAME]</li>
+      <li><strong>Registered address:</strong> [REGISTERED ADDRESS]</li>
+      <li><strong>Company / VAT number:</strong> [COMPANY NUMBER]</li>
+      <li><strong>Privacy contact:</strong> <a href="mailto:[PRIVACY EMAIL]">[PRIVACY EMAIL]</a></li>
+    </ul>
+    <p>We have not appointed a Data Protection Officer, as we are not required to under Article 37 GDPR. Privacy questions go to the contact address above.</p>
+
+    <h2>2. The data we collect</h2>
+    <ul>
+      <li><strong>Account data:</strong> your username, email address and a cryptographic hash of your password. We never store your password itself.</li>
+      <li><strong>Content you upload:</strong> product photos, reference images, ad creatives, video and audio files, competitor ads, notes, scripts and the text prompts you write.</li>
+      <li><strong>Content we generate for you:</strong> images, transcripts, analyses and landing pages produced from your inputs.</li>
+      <li><strong>Billing data:</strong> your plan, credit balance, credit ledger entries and the Stripe customer and subscription identifiers. Card details are entered on Stripe's systems and never reach ours.</li>
+      <li><strong>Advertising metrics you import:</strong> the contents of any Meta Ads export you upload, which contain your own campaign performance figures.</li>
+      <li><strong>Technical and security data:</strong> IP address, request paths and timestamps used for rate limiting and abuse detection, failed-login counters and account lockout timestamps.</li>
+      <li><strong>Error diagnostics:</strong> stack traces and request context when something breaks, sent to Sentry with passwords filtered out and personal-data collection disabled.</li>
+      <li><strong>Optional AI provider keys:</strong> if you choose to supply your own Google or OpenAI API key, we store it encrypted (see section 7).</li>
+    </ul>
+    <p>We do not knowingly collect special category data (Article 9 GDPR) and ask that you do not upload it. We do not run advertising or analytics trackers.</p>
+
+    <h2>3. Why we process it, and on what legal basis</h2>
+    <div class="legal-table-wrap">
+      <table>
+        <thead>
+          <tr><th>Purpose</th><th>Data used</th><th>Legal basis (Art. 6 GDPR)</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Creating and running your account; delivering the features you use</td><td>Account data, uploaded content, generated content</td><td>Performance of a contract — Art. 6(1)(b)</td></tr>
+          <tr><td>Taking payment and managing subscriptions and credits</td><td>Billing data, account data</td><td>Performance of a contract — Art. 6(1)(b)</td></tr>
+          <tr><td>Sending transactional email (password resets, billing notices)</td><td>Email address</td><td>Performance of a contract — Art. 6(1)(b)</td></tr>
+          <tr><td>Keeping the service secure: rate limiting, lockouts, abuse detection</td><td>Technical and security data</td><td>Legitimate interests — Art. 6(1)(f), namely protecting the service and its users from attack and abuse</td></tr>
+          <tr><td>Diagnosing faults and improving reliability</td><td>Error diagnostics, technical data</td><td>Legitimate interests — Art. 6(1)(f), namely keeping the service working</td></tr>
+          <tr><td>Meeting accounting and tax obligations</td><td>Billing data</td><td>Legal obligation — Art. 6(1)(c)</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Where we rely on legitimate interests, we have weighed those interests against your rights and freedoms. You may object to that processing at any time (see section 8).</p>
+    <p><strong>We do not sell personal data, and we do not use your content to train our own or anyone else's AI models.</strong></p>
+
+    <h2>4. Sub-processors and recipients</h2>
+    <p>We share data only with providers who need it to run the service. Each is bound by a data processing agreement.</p>
+    <div class="legal-table-wrap">
+      <table>
+        <thead>
+          <tr><th>Provider</th><th>What it handles</th><th>Where</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Stripe</td><td>Payments, subscriptions, invoices</td><td>USA / EU</td></tr>
+          <tr><td>Google (Gemini API)</td><td>Content you submit for image generation and analysis</td><td>USA</td></tr>
+          <tr><td>OpenAI</td><td>Content you submit for transcription, vision analysis and generation</td><td>USA</td></tr>
+          <tr><td>Sentry</td><td>Error diagnostics</td><td>USA / EU</td></tr>
+          <tr><td>[HOSTING PROVIDER]</td><td>Application hosting, database and file storage</td><td>[REGION]</td></tr>
+          <tr><td>[EMAIL PROVIDER]</td><td>Transactional email delivery</td><td>[REGION]</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>When you use an AI feature, the specific content you submit for that request — for example a product photo and your prompt — is sent to the provider named above so it can return a result. Consult each provider's own policy for how they retain that data.</p>
+
+    <h2>5. International transfers</h2>
+    <p>Some of the providers above are established in the United States. Where personal data leaves the European Economic Area, we rely on the European Commission's Standard Contractual Clauses, and on the EU–US Data Privacy Framework where the provider is certified under it. You may request a copy of the safeguards we rely on by writing to our privacy contact.</p>
+
+    <h2>6. How long we keep it</h2>
+    <ul>
+      <li><strong>Account data:</strong> for as long as your account exists, then deleted within 30 days of account closure.</li>
+      <li><strong>Uploaded and generated content:</strong> until you delete it, or within 30 days of account closure.</li>
+      <li><strong>Billing records:</strong> retained for [7] years after the transaction, because tax law requires it.</li>
+      <li><strong>Security logs and rate-limit records:</strong> up to 90 days.</li>
+      <li><strong>Error diagnostics:</strong> up to 90 days, per our Sentry retention setting.</li>
+      <li><strong>Password reset tokens:</strong> expire after a few hours and are cleared once used.</li>
     </ul>
 
-    <h2>2. How We Use Your Information</h2>
+    <h2>7. How we protect it</h2>
     <ul>
-      <li>To provide and improve the EcomFans service.</li>
-      <li>To manage your account, billing, and subscription.</li>
-      <li>To send transactional emails (account confirmations, password resets).</li>
-      <li>To monitor service health and detect abuse.</li>
+      <li>All traffic is served over TLS, with HTTP Strict Transport Security enabled.</li>
+      <li>Passwords are hashed with <strong>scrypt</strong> (Werkzeug's default parameters). We cannot read them.</li>
+      <li>Any AI provider key you supply is encrypted at rest with <strong>Fernet</strong> — AES-128 in CBC mode, authenticated with HMAC-SHA256 — under a key derived from our application secret using PBKDF2-HMAC-SHA256.</li>
+      <li>Session cookies are HttpOnly, Secure and SameSite-scoped. Changing your password invalidates every other session.</li>
+      <li>Every request that changes data carries a CSRF token, and sensitive endpoints are rate limited.</li>
+      <li>Accounts lock temporarily after repeated failed logins.</li>
+      <li>Your files are stored under a per-account path and every media request is checked against the requesting account.</li>
     </ul>
+    <p>No system is perfectly secure. Please use a strong, unique password, and tell us at once if you think your account has been accessed by someone else.</p>
 
-    <h2>3. Data Sharing</h2>
-    <p>We do not sell your personal data. We share data only with trusted service providers necessary to operate EcomFans:</p>
+    <h2>8. Your rights</h2>
+    <p>Under the GDPR you have the right to:</p>
     <ul>
-      <li><strong>Stripe</strong> — payment processing</li>
-      <li><strong>Google (Gemini API)</strong> — AI image generation</li>
-      <li><strong>OpenAI</strong> — transcription and ad creative generation</li>
-      <li><strong>Sentry</strong> — error monitoring (no personal data included in error reports)</li>
+      <li><strong>Access</strong> the personal data we hold about you, and receive a copy.</li>
+      <li><strong>Rectify</strong> data that is inaccurate or incomplete.</li>
+      <li><strong>Erase</strong> your data ("right to be forgotten"), subject to records we must keep by law.</li>
+      <li><strong>Restrict</strong> our processing in certain circumstances.</li>
+      <li><strong>Port</strong> your data — receive it in a structured, machine-readable format, or have it sent to another provider.</li>
+      <li><strong>Object</strong> to processing based on our legitimate interests.</li>
+      <li><strong>Withdraw consent</strong> at any time, where we rely on consent. Withdrawal does not affect processing already carried out.</li>
     </ul>
+    <p>Write to <a href="mailto:[PRIVACY EMAIL]">[PRIVACY EMAIL]</a> to exercise any of these. We will respond within one month, as Article 12 requires.</p>
+    <p>If you believe we have handled your data unlawfully you may complain to your local supervisory authority. In Portugal this is the <strong>Comissão Nacional de Proteção de Dados (CNPD)</strong>, <a href="https://www.cnpd.pt" rel="noopener">www.cnpd.pt</a>. You may also complain to the authority in the EU country where you live or work.</p>
 
-    <h2>4. Data Retention</h2>
-    <p>We retain your account data for as long as your account is active. Uploaded media and generated files are associated with your account and deleted when you delete them or close your account. You may request deletion of your account and associated data by contacting us.</p>
+    <h2>9. Automated decision-making</h2>
+    <p>We do not make decisions producing legal or similarly significant effects about you by automated means. The AI features in the product generate creative content at your request; they do not evaluate or score you.</p>
 
-    <h2>5. Security</h2>
-    <p>We use industry-standard security measures including encrypted connections (TLS), hashed passwords (bcrypt), and encrypted storage for sensitive credentials. No method of transmission over the Internet is 100% secure; we encourage you to use a strong, unique password.</p>
+    <h2>10. Pages you publish through EcomFans</h2>
+    <p>The funnel builder lets you publish landing pages. For any personal data that <em>your</em> published pages collect from <em>your</em> visitors, you are the controller and we act as your processor. You are responsible for having your own privacy notice, legal basis and consent mechanism on those pages. See our <a href="{{ url_for('landing.terms_page') }}">Terms of Service</a> for the full allocation of responsibility.</p>
 
-    <h2>6. Your Rights</h2>
-    <p>Depending on your jurisdiction you may have rights to access, correct, or delete your personal data. To exercise these rights, contact us at the address below.</p>
+    <h2>11. Children</h2>
+    <p>EcomFans is a business tool and is not directed at children. We do not knowingly collect data from anyone under 16. If you believe a child has given us personal data, contact us and we will delete it.</p>
 
-    <h2>7. Cookies</h2>
-    <p>We use a single session cookie to keep you logged in. We do not use tracking or advertising cookies.</p>
+    <h2>12. Cookies</h2>
+    <p>We use only cookies that are strictly necessary to run the service. Details are in our <a href="{{ url_for('landing.cookies_page') }}">Cookie Policy</a>.</p>
 
-    <h2>8. Changes to This Policy</h2>
-    <p>We may update this policy from time to time. Continued use of EcomFans after changes constitutes acceptance of the revised policy.</p>
+    <h2>13. Changes to this policy</h2>
+    <p>We may update this policy. If a change materially affects your rights we will notify you by email or in the application before it takes effect. The "last updated" date above always reflects the current version.</p>
 
-    <h2>9. Contact</h2>
-    <p>For privacy inquiries, email us at <a href="mailto:privacy@ecomfans.com">privacy@ecomfans.com</a>.</p>
+    <h2>14. Contact</h2>
+    <p>[LEGAL ENTITY NAME], [REGISTERED ADDRESS] — <a href="mailto:[PRIVACY EMAIL]">[PRIVACY EMAIL]</a>.</p>
   </main>
 
   <footer class="foot">
@@ -88,6 +170,7 @@
         <span>&copy; 2026 EcomFans</span>
         <div class="foot__social">
           <a href="{{ url_for('landing.privacy_page') }}">Privacy</a>
+          <a href="{{ url_for('landing.cookies_page') }}">Cookies</a>
           <a href="{{ url_for('landing.terms_page') }}">Terms</a>
         </div>
       </div>

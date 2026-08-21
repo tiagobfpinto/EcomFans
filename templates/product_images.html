@@ -276,7 +276,7 @@
     </div>
 </div>
 
-<script id="product-images-bootstrap" type="application/json">
+<script nonce="{{ csp_nonce }}" id="product-images-bootstrap" type="application/json">
 {
     "lacyAnalysisPrompt": {{ lacy_analysis_prompt | tojson }},
     "creditsRedirectUrl": {{ ('/upgrade' if plan_tier == 'free' else '/credits-store') | tojson }},

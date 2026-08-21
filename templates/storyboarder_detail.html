@@ -93,7 +93,7 @@
         {% endif %}
     </section>
 
-    <script id="sb-prompt-blocks-data" type="application/json">{{ project.prompt_blocks | tojson }}</script>
+    <script nonce="{{ csp_nonce }}" id="sb-prompt-blocks-data" type="application/json">{{ project.prompt_blocks | tojson }}</script>
 
     <section class="sb-frames-section">
         <div class="sb-section-heading">

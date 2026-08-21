@@ -60,7 +60,7 @@
 </div>
 {% endblock %}
 {% block scripts %}
-<script>
+<script nonce="{{ csp_nonce }}">
 function togglePassword(inputId, btn) {
     const input = document.getElementById(inputId);
     const isHidden = input.type === 'password';

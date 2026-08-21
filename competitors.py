@@ -32,6 +32,7 @@ from image_harvest import (
     fetch_image,
     stream_media,
 )
+from security import harden_media_response, safe_media_mime
 from media_storage import delete_storage_file, save_competitor_ad_video
 from worker_queue import (
     JOB_STATUS_COMPLETED,
@@ -549,34 +550,41 @@ def image_proxy():
     as_download = request.args.get("download") == "1"
     is_video = request.args.get("kind") == "video"
 
+    # content_type below is chosen by whoever controls the remote server (or by
+    # the data: URI the caller pasted), so it is never echoed back verbatim.
+    # safe_media_mime keeps only known raster/video types; everything else is
+    # served as an opaque attachment, which is what stops a crafted SVG or
+    # text/html response from executing script on our origin.
     if url.startswith("data:"):
         decoded = _decode_data_uri(url)
         if not decoded:
             abort(400)
-        data, content_type = decoded
-        response = Response(data, mimetype=content_type or "application/octet-stream")
+        data, raw_type = decoded
+        safe_mime, inline = safe_media_mime(raw_type, allow_video=True)
+        response = Response(data, mimetype=safe_mime)
     elif is_video:
         try:
-            stream, content_type = stream_media(url)
+            stream, raw_type = stream_media(url)
         except Exception:
             abort(502)
-        response = Response(
-            stream_with_context(stream),
-            mimetype=content_type or "application/octet-stream",
-        )
+        safe_mime, inline = safe_media_mime(raw_type, allow_video=True)
+        response = Response(stream_with_context(stream), mimetype=safe_mime)
     else:
         try:
-            data, content_type = fetch_image(url)
+            data, raw_type = fetch_image(url)
         except Exception:
             abort(502)
-        response = Response(data, mimetype=content_type or "application/octet-stream")
+        safe_mime, inline = safe_media_mime(raw_type, allow_video=True)
+        response = Response(data, mimetype=safe_mime)
 
     response.headers["Cache-Control"] = "private, max-age=300"
-    if as_download:
-        fallback = "video.mp4" if is_video else "image.jpg"
-        name = _download_name(request.args.get("name"), content_type, fallback)
-        response.headers["Content-Disposition"] = f'attachment; filename="{name}"'
-    return response
+    fallback = "video.mp4" if is_video else "image.jpg"
+    name = _download_name(request.args.get("name"), safe_mime, fallback)
+    return harden_media_response(
+        response,
+        inline=inline and not as_download,
+        download_name=name,
+    )
 
 
 @competitors_bp.route("/competitors/download-images-zip", methods=["POST"])

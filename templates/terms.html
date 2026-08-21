@@ -8,6 +8,10 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}" />
+  <style>
+    .legal-todo { display: block; margin: 20px 0 28px; padding: 14px 16px; border-left: 4px solid #c0392b; background: rgba(192,57,43,.07); font-size: .9rem; line-height: 1.6; }
+    .legal-todo strong { color: #c0392b; }
+  </style>
 </head>
 <body>
 
@@ -33,62 +37,106 @@
 
   <main class="legal-page">
     <h1>Terms of Service</h1>
-    <p class="legal-meta">Last updated: March 2026</p>
+    <p class="legal-meta">Last updated: 21 August 2026</p>
 
-    <p>By creating an account or using EcomFans ("Service"), you agree to these Terms of Service ("Terms"). Please read them carefully.</p>
+    <p class="legal-todo"><strong>Before publishing:</strong> replace every <code>[BRACKETED]</code> value with your real details. Sections 6 (withdrawal), 11 (liability) and 15 (disputes) contain mandatory consumer protections under EU law — do not soften them without a lawyer's advice, because unenforceable clauses can invalidate the surrounding terms. Have a qualified lawyer review the final text; this is a thorough starting point, not legal advice.</p>
 
-    <h2>1. Eligibility</h2>
-    <p>You must be at least 18 years old and have the legal authority to enter into these Terms. By using the Service you represent that you meet these requirements.</p>
+    <h2>1. Who you are contracting with</h2>
+    <p>The EcomFans service ("Service") is operated by <strong>[LEGAL ENTITY NAME]</strong>, registered at [REGISTERED ADDRESS], company number [COMPANY NUMBER], VAT [VAT NUMBER], contactable at <a href="mailto:[SUPPORT EMAIL]">[SUPPORT EMAIL]</a> ("we", "us"). These Terms of Service ("Terms") form a binding agreement between you and us from the moment you create an account. If you do not accept them, do not use the Service.</p>
 
-    <h2>2. Account Responsibilities</h2>
+    <h2>2. Eligibility</h2>
+    <p>You must be at least 18 years old and legally able to enter into a contract. If you use the Service on behalf of a company, you confirm you are authorised to bind it, and "you" means that company.</p>
+
+    <h2>3. Your account</h2>
     <ul>
-      <li>You are responsible for maintaining the confidentiality of your account credentials.</li>
-      <li>You are responsible for all activity that occurs under your account.</li>
-      <li>Notify us immediately of any unauthorized use.</li>
+      <li>Keep your credentials confidential. You are responsible for everything done under your account.</li>
+      <li>Tell us immediately at <a href="mailto:[SUPPORT EMAIL]">[SUPPORT EMAIL]</a> if you suspect unauthorised access.</li>
+      <li>One person or organisation per account. Do not share logins.</li>
+      <li>Give us accurate registration details and keep them current.</li>
     </ul>
 
-    <h2>3. Acceptable Use</h2>
-    <p>You agree not to use the Service to:</p>
+    <h2>4. Acceptable use</h2>
+    <p>You must not use the Service to:</p>
     <ul>
-      <li>Generate content that is illegal, deceptive, defamatory, or infringes intellectual property rights.</li>
-      <li>Upload content you do not have the rights to use.</li>
-      <li>Attempt to reverse-engineer, scrape, or overload the Service.</li>
-      <li>Resell or redistribute AI-generated outputs as a standalone AI service without transforming them.</li>
+      <li>Create or publish content that is illegal, fraudulent, deceptive, defamatory, harassing, hateful, sexually explicit, or that infringes anyone's intellectual property, privacy or publicity rights.</li>
+      <li>Impersonate a real person, brand or organisation, or make health, financial or earnings claims you cannot substantiate.</li>
+      <li>Upload content you do not hold the necessary rights to, including competitor material you are not permitted to reproduce.</li>
+      <li>Upload malware, or content designed to phish, mine credentials or defraud.</li>
+      <li>Reverse-engineer, decompile, scrape, or probe the Service, circumvent rate limits or usage metering, or test its security without our prior written permission.</li>
+      <li>Resell or redistribute the AI outputs as a standalone generative-AI service.</li>
+      <li>Breach the terms of the underlying AI providers (Google and OpenAI), whose usage policies apply to content you submit through us.</li>
+    </ul>
+    <p>We may remove content and suspend accounts that breach this section, and we will report activity to the authorities where the law requires it.</p>
+
+    <h2>5. Pages you publish, and who is responsible for them</h2>
+    <p>The funnel builder lets you publish landing pages that are served from our infrastructure. You should understand exactly how responsibility is split:</p>
+    <ul>
+      <li><strong>The content is yours.</strong> You author it, you decide what claims it makes, and you are solely responsible for it — including advertising, consumer-protection, product-safety and marketing law in every market where it is seen.</li>
+      <li><strong>Your visitors' data is yours to protect.</strong> If your published page collects personal data, you are the controller for that data and we are your processor. You must provide your own privacy notice, establish your own legal basis and obtain any consent required for cookies or trackers you add.</li>
+      <li><strong>We are a hosting provider for it.</strong> We do not monitor published pages before they go live. Under Article 6 of the EU Digital Services Act we are not liable for content we do not know about, but we will act promptly once we do.</li>
+      <li><strong>Notice and action.</strong> Anyone may report an unlawful published page to <a href="mailto:[ABUSE EMAIL]">[ABUSE EMAIL]</a>. We will assess reports promptly, may disable the page, and will tell you what we did and why, so that you can respond.</li>
+      <li><strong>Indemnity.</strong> You will indemnify us against claims, losses and reasonable legal costs arising from content you publish through the Service or from your breach of section 4.</li>
     </ul>
 
-    <h2>4. Credits and Billing</h2>
+    <h2>6. Plans, credits and payment</h2>
     <ul>
-      <li>The Service operates on a credit system. Credits are consumed per AI generation.</li>
-      <li>Monthly plan credits reset at the start of each billing cycle and do not roll over.</li>
-      <li>Top-up credit packs do not expire and are consumed after monthly credits.</li>
-      <li>All payments are processed by Stripe and are subject to Stripe's terms.</li>
-      <li>Subscriptions renew automatically unless cancelled before the renewal date.</li>
-      <li>Refunds are handled on a case-by-case basis; contact support within 14 days of a charge.</li>
+      <li>The Service runs on credits, consumed per AI generation at the rates shown in the app.</li>
+      <li>Monthly plan credits reset at the start of each billing cycle and do not roll over. Top-up packs do not expire and are consumed after monthly credits.</li>
+      <li>Prices are shown inclusive or exclusive of VAT as indicated at checkout. VAT is charged according to your billing country.</li>
+      <li>Payments are processed by Stripe. We do not receive or store your card details. Stripe's own terms apply to the payment itself.</li>
+      <li>Subscriptions renew automatically for successive periods until cancelled. Cancel any time before the renewal date from your account settings; cancellation takes effect at the end of the paid period and you keep access until then.</li>
+      <li>Failed payments may result in suspension until the balance is settled.</li>
+      <li>We may change prices with at least 30 days' notice by email. If you do not accept a change, cancel before it takes effect.</li>
     </ul>
 
-    <h2>5. AI-Generated Content</h2>
-    <p>You retain ownership of content you upload. You are granted a non-exclusive licence to use the AI-generated outputs for your business purposes. You are solely responsible for ensuring generated content complies with applicable laws and platform policies (Meta, TikTok, etc.).</p>
+    <h3>Right of withdrawal (EU and UK consumers)</h3>
+    <p>If you are a consumer in the EU or UK, you normally have 14 days to withdraw from a distance contract without giving a reason. Because the Service is digital content supplied immediately, at checkout you are asked to <strong>expressly request immediate performance and acknowledge that you lose the right of withdrawal once supply has begun</strong>. If you have not used any credits, we will refund you in full within the 14-day period. Where you have used credits, we may deduct an amount proportionate to what you consumed. Nothing here limits your statutory rights in respect of a service that is faulty or not as described.</p>
+    <p>Business customers are not covered by the consumer withdrawal right. Refunds outside the situations above are at our discretion; write to <a href="mailto:[SUPPORT EMAIL]">[SUPPORT EMAIL]</a> within 14 days of a charge.</p>
 
-    <h2>6. Intellectual Property</h2>
-    <p>EcomFans and its underlying technology are the intellectual property of the operator. Nothing in these Terms grants you rights to our trademarks, software, or infrastructure.</p>
+    <h2>7. Your content and our licence to it</h2>
+    <p>You keep ownership of everything you upload. You grant us a limited, non-exclusive, worldwide, royalty-free licence to host, store, reproduce, transmit and adapt that content <strong>only</strong> so far as needed to operate the Service for you — including transmitting it to the AI providers named in our <a href="{{ url_for('landing.privacy_page') }}">Privacy Policy</a> to fulfil a request you made. This licence ends when you delete the content or close your account.</p>
+    <p><strong>We do not use your content to train AI models</strong>, and we do not license it to anyone for that purpose.</p>
 
-    <h2>7. Service Availability</h2>
-    <p>We aim for high availability but do not guarantee uninterrupted access. We may modify or discontinue features with reasonable notice.</p>
+    <h2>8. AI-generated output</h2>
+    <p>Subject to your having paid for it, you may use the output the Service generates for you for any lawful business purpose. You should know that:</p>
+    <ul>
+      <li>AI output can be inaccurate, misleading or unintentionally similar to existing material. <strong>Review everything before you publish it.</strong></li>
+      <li>Given how generative models work, output is not guaranteed to be unique, and identical or similar output may be produced for other users.</li>
+      <li>Copyright in AI-generated material is unsettled in many jurisdictions; we make no representation that you can register or enforce copyright in it.</li>
+      <li>You are responsible for making sure the output complies with the law and with the policies of the platforms you run it on (Meta, TikTok, Google and others).</li>
+    </ul>
 
-    <h2>8. Limitation of Liability</h2>
-    <p>To the fullest extent permitted by law, EcomFans shall not be liable for indirect, incidental, special, or consequential damages arising from your use of the Service. Our aggregate liability to you shall not exceed the amount you paid in the 3 months preceding the claim.</p>
+    <h2>9. Our intellectual property</h2>
+    <p>The Service, its software, design, page templates and documentation remain our property or our licensors'. Nothing here transfers rights in our trademarks, code or infrastructure. Page templates are provided for use inside the Service; the sample copy and imagery in them are placeholders you must replace with your own substantiated content before publishing.</p>
 
-    <h2>9. Termination</h2>
-    <p>We may suspend or terminate accounts that violate these Terms. You may close your account at any time from your account settings. Closing your account cancels any active subscription from the next billing cycle.</p>
+    <h2>10. Availability, support and changes</h2>
+    <p>We aim for high availability but do not promise the Service will be uninterrupted or error-free, and we offer no service level agreement unless we have signed one with you separately. We may carry out maintenance, and we may add, change or withdraw features. If we withdraw something material or discontinue the Service, we will give you at least 30 days' notice and a pro-rata refund of any prepaid, unused subscription fees.</p>
 
-    <h2>10. Changes to These Terms</h2>
-    <p>We may update these Terms from time to time. We will notify you via email or an in-app notice. Continued use after the effective date constitutes acceptance.</p>
+    <h2>11. Warranties and liability</h2>
+    <p>Except as expressly stated, the Service is provided "as is" and we disclaim all implied warranties to the fullest extent the law allows, including fitness for a particular purpose and non-infringement.</p>
+    <p><strong>Nothing in these Terms limits or excludes our liability for death or personal injury caused by our negligence, for fraud or fraudulent misrepresentation, or for any liability that cannot be limited under applicable law — including a consumer's statutory rights.</strong></p>
+    <p>Subject to that, we are not liable for indirect, incidental, special or consequential loss, nor for lost profits, revenue, goodwill, or data; and our total aggregate liability arising out of or in connection with these Terms is limited to the greater of (a) the fees you paid us in the 12 months before the event giving rise to the claim, or (b) EUR 100.</p>
+    <p>We are not liable for losses caused by an event outside our reasonable control, including failures of the third-party AI providers, payment processors or hosting infrastructure the Service depends on.</p>
 
-    <h2>11. Governing Law</h2>
-    <p>These Terms are governed by the laws of Portugal, without regard to conflict of law provisions.</p>
+    <h2>12. Suspension and termination</h2>
+    <p>You may close your account at any time from your settings; closure cancels any active subscription from the next billing cycle and does not entitle you to a refund of the current period except as set out in section 6.</p>
+    <p>We may suspend or terminate your account if you materially breach these Terms, if we are required to by law, or if your use puts the Service or other users at risk. Except where a breach is serious or unlawful, we will give you notice and a reasonable chance to put it right first. On termination we will delete your data as described in the Privacy Policy; export anything you want to keep beforehand.</p>
 
-    <h2>12. Contact</h2>
-    <p>For questions about these Terms, email us at <a href="mailto:legal@ecomfans.com">legal@ecomfans.com</a>.</p>
+    <h2>13. Data protection</h2>
+    <p>How we handle personal data is set out in our <a href="{{ url_for('landing.privacy_page') }}">Privacy Policy</a> and <a href="{{ url_for('landing.cookies_page') }}">Cookie Policy</a>, which form part of these Terms. Where we process personal data on your behalf — principally for pages you publish — we do so only on your documented instructions, keep it confidential, apply appropriate security measures, and will assist you with data-subject requests. A separate Data Processing Agreement is available on request at <a href="mailto:[PRIVACY EMAIL]">[PRIVACY EMAIL]</a>.</p>
+
+    <h2>14. Changes to these Terms</h2>
+    <p>We may update these Terms. For changes that materially affect your rights we will give at least 30 days' notice by email or in-app notice, and you may cancel before they take effect. Continued use after the effective date means you accept the revised Terms.</p>
+
+    <h2>15. Governing law and disputes</h2>
+    <p>These Terms are governed by the law of Portugal, without regard to its conflict-of-law rules. The courts of Portugal have jurisdiction, except that if you are a consumer you may also bring proceedings in the courts of your country of residence, and you keep the protection of any mandatory consumer law there.</p>
+    <p>EU consumers may also use the European Commission's Online Dispute Resolution platform at <a href="https://ec.europa.eu/consumers/odr" rel="noopener">ec.europa.eu/consumers/odr</a>. We would rather sort things out directly first — write to <a href="mailto:[SUPPORT EMAIL]">[SUPPORT EMAIL]</a>.</p>
+
+    <h2>16. General</h2>
+    <p>If any provision is found unenforceable, the rest stays in force. Our not enforcing a right is not a waiver of it. You may not assign these Terms without our consent; we may assign them to a successor in connection with a merger or sale of the business. These Terms, together with the Privacy Policy and Cookie Policy, are the entire agreement between us on this subject.</p>
+
+    <h2>17. Contact</h2>
+    <p>[LEGAL ENTITY NAME], [REGISTERED ADDRESS] — <a href="mailto:[SUPPORT EMAIL]">[SUPPORT EMAIL]</a>. Abuse reports: <a href="mailto:[ABUSE EMAIL]">[ABUSE EMAIL]</a>.</p>
   </main>
 
   <footer class="foot">
@@ -97,6 +145,7 @@
         <span>&copy; 2026 EcomFans</span>
         <div class="foot__social">
           <a href="{{ url_for('landing.privacy_page') }}">Privacy</a>
+          <a href="{{ url_for('landing.cookies_page') }}">Cookies</a>
           <a href="{{ url_for('landing.terms_page') }}">Terms</a>
         </div>
       </div>

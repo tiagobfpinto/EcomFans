@@ -101,7 +101,7 @@
     </div>
 </div>
 
-<script type="application/json" id="fn-editor-bootstrap">{{ {"page": page, "page_template": page_template, "default_template": default_template}|tojson }}</script>
+<script nonce="{{ csp_nonce }}" type="application/json" id="fn-editor-bootstrap">{{ {"page": page, "page_template": page_template, "default_template": default_template}|tojson }}</script>
 {% endblock %}
 
 {% block scripts %}

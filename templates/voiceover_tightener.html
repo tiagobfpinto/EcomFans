@@ -7,7 +7,7 @@
 <div class="vt-page" id="voiceover-tightener"
     data-max-upload-mb="{{ max_upload_mb }}"
     data-max-duration-minutes="{{ max_duration_minutes }}">
-    <script type="application/json" id="vt-preset-data">{{ preset_defaults|tojson }}</script>
+    <script nonce="{{ csp_nonce }}" type="application/json" id="vt-preset-data">{{ preset_defaults|tojson }}</script>
 
     <header class="vt-header">
         <div>

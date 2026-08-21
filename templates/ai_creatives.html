@@ -1824,7 +1824,7 @@
     }
 </style>
 
-<script id="ai-creatives-bootstrap" type="application/json">
+<script nonce="{{ csp_nonce }}" id="ai-creatives-bootstrap" type="application/json">
 {
     "defaultBasePrompt": {{ default_base_prompt | tojson }},
     "defaultAnalysisPrompt": {{ default_analysis_prompt | tojson }},
@@ -1841,7 +1841,7 @@
 </script>
 
 
-<script>
+<script nonce="{{ csp_nonce }}">
     function parseAiCreativesBootstrap() {
         const bootstrapEl = document.getElementById('ai-creatives-bootstrap');
         if (!bootstrapEl) return {};

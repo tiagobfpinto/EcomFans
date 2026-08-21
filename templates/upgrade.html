@@ -121,7 +121,7 @@
     </div>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 const _stripeEnabled = {{ 'true' if stripe_enabled else 'false' }};
 
 async function buyPlan(plan) {
