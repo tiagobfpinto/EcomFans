@@ -80,6 +80,37 @@ def test_create_funnel_and_page_uses_selected_template(client, test_user):
     assert b"ex.html" not in editor.data
 
 
+def test_korean_advertorial_template_is_selectable_and_editable(client, test_user):
+    _login(client, test_user)
+    funnel = _create_funnel(client)
+    page = _create_page(
+        client, funnel["id"], slug="korean-roots", template_id="listicle-korean"
+    )
+
+    assert page["template_id"] == "listicle-korean"
+    assert page["template_name"] == "Korean Root Cover Advertorial"
+    assert page["html_content"] == page_template_html("listicle-korean")
+    assert 'data-page-template="listicle-korean"' in page["html_content"]
+    assert 'data-template-bundle="styles.css"' in page["html_content"]
+    assert 'data-template-bundle="app.js"' in page["html_content"]
+    assert 'href="styles.css"' not in page["html_content"]
+    assert 'src="app.js"' not in page["html_content"]
+
+    # the editor chrome the visual builder drives
+    assert "ecomfans:funnel-template" in page["html_content"]
+    assert ".template-editor-enabled .edit-dock" in page["html_content"]
+    assert page["html_content"].count('data-image-key="') == 8
+
+    # copy and assets specific to the advertorial
+    assert "Hydrogen Peroxide" in page["html_content"]
+    for asset in ("gray-roots-hero.webp", "peroxide-diagram.svg", "cuticle-diagram.svg"):
+        assert f"/funnels/templates/listicle-korean/assets/{asset}" in page["html_content"]
+        assert client.get(f"/funnels/templates/listicle-korean/assets/{asset}").status_code == 200
+
+    detail = client.get(f"/funnels/{funnel['id']}")
+    assert b"Korean Root Cover Advertorial" in detail.data
+
+
 def test_unknown_page_template_is_rejected(client, test_user):
     _login(client, test_user)
     funnel = _create_funnel(client)

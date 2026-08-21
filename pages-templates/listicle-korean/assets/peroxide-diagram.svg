@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 540" width="900" height="540" role="img" aria-label="Diagram comparing hydrogen peroxide building up inside a graying follicle with hydrogen peroxide added from a salon developer bowl">
+  <defs>
+    <linearGradient id="shaft" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0" stop-color="#cfcbc4"/>
+      <stop offset="0.35" stop-color="#9b948b"/>
+      <stop offset="1" stop-color="#4a413a"/>
+    </linearGradient>
+  </defs>
+  <g font-family="DM Sans, Segoe UI, Arial, sans-serif">
+    <text x="450" y="46" text-anchor="middle" font-size="15" font-weight="700" letter-spacing="4" fill="#6b6963">THE SAME COMPOUND &#8212; TWICE</text>
+
+    <!-- panels -->
+    <rect x="26" y="82" width="366" height="430" rx="6" fill="#fdfaf4" stroke="#e3ddd1" stroke-width="1.5"/>
+    <rect x="508" y="82" width="366" height="430" rx="6" fill="#fdfaf4" stroke="#e3ddd1" stroke-width="1.5"/>
+
+    <rect x="50" y="104" width="176" height="26" rx="13" fill="#a94c33"/>
+    <text x="138" y="122" text-anchor="middle" font-size="11" font-weight="800" letter-spacing="1.1" fill="#ffffff">01 &#183; YOUR FOLLICLE</text>
+    <rect x="532" y="104" width="200" height="26" rx="13" fill="#a94c33"/>
+    <text x="632" y="122" text-anchor="middle" font-size="11" font-weight="800" letter-spacing="1.1" fill="#ffffff">02 &#183; THE MIXING BOWL</text>
+
+    <!-- left: follicle -->
+    <rect x="50" y="300" width="342" height="136" fill="#f3ebdc"/>
+    <line x1="50" y1="300" x2="392" y2="300" stroke="#ddd2bd" stroke-width="2"/>
+    <path d="M196 302 L193 384 Q193 420 218 420 Q243 420 243 384 L240 302 Z" fill="#ede2d0" stroke="#cbbca4" stroke-width="1.5"/>
+    <path d="M206 302 L208 162 Q218 150 228 162 L230 302 Z" fill="url(#shaft)"/>
+    <g fill="#a94c33" opacity="0.85">
+      <circle cx="211" cy="400" r="5"/>
+      <circle cx="228" cy="406" r="4"/>
+      <circle cx="219" cy="381" r="6"/>
+      <circle cx="204" cy="374" r="4"/>
+      <circle cx="233" cy="383" r="5"/>
+      <circle cx="216" cy="350" r="4"/>
+      <circle cx="229" cy="337" r="3"/>
+      <circle cx="207" cy="327" r="3"/>
+    </g>
+    <line x1="250" y1="388" x2="296" y2="388" stroke="#a94c33" stroke-width="1.5"/>
+    <text x="302" y="384" font-size="12" font-weight="700" fill="#a94c33">Peroxide</text>
+    <text x="302" y="400" font-size="12" font-weight="700" fill="#a94c33">builds up</text>
+    <text x="302" y="424" font-size="11" fill="#6b6963">Catalase</text>
+    <text x="302" y="438" font-size="11" fill="#6b6963">almost gone</text>
+    <text x="50" y="462" font-size="12.5" fill="#4b4943">Hydrogen peroxide accumulates as pigment cells fail,</text>
+    <text x="50" y="480" font-size="12.5" fill="#4b4943">and catalase &#8212; the enzyme that clears it &#8212; is gone.</text>
+
+    <!-- centre link -->
+    <line x1="392" y1="318" x2="508" y2="318" stroke="#c9c3b6" stroke-width="1.5" stroke-dasharray="5 5"/>
+    <rect x="406" y="292" width="88" height="52" rx="26" fill="#1c1b19"/>
+    <text x="450" y="326" text-anchor="middle" font-size="21" font-weight="700" fill="#ffffff">H<tspan font-size="14" dy="5">2</tspan><tspan font-size="21" dy="-5">O</tspan><tspan font-size="14" dy="5">2</tspan></text>
+    <text x="450" y="366" text-anchor="middle" font-size="10" font-weight="800" letter-spacing="1.6" fill="#6b6963">SAME</text>
+    <text x="450" y="380" text-anchor="middle" font-size="10" font-weight="800" letter-spacing="1.6" fill="#6b6963">MOLECULE</text>
+
+    <!-- right: bowl -->
+    <path d="M579 344 Q581 436 691 436 Q801 436 803 344 Z" fill="#f6f3ec" stroke="#cbbca4" stroke-width="2"/>
+    <ellipse cx="691" cy="344" rx="112" ry="28" fill="#ffffff" stroke="#cbbca4" stroke-width="2"/>
+    <ellipse cx="691" cy="347" rx="98" ry="22" fill="#ddcfbc"/>
+    <g transform="rotate(-24 700 300)">
+      <rect x="690" y="196" width="20" height="118" rx="9" fill="#2f2a24"/>
+      <rect x="687" y="310" width="26" height="16" rx="3" fill="#b9ab92"/>
+      <path d="M689 326 L711 326 L707 362 L693 362 Z" fill="#6f6357"/>
+    </g>
+    <g fill="#a94c33" opacity="0.8">
+      <circle cx="596" cy="292" r="5"/>
+      <circle cx="612" cy="258" r="4"/>
+      <circle cx="762" cy="300" r="5"/>
+      <circle cx="778" cy="264" r="4"/>
+      <circle cx="740" cy="230" r="3"/>
+    </g>
+    <text x="532" y="462" font-size="12.5" fill="#4b4943">Permanent color cannot work without it. Peroxide is</text>
+    <text x="532" y="480" font-size="12.5" fill="#4b4943">the developer that strips pigment so new color sits.</text>
+
+  </g>
+</svg>
