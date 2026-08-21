@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 560" width="900" height="560" role="img" aria-label="Preview of the simple advertorial page template">
+  <rect width="900" height="560" fill="#fdfaf4"/>
+
+  <line x1="0" y1="74" x2="900" y2="74" stroke="#e5e0d5" stroke-width="2"/>
+  <rect x="386" y="38" width="128" height="12" rx="6" fill="#1c1b19" opacity="0.82"/>
+
+  <rect x="200" y="122" width="60" height="10" rx="5" fill="#a94c33"/>
+
+  <rect x="200" y="158" width="500" height="24" rx="4" fill="#1c1b19"/>
+  <rect x="200" y="196" width="440" height="24" rx="4" fill="#1c1b19"/>
+
+  <rect x="200" y="248" width="470" height="11" rx="5.5" fill="#b3ada2"/>
+  <rect x="200" y="272" width="392" height="11" rx="5.5" fill="#b3ada2"/>
+
+  <rect x="150" y="326" width="600" height="188" fill="#e9dfcb"/>
+  <circle cx="450" cy="404" r="40" fill="#cbbda2"/>
+  <path d="M368 514 L438 428 L492 486 L536 448 L604 514 Z" fill="#c0b096"/>
+</svg>

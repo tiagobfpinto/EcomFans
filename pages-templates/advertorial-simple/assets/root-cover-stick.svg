@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 800" width="640" height="800" role="img" aria-label="Root coverage stick twisted up, showing the fine comb teeth at the tip, with its cap resting beside it">
+  <defs>
+    <linearGradient id="barrel" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#cabda6"/>
+      <stop offset="0.16" stop-color="#fbf6ee"/>
+      <stop offset="0.48" stop-color="#f4eee1"/>
+      <stop offset="0.82" stop-color="#ddd1bb"/>
+      <stop offset="1" stop-color="#c4b69e"/>
+    </linearGradient>
+    <linearGradient id="core" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#1e1815"/>
+      <stop offset="0.42" stop-color="#453831"/>
+      <stop offset="1" stop-color="#221b18"/>
+    </linearGradient>
+    <linearGradient id="collar" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#9c9182"/>
+      <stop offset="0.4" stop-color="#d3c8b4"/>
+      <stop offset="1" stop-color="#9a8f80"/>
+    </linearGradient>
+    <linearGradient id="cap" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#13100e"/>
+      <stop offset="0.42" stop-color="#38302a"/>
+      <stop offset="1" stop-color="#161310"/>
+    </linearGradient>
+  </defs>
+
+  <ellipse cx="306" cy="664" rx="94" ry="16" fill="#5b4b38" opacity="0.14"/>
+  <ellipse cx="452" cy="716" rx="70" ry="11" fill="#5b4b38" opacity="0.12"/>
+
+  <!-- the stick -->
+  <g transform="translate(300 430) rotate(-7)">
+    <rect x="-52" y="-160" width="104" height="380" rx="16" fill="url(#barrel)"/>
+    <rect x="-34" y="-140" width="14" height="330" rx="7" fill="#ffffff" opacity="0.45"/>
+    <rect x="-42" y="-66" width="84" height="152" rx="5" fill="#ffffff" opacity="0.42"/>
+    <rect x="-52" y="130" width="104" height="11" fill="#c9a24a"/>
+    <path d="M-52 141 L52 141 L52 204 Q52 220 36 220 L-36 220 Q-52 220 -52 204 Z" fill="#1f1b18"/>
+    <rect x="-38" y="158" width="10" height="46" rx="5" fill="#ffffff" opacity="0.14"/>
+
+    <!-- collar -->
+    <path d="M-46 -160 L46 -160 L41 -180 L-41 -180 Z" fill="url(#collar)"/>
+    <rect x="-43" y="-188" width="86" height="9" rx="3" fill="#a2967f"/>
+
+    <!-- pigment core -->
+    <rect x="-35" y="-234" width="70" height="48" rx="7" fill="url(#core)"/>
+    <rect x="-27" y="-228" width="9" height="36" rx="4" fill="#ffffff" opacity="0.12"/>
+
+    <!-- comb teeth -->
+    <g fill="url(#core)">
+      <path d="M-31.5 -230 L-27.5 -278 L-23.5 -230 Z"/>
+      <path d="M-20.5 -230 L-16.5 -282 L-12.5 -230 Z"/>
+      <path d="M-9.5 -230 L-5.5 -284 L-1.5 -230 Z"/>
+      <path d="M1.5 -230 L5.5 -284 L9.5 -230 Z"/>
+      <path d="M12.5 -230 L16.5 -282 L20.5 -230 Z"/>
+      <path d="M23.5 -230 L27.5 -278 L31.5 -230 Z"/>
+    </g>
+    <g stroke="#ffffff" stroke-width="1" opacity="0.16" stroke-linecap="round">
+      <path d="M-27 -272 L-27 -236"/><path d="M-16 -276 L-16 -236"/><path d="M-5 -278 L-5 -236"/>
+      <path d="M6 -278 L6 -236"/><path d="M17 -276 L17 -236"/><path d="M28 -272 L28 -236"/>
+    </g>
+  </g>
+
+  <!-- cap -->
+  <g transform="translate(452 690) rotate(76)">
+    <rect x="-33" y="-62" width="66" height="124" rx="13" fill="url(#cap)"/>
+    <rect x="-33" y="42" width="66" height="9" fill="#c9a24a"/>
+    <rect x="-22" y="-46" width="8" height="88" rx="4" fill="#ffffff" opacity="0.12"/>
+  </g>
+</svg>
