@@ -39,6 +39,15 @@ PAGE_TEMPLATES = {
         "thumbnail": "assets/hair-roots-hero.webp",
         "features": ("Inline text editing", "Image replacement", "CTA and color settings"),
     },
+    "advertorial-simple": {
+        "name": "Simple Advertorial",
+        "description": (
+            "A quiet, text-led story page. Images and copy carry it, with two "
+            "essential details and nothing to sell until the product reveal."
+        ),
+        "thumbnail": "assets/template-thumbnail.svg",
+        "features": ("Inline text editing", "Image replacement", "CTA and color settings"),
+    },
     "listicle-korean": {
         "name": "Korean Root Cover Advertorial",
         "description": (

@@ -111,6 +111,33 @@ def test_korean_advertorial_template_is_selectable_and_editable(client, test_use
     assert b"Korean Root Cover Advertorial" in detail.data
 
 
+def test_simple_advertorial_template_sells_nothing_before_the_reveal(client, test_user):
+    _login(client, test_user)
+    funnel = _create_funnel(client)
+    page = _create_page(
+        client, funnel["id"], slug="simple-story", template_id="advertorial-simple"
+    )
+
+    assert page["template_id"] == "advertorial-simple"
+    assert page["template_name"] == "Simple Advertorial"
+    assert page["html_content"] == page_template_html("advertorial-simple")
+    assert 'data-page-template="advertorial-simple"' in page["html_content"]
+    assert 'data-template-bundle="styles.css"' in page["html_content"]
+    assert 'data-template-bundle="app.js"' in page["html_content"]
+    assert "ecomfans:funnel-template" in page["html_content"]
+    assert ".template-editor-enabled .edit-dock" in page["html_content"]
+
+    body, _, _ = page["html_content"].partition('<script data-template-bundle="app.js">')
+    reveal = body.index("What Korean women have been doing instead")
+    # every call to action, and the price, must sit after the product reveal
+    assert body.index('<a class="cta"') > reveal
+    assert body.rindex('<a class="cta"') > reveal
+    assert body.index('class="price"') > reveal
+    # and none of the pre-reveal urgency furniture the listicle carries
+    for absent in ("countdown", "sale-bar", "mobile-buy-bar", "offer-discount"):
+        assert absent not in body
+
+
 def test_unknown_page_template_is_rejected(client, test_user):
     _login(client, test_user)
     funnel = _create_funnel(client)
