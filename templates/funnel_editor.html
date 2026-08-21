@@ -3,7 +3,7 @@
 {% block title %}{{ page.title }} - Funnel editor - EcomFans{% endblock %}
 
 {% block head %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/funnels.css', v='2') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/funnels.css', v='3') }}">
 {% endblock %}
 
 {% block content %}
@@ -42,12 +42,6 @@
                 <input id="fn-editor-title" type="text" maxlength="200" value="{{ page.title }}">
             </label>
             <label class="fn-field">
-                <span>Page type</span>
-                <select id="fn-editor-type">
-                    {% for value, label in page_types.items() %}<option value="{{ value }}" {% if page.page_type == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
-                </select>
-            </label>
-            <label class="fn-field">
                 <span>URL slug</span>
                 <div class="fn-slug-field"><b>/</b><input id="fn-editor-slug" type="text" maxlength="180" value="{{ page.slug }}"></div>
             </label>
@@ -70,7 +64,7 @@
             </div>
             <div class="fn-template-card">
                 <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 2h9l5 5v15H6z"/><path d="M14 2v6h6M9 13h8M9 17h6"/></svg>
-                <div><span>Base template</span><strong>ex.html</strong></div>
+                <div><span>Page template</span><strong>{{ page_template.name }}</strong></div>
                 <button id="fn-reset-template" type="button">Reset</button>
             </div>
         </aside>
@@ -107,9 +101,9 @@
     </div>
 </div>
 
-<script type="application/json" id="fn-editor-bootstrap">{{ {"page": page, "default_template": default_template}|tojson }}</script>
+<script type="application/json" id="fn-editor-bootstrap">{{ {"page": page, "page_template": page_template, "default_template": default_template}|tojson }}</script>
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/funnel_editor.js', v='1') }}"></script>
+<script src="{{ url_for('static', filename='js/funnel_editor.js', v='2') }}"></script>
 {% endblock %}

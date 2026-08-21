@@ -1,0 +1,1 @@
+Starting worker pool (queue=default, concurrency=2, poll_interval=1.5s, stale_timeout=3600s)

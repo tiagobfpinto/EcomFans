@@ -139,7 +139,6 @@
         const modal = document.getElementById("fn-page-modal");
         const form = document.getElementById("fn-page-form");
         const titleInput = document.getElementById("fn-page-title");
-        const typeInput = document.getElementById("fn-page-type");
         const slugInput = document.getElementById("fn-page-slug");
         const errorLabel = document.getElementById("fn-page-error");
         const submitButton = document.getElementById("fn-create-page");
@@ -163,11 +162,14 @@
             event.preventDefault();
             const title = titleInput.value.trim();
             const slug = slugify(slugInput.value);
+            const templateInput = form.querySelector('input[name="template_id"]:checked');
             slugInput.value = slug;
-            if (!title || !slug) {
-                errorLabel.textContent = title ? "Enter a URL slug." : "Enter a page title.";
+            if (!title || !slug || !templateInput) {
+                errorLabel.textContent = !templateInput
+                    ? "Choose a page template."
+                    : (title ? "Enter a URL slug." : "Enter a page title.");
                 errorLabel.hidden = false;
-                (title ? slugInput : titleInput).focus();
+                (templateInput ? (title ? slugInput : titleInput) : form.querySelector('input[name="template_id"]'))?.focus();
                 return;
             }
             setBusy(submitButton, true, "Creating…", "Create and edit");
@@ -175,7 +177,7 @@
                 const payload = await requestJSON("/funnels/" + funnelId + "/pages", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ title: title, page_type: typeInput.value, slug: slug }),
+                    body: JSON.stringify({ title: title, template_id: templateInput.value, slug: slug }),
                 });
                 window.location.href = "/funnels/" + funnelId + "/pages/" + payload.page.id;
             } catch (error) {

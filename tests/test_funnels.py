@@ -4,7 +4,7 @@ from werkzeug.security import generate_password_hash
 
 from billing_service import utc_now
 from db import Funnel, FunnelPage, User, db
-from funnels import default_template_html
+from funnels import DEFAULT_PAGE_TEMPLATE_ID, page_template_html
 from tests.conftest import csrf_token
 
 
@@ -34,12 +34,12 @@ def _create_funnel(client, name="Campaign funnel"):
     return response.get_json()["funnel"]
 
 
-def _create_page(client, funnel_id, slug="five-reasons", page_type="listicle"):
+def _create_page(client, funnel_id, slug="five-reasons", template_id="listicle"):
     response = _json(
         client,
         "POST",
         f"/funnels/{funnel_id}/pages",
-        {"title": "Five reasons", "page_type": page_type, "slug": slug},
+        {"title": "Five reasons", "template_id": template_id, "slug": slug},
     )
     assert response.status_code == 201
     return response.get_json()["page"]
@@ -51,21 +51,53 @@ def test_funnels_require_login(client):
     assert "/login" in response.headers["Location"]
 
 
-def test_create_funnel_and_page_uses_ex_html(client, test_user):
+def test_create_funnel_and_page_uses_selected_template(client, test_user):
     _login(client, test_user)
     funnel = _create_funnel(client)
     page = _create_page(client, funnel["id"], slug="/Cinco Razões/")
 
     assert page["slug"] == "cinco-razoes"
     assert page["status"] == "draft"
-    assert page["html_content"] == default_template_html()
+    assert page["template_id"] == DEFAULT_PAGE_TEMPLATE_ID
+    assert page["html_content"] == page_template_html("listicle")
+    assert 'data-page-template="listicle"' in page["html_content"]
+    assert 'data-template-bundle="styles.css"' in page["html_content"]
+    assert 'data-template-bundle="app.js"' in page["html_content"]
+    assert "/funnels/templates/listicle/assets/hair-roots-hero.webp" in page["html_content"]
+    assert "ecomfans:funnel-template" in page["html_content"]
+    assert ".template-editor-enabled .edit-dock" in page["html_content"]
+    assert 'href="styles.css"' not in page["html_content"]
+    assert 'src="app.js"' not in page["html_content"]
 
     detail = client.get(f"/funnels/{funnel['id']}")
     editor = client.get(f"/funnels/{funnel['id']}/pages/{page['id']}")
     assert detail.status_code == 200
     assert b"Five reasons" in detail.data
+    assert b"Choose a template" in detail.data
     assert editor.status_code == 200
-    assert b"ex.html" in editor.data
+    assert b"Page template" in editor.data
+    assert b"Listicle" in editor.data
+    assert b"ex.html" not in editor.data
+
+
+def test_unknown_page_template_is_rejected(client, test_user):
+    _login(client, test_user)
+    funnel = _create_funnel(client)
+    response = _json(
+        client,
+        "POST",
+        f"/funnels/{funnel['id']}/pages",
+        {"title": "Unknown", "template_id": "advertorial", "slug": "unknown"},
+    )
+    assert response.status_code == 400
+    assert "template" in response.get_json()["error"].lower()
+
+
+def test_template_asset_is_publicly_served(client):
+    path = "/funnels/templates/listicle/assets/hair-roots-hero.webp"
+    response = client.get(path)
+    assert response.status_code == 200
+    assert response.content_type == "image/webp"
 
 
 def test_reserved_and_duplicate_slugs_are_rejected(client, test_user):
@@ -77,7 +109,7 @@ def test_reserved_and_duplicate_slugs_are_rejected(client, test_user):
         client,
         "POST",
         f"/funnels/{first['id']}/pages",
-        {"title": "Bad", "page_type": "advertorial", "slug": "/products/sale"},
+        {"title": "Bad", "template_id": "listicle", "slug": "/products/sale"},
     )
     assert reserved.status_code == 400
     assert "reserved" in reserved.get_json()["error"].lower()
@@ -87,7 +119,7 @@ def test_reserved_and_duplicate_slugs_are_rejected(client, test_user):
         client,
         "POST",
         f"/funnels/{second['id']}/pages",
-        {"title": "Other offer", "page_type": "landing", "slug": "offer"},
+        {"title": "Other offer", "template_id": "listicle", "slug": "offer"},
     )
     assert duplicate.status_code == 409
 
@@ -111,7 +143,6 @@ def test_draft_preview_and_published_root_slug(client, test_user):
         f"/funnels/{funnel['id']}/pages/{page['id']}",
         {
             "title": "Live offer",
-            "page_type": "advertorial",
             "slug": "special-offer",
             "status": "published",
             "html_content": "<!doctype html><html><body>Live funnel page</body></html>",
