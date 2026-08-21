@@ -22,6 +22,7 @@ from media_storage import (
     save_prompt_library_target_image,
     save_prompt_library_thumbnail,
 )
+from security import is_allowed_upload_image, upload_image_type_error
 
 prompts_bp = Blueprint("prompts", __name__)
 
@@ -69,8 +70,8 @@ def _read_image_uploads(files, *, max_count: int, total_limit: int) -> list[dict
     total_bytes = 0
     for index, file in enumerate(selected_files, start=1):
         mime_type = _mime_for_upload(file)
-        if not mime_type.startswith("image/"):
-            raise ValueError("Only image files are supported.")
+        if not is_allowed_upload_image(mime_type):
+            raise ValueError(upload_image_type_error())
 
         image_bytes = file.read()
         if not image_bytes:

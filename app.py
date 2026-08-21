@@ -37,6 +37,12 @@ from db import CreativeInspiration, ProductImage, User, db, migrate
 from media import media_bp
 from media_storage import save_inspiration_image, save_product_image
 from metrics import metrics_bp
+import net_guard
+from security import (
+    PERMISSIONS_POLICY,
+    build_content_security_policy,
+    csp_nonce,
+)
 from notes import notes_bp
 from products import products_bp
 from product_images import product_images_bp
@@ -56,6 +62,7 @@ from worker_runtime import run_worker_pool
 landing_bp = Blueprint("landing", __name__)
 
 load_dotenv()
+net_guard.install()
 mimetypes.add_type("application/javascript", ".js")
 mimetypes.add_type("application/javascript", ".mjs")
 mimetypes.add_type("text/css", ".css")
@@ -392,13 +399,32 @@ def apply_request_guardrails():
     return None
 
 
+# The funnel editor previews a page template inside a srcdoc iframe, which
+# inherits this document's CSP, so a nonce-only script-src would block the
+# template's own bundled script. See security.build_content_security_policy.
+_INLINE_SCRIPT_ENDPOINTS = {"funnels.page_editor"}
+
+
 @app.after_request
 def add_security_headers(response):
     response.headers.setdefault("X-Content-Type-Options", "nosniff")
     response.headers.setdefault("X-Frame-Options", "DENY")
     response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    response.headers.setdefault("Permissions-Policy", PERMISSIONS_POLICY)
+    response.headers.setdefault("Cross-Origin-Opener-Policy", "same-origin")
+    response.headers.setdefault("X-Permitted-Cross-Domain-Policies", "none")
     if app.config.get("SESSION_COOKIE_SECURE"):
-        response.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+        response.headers.setdefault(
+            "Strict-Transport-Security", "max-age=31536000; includeSubDomains"
+        )
+
+    # Routes that serve user-authored documents (published funnel pages, media
+    # proxies) set their own policy; never overwrite it.
+    if "Content-Security-Policy" not in response.headers:
+        response.headers["Content-Security-Policy"] = build_content_security_policy(
+            csp_nonce(),
+            allow_inline_scripts=request.endpoint in _INLINE_SCRIPT_ENDPOINTS,
+        )
     return response
 
 
@@ -438,6 +464,11 @@ def privacy_page():
 @landing_bp.route("/terms")
 def terms_page():
     return render_template("terms.html")
+
+
+@landing_bp.route("/cookies")
+def cookies_page():
+    return render_template("cookies.html")
 
 
 app.register_blueprint(landing_bp)
@@ -481,7 +512,7 @@ def inject_billing_context():
 
 @app.context_processor
 def inject_csrf_context():
-    return {"csrf_token": _ensure_csrf_token()}
+    return {"csrf_token": _ensure_csrf_token(), "csp_nonce": csp_nonce()}
 
 
 @app.cli.command("backfill-media-files")

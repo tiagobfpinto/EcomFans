@@ -148,7 +148,7 @@
     </div>
 </div>
 
-<script type="application/json" id="comp-bootstrap">{{ ads|tojson }}</script>
+<script nonce="{{ csp_nonce }}" type="application/json" id="comp-bootstrap">{{ ads|tojson }}</script>
 {% endblock %}
 
 {% block scripts %}

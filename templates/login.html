@@ -151,7 +151,7 @@
 </div>
 {% endblock %}
 {% block scripts %}
-<script>
+<script nonce="{{ csp_nonce }}">
 (() => {
     const button = document.getElementById('login-password-toggle');
     const input = document.getElementById('password');

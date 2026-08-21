@@ -42,6 +42,10 @@ class User(db.Model):
     last_password_reset_request_at = db.Column(db.DateTime(timezone=True), nullable=True)
     reset_token = db.Column(db.String(128), nullable=True, unique=True)
     reset_token_expires_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    # Bumped whenever the password changes. Sessions carry the value they were
+    # issued with, so every older session — including one an attacker stole —
+    # stops validating the moment the real owner resets their password.
+    session_epoch = db.Column(db.Integer, nullable=False, default=1, server_default="1")
     created_at = db.Column(
         db.DateTime(timezone=True), server_default=func.now(), nullable=False
     )

@@ -141,7 +141,7 @@
     </div>
 </div>
 
-<script id="notes-bootstrap" type="application/json">{{ board|tojson }}</script>
+<script nonce="{{ csp_nonce }}" id="notes-bootstrap" type="application/json">{{ board|tojson }}</script>
 {% endblock %}
 
 {% block scripts %}

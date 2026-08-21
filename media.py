@@ -25,6 +25,7 @@ from db import (
     StoryboardProject,
 )
 from media_storage import read_storage_bytes, resolve_storage_path
+from security import harden_media_response, safe_media_mime
 
 
 media_bp = Blueprint("media", __name__)
@@ -37,29 +38,29 @@ def _send_image_payload(
     mime_type: str,
     download_name: str,
 ):
-    storage_bytes = read_storage_bytes(storage_path)
-    if storage_bytes is not None:
-        return send_file(
-            io.BytesIO(storage_bytes),
-            mimetype=mime_type,
-            as_attachment=False,
-            download_name=download_name,
-        )
+    # mime_type comes from whatever the uploader declared, so it is never
+    # trusted for inline rendering. Anything outside the raster allowlist (an
+    # SVG, say) is downgraded to an opaque download so the browser cannot parse
+    # it as a script-bearing document on our own origin.
+    safe_mime, inline = safe_media_mime(mime_type)
 
-    if fallback_b64:
+    payload = read_storage_bytes(storage_path)
+    if payload is None and fallback_b64:
         try:
-            decoded = base64.b64decode(fallback_b64, validate=False)
+            payload = base64.b64decode(fallback_b64, validate=False)
         except Exception:
-            decoded = b""
-        if decoded:
-            return send_file(
-                io.BytesIO(decoded),
-                mimetype=mime_type,
-                as_attachment=False,
-                download_name=download_name,
-            )
+            payload = None
 
-    abort(404)
+    if not payload:
+        abort(404)
+
+    response = send_file(
+        io.BytesIO(payload),
+        mimetype=safe_mime,
+        as_attachment=not inline,
+        download_name=download_name,
+    )
+    return harden_media_response(response, inline=inline, download_name=download_name)
 
 
 @media_bp.route("/media/product-images/<int:image_id>")
@@ -278,13 +279,16 @@ def competitor_ad_video(ad_id: int):
     if not file_path.is_file():
         abort(404)
 
-    return send_file(
+    download_name = ad.original_filename or f"competitor_ad_{ad.id}.mp4"
+    safe_mime, inline = safe_media_mime(ad.mime_type or "video/mp4", allow_video=True)
+    response = send_file(
         file_path,
-        mimetype=ad.mime_type or "video/mp4",
-        as_attachment=False,
-        download_name=ad.original_filename or f"competitor_ad_{ad.id}.mp4",
+        mimetype=safe_mime,
+        as_attachment=not inline,
+        download_name=download_name,
         conditional=True,
     )
+    return harden_media_response(response, inline=inline, download_name=download_name)
 
 
 @media_bp.route("/media/creative-results/<int:result_id>/generated")

@@ -426,7 +426,7 @@ body.lb-connecting .lb-port--in {
     </div>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 // ── State ──────────────────────────────────────────────────────
 let nodes        = {};   // { [id]: NodeObject }
 let connections  = [];   // [ { id, fromNodeId, toNodeId } ]

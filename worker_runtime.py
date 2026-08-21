@@ -79,6 +79,7 @@ from worker_tasks import (
     JOB_TYPE_SCRIPT_TRANSCRIBE,
     JOB_TYPE_VOICEOVER_TIGHTEN,
 )
+from security import is_allowed_upload_image
 from voiceover_worker import run_voiceover_tightening_job
 
 
@@ -1230,7 +1231,7 @@ def _run_brand_dna_analyze(
                 if not img_bytes or len(img_bytes) < MIN_IMG_BYTES:
                     continue
                 mime = content_type.split(";")[0].strip().lower()
-                if not mime.startswith("image/"):
+                if not is_allowed_upload_image(mime):
                     continue
                 if mime not in ALLOWED_IMAGE_MIMES:
                     mime = "image/jpeg"

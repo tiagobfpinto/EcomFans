@@ -21,6 +21,7 @@ from media_storage import delete_storage_file, read_storage_bytes, save_inspirat
 from scraper import _ensure_public_url, _safe_get_bytes, extract_images
 from worker_queue import enqueue_worker_job, get_worker_job_for_user, job_payload
 from worker_tasks import JOB_TYPE_LACY_GENERATE
+from security import is_allowed_upload_image
 
 product_images_bp = Blueprint("product_images", __name__)
 
@@ -93,8 +94,11 @@ def _normalize_image_mime(content_type: str | None, source_url: str) -> str:
     mime_type = (content_type or "").split(";")[0].strip().lower()
     if mime_type == "image/jpg":
         mime_type = "image/jpeg"
-    if not mime_type.startswith("image/"):
-        mime_type = mimetypes.guess_type(urlparse(source_url).path)[0] or "image/jpeg"
+    if not is_allowed_upload_image(mime_type):
+        # Falling back to the URL's extension must not reintroduce a type we
+        # just rejected (a ".svg" path would guess right back to image/svg+xml).
+        guessed = mimetypes.guess_type(urlparse(source_url).path)[0] or ""
+        mime_type = guessed if is_allowed_upload_image(guessed) else "image/jpeg"
     return mime_type
 
 

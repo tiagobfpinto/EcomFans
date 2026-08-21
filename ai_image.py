@@ -24,6 +24,7 @@ from usage_pricing import normalize_model_name
 from utils_crypto import encrypt_api_key
 from worker_queue import enqueue_worker_job, get_worker_job_for_user, job_payload, serialize_worker_job
 from worker_tasks import JOB_TYPE_AI_IMAGE_GENERATE
+from security import is_allowed_upload_image, upload_image_type_error
 
 ai_image_bp = Blueprint("ai_image", __name__)
 
@@ -232,8 +233,8 @@ def generate_images():
             if not img_bytes:
                 continue
             mime = file_obj.content_type or mimetypes.guess_type(file_obj.filename)[0] or "image/png"
-            if not mime.startswith("image/"):
-                return jsonify({"error": "Only image files are supported as references."}), 400
+            if not is_allowed_upload_image(mime):
+                return jsonify({"error": upload_image_type_error()}), 400
             if len(img_bytes) > MAX_REFERENCE_IMAGE_BYTES:
                 return jsonify(
                     {

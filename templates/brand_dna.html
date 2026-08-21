@@ -605,7 +605,7 @@
 {% endblock %}
 
 {% block scripts %}
-<script>
+<script nonce="{{ csp_nonce }}">
 const BDNA_STEPS = [
     "Fetching website...",
     "Studying your brand values...",

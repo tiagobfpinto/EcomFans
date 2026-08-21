@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cookie Policy — EcomFans</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}" />
+  <style>
+    .legal-page table { width: 100%; margin: 18px 0 26px; border-collapse: collapse; font-size: .92rem; }
+    .legal-page th, .legal-page td { padding: 10px 12px; border: 1px solid rgba(128,128,128,.28); text-align: left; vertical-align: top; }
+    .legal-page th { font-weight: 700; }
+    .legal-table-wrap { overflow-x: auto; }
+    .legal-todo { display: block; margin: 20px 0 28px; padding: 14px 16px; border-left: 4px solid #c0392b; background: rgba(192,57,43,.07); font-size: .9rem; line-height: 1.6; }
+    .legal-todo strong { color: #c0392b; }
+  </style>
+</head>
+<body>
+
+  <nav class="nav is-stuck">
+    <div class="shell nav__inner">
+      <a href="{{ url_for('landing.landing_page') }}" class="nav__mark">
+        <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
+          <g fill="none" stroke="currentColor" stroke-width="1.6" opacity=".45">
+            <rect x="2.2" y="2.2" width="8.6" height="8.6" rx="1" />
+            <rect x="13.2" y="2.2" width="8.6" height="8.6" rx="1" />
+            <rect x="2.2" y="13.2" width="8.6" height="8.6" rx="1" />
+          </g>
+          <rect x="13.2" y="13.2" width="8.6" height="8.6" rx="1" fill="currentColor" />
+        </svg>
+        <span>EcomFans</span>
+      </a>
+      <div class="nav__ctas nav__ctas--always">
+        <a href="{{ url_for('auth.login') }}" class="btn btn--line btn--sm">Log in</a>
+        <a href="{{ url_for('auth.register') }}" class="btn btn--mark btn--sm">Start free</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="legal-page">
+    <h1>Cookie Policy</h1>
+    <p class="legal-meta">Last updated: 21 August 2026</p>
+
+    <p class="legal-todo"><strong>Before publishing:</strong> replace <code>[LEGAL ENTITY NAME]</code> and <code>[PRIVACY EMAIL]</code>, and re-check this page whenever you add anything to the site that sets a cookie. The moment you add analytics, a support widget, an embedded video or an advertising pixel, the "strictly necessary only" position below stops being true and you will need a consent banner that blocks those cookies until the visitor opts in.</p>
+
+    <h2>1. What this covers</h2>
+    <p>This policy explains the cookies and similar browser storage that <strong>[LEGAL ENTITY NAME]</strong> uses on the EcomFans application and marketing site. It sits alongside our <a href="{{ url_for('landing.privacy_page') }}">Privacy Policy</a>.</p>
+
+    <h2>2. The short version</h2>
+    <p><strong>We use only strictly necessary cookies.</strong> We run no analytics, no advertising pixels and no third-party trackers on our own site. Under the EU ePrivacy Directive (and Portugal's Lei n.º 41/2004) cookies that are strictly necessary to deliver a service you asked for do not require consent, which is why you are not shown a cookie banner. We still have to tell you they exist, and this page does that.</p>
+
+    <h2>3. Cookies we set</h2>
+    <div class="legal-table-wrap">
+      <table>
+        <thead>
+          <tr><th>Name</th><th>Purpose</th><th>Type</th><th>Expires</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>session</code></td>
+            <td>Keeps you signed in and carries the anti-CSRF token that protects your account from forged requests. Signed with our server key; it holds your user id, username and a session marker, and cannot be read or altered by your browser or by any script.</td>
+            <td>Strictly necessary — first party</td>
+            <td>12 hours by default, or when you log out</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p>The cookie is set with the <code>HttpOnly</code> flag (JavaScript cannot read it), the <code>Secure</code> flag (it is only ever sent over HTTPS) and a <code>SameSite</code> restriction (it is not sent on cross-site requests).</p>
+
+    <h2>4. Other browser storage</h2>
+    <p>These are not cookies, but they store data in your browser, so we list them for completeness. None of it reaches our servers and none of it identifies you.</p>
+    <div class="legal-table-wrap">
+      <table>
+        <thead>
+          <tr><th>Key</th><th>Storage</th><th>Purpose</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>ecomfans-theme</code></td><td>localStorage</td><td>Remembers whether you chose light or dark mode.</td></tr>
+          <tr><td>Editor draft state</td><td>localStorage / sessionStorage</td><td>Holds unsaved changes in the page builder so a refresh does not lose your work.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2>5. Third-party cookies</h2>
+    <p>We embed no third-party trackers. Two third parties are nonetheless involved in delivering the site:</p>
+    <ul>
+      <li><strong>Google Fonts</strong> — typefaces are loaded from <code>fonts.googleapis.com</code> and <code>fonts.gstatic.com</code>. Google does not set cookies for font requests, but it does receive your IP address as part of the request. If you would rather it did not, we can self-host the fonts on request.</li>
+      <li><strong>Stripe</strong> — when you start a checkout you are taken to Stripe's own hosted page. Stripe sets its own cookies there, including cookies used for fraud prevention, and those are governed by <a href="https://stripe.com/legal/cookies-policy" rel="noopener">Stripe's cookie policy</a>. We do not load Stripe scripts on our pages.</li>
+    </ul>
+
+    <h2>6. Pages published by our customers</h2>
+    <p>EcomFans customers can publish their own landing pages through the funnel builder. Those pages are authored by the customer, and any cookie, pixel or tracking script on them is the customer's responsibility, not ours — the customer is the data controller for their own visitors. If you have arrived on a published page and want to know what it collects, contact whoever operates that page.</p>
+
+    <h2>7. Managing cookies</h2>
+    <p>Every major browser lets you view, block and delete cookies from its settings. Because our only cookie is the one that keeps you signed in, blocking it will stop you from logging in to EcomFans at all. Clearing it simply logs you out.</p>
+    <p>You can clear the browser storage listed in section 4 through your browser's "clear site data" tool; the only effect is that your theme choice and any unsaved editor drafts are forgotten.</p>
+
+    <h2>8. Changes</h2>
+    <p>If we ever introduce a cookie that is not strictly necessary, we will update this page and ask for your consent before setting it. The "last updated" date above always reflects the current version.</p>
+
+    <h2>9. Contact</h2>
+    <p>Questions about this policy: <a href="mailto:[PRIVACY EMAIL]">[PRIVACY EMAIL]</a>.</p>
+  </main>
+
+  <footer class="foot">
+    <div class="shell">
+      <div class="foot__bottom foot__bottom--only">
+        <span>&copy; 2026 EcomFans</span>
+        <div class="foot__social">
+          <a href="{{ url_for('landing.privacy_page') }}">Privacy</a>
+          <a href="{{ url_for('landing.cookies_page') }}">Cookies</a>
+          <a href="{{ url_for('landing.terms_page') }}">Terms</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+</body>
+</html>
